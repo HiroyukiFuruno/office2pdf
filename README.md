@@ -1,9 +1,15 @@
-# office2pdf
+# office2pdf-katana
 
-[![CI](https://github.com/developer0hye/office2pdf/actions/workflows/ci.yml/badge.svg)](https://github.com/developer0hye/office2pdf/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/office2pdf.svg)](https://crates.io/crates/office2pdf)
-[![docs.rs](https://docs.rs/office2pdf/badge.svg)](https://docs.rs/office2pdf)
-[![License](https://img.shields.io/crates/l/office2pdf.svg)](LICENSE)
+[![upstream](https://img.shields.io/badge/upstream-office2pdf-blue)](https://github.com/developer0hye/office2pdf)
+[![crates.io](https://img.shields.io/crates/v/office2pdf-katana.svg)](https://crates.io/crates/office2pdf-katana)
+[![docs.rs](https://docs.rs/office2pdf-katana/badge.svg)](https://docs.rs/office2pdf-katana)
+[![License](https://img.shields.io/crates/l/office2pdf-katana.svg)](LICENSE)
+
+Compatibility-maintenance package for KatanA's registry-only release chain. It is
+based on upstream `office2pdf` 0.6.5 and carries the merged PowerPoint paragraph
+spacing fix from upstream PR #745. The package remains Apache-2.0 licensed and
+retains the upstream source history. It will be replaced by the official
+`office2pdf` package after an equivalent maintenance release is published.
 
 Pure-Rust library and CLI for converting DOCX, XLSX, and PPTX files to PDF.
 
@@ -26,7 +32,7 @@ No LibreOffice, no Chromium, no Docker — just a single binary powered by [Typs
 
 ```toml
 [dependencies]
-office2pdf = "0.6.6"
+office2pdf = { package = "office2pdf-katana", version = "=0.6.6" }
 ```
 
 ### CLI
