@@ -116,6 +116,16 @@ fn fallback_candidates(font_family: &str, context: Option<&FontSearchContext>) -
     candidates
 }
 
+/// Families to try when resolving a declared name to the face used by rendering.
+pub(crate) fn family_candidates(font_family: &str) -> Vec<String> {
+    ACTIVE_FONT_CONTEXT.with(|active_context| {
+        let context = active_context.borrow();
+        let mut candidates: Vec<String> = vec![font_family.to_string()];
+        candidates.extend(fallback_candidates(font_family, context.as_ref()));
+        candidates
+    })
+}
+
 /// Return metric-compatible substitute font names for the given font family.
 ///
 /// Returns `None` if no substitution is defined for the font (i.e., it is not

@@ -13,7 +13,7 @@ use office2pdf::config::ConvertOptions;
 use office2pdf::internal::Parser;
 use office2pdf::internal::PptxParser;
 use office2pdf::internal::generate_typst;
-use office2pdf::ir::{Block, Color, FixedElementKind, FixedPage, Page};
+use office2pdf::ir::{Block, Color, FixedElementKind, FixedPage, LineSpacing, Page};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -143,6 +143,56 @@ fn acceptance_pr_188_contributor_acceptance_page_fill_reset() {
     assert_eq!(page_settings.len(), 2);
     assert!(page_settings[0].contains("fill: rgb(192, 0, 0)"));
     assert!(page_settings[1].contains("fill: white"));
+}
+
+// ---------------------------------------------------------------------------
+// paragraph-boundary-spacing.pptx
+// ---------------------------------------------------------------------------
+
+#[test]
+fn smoke_paragraph_boundary_spacing() {
+    assert_produces_valid_pdf("paragraph-boundary-spacing.pptx");
+}
+
+#[test]
+fn structure_paragraph_boundary_spacing_keeps_three_unstyled_paragraphs() {
+    let pages = fixed_pages("paragraph-boundary-spacing.pptx");
+    assert_eq!(pages.len(), 1);
+    let text_box = pages[0]
+        .elements
+        .iter()
+        .find_map(|element| match &element.kind {
+            FixedElementKind::TextBox(text_box) => Some(text_box),
+            _ => None,
+        })
+        .expect("fixture should contain its text frame");
+    let paragraphs: Vec<_> = text_box
+        .content
+        .iter()
+        .filter_map(|block| match block {
+            Block::Paragraph(paragraph) => Some(paragraph),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(paragraphs.len(), 3);
+    for (index, paragraph) in paragraphs.iter().enumerate() {
+        assert!(
+            matches!(
+                paragraph.style.line_spacing,
+                Some(LineSpacing::Proportional(factor)) if (factor - 1.0).abs() < f64::EPSILON
+            ),
+            "paragraph should retain its 100% line spacing: {:?}",
+            paragraph.style.line_spacing
+        );
+        assert!(paragraph.runs[0].style.font_family.is_none());
+        assert_eq!(paragraph.runs[0].style.font_size, Some(18.0));
+        assert!(
+            paragraph.runs[0]
+                .text
+                .starts_with(&format!("Paragraph {}", ["one", "two", "three"][index]))
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

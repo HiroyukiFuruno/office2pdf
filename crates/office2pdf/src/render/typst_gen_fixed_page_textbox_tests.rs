@@ -101,7 +101,20 @@ fn test_fixed_page_text_box_multiple_paragraphs_preserve_breaks() {
     let output = generate_typst(&doc).unwrap();
     assert!(output.source.contains("First item"));
     assert!(output.source.contains("Second item"));
-    assert!(output.source.contains("First item\n\n  Second item"));
+    assert!(
+        output.source.find("First item") < output.source.find("Second item"),
+        "paragraph order changed: {}",
+        output.source
+    );
+    assert_eq!(
+        output
+            .source
+            .matches("#block(above: 0pt, below: 0pt)")
+            .count(),
+        2,
+        "each paragraph should retain a separate block: {}",
+        output.source
+    );
 }
 
 #[test]

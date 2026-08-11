@@ -26,7 +26,7 @@ No LibreOffice, no Chromium, no Docker — just a single binary powered by [Typs
 
 ```toml
 [dependencies]
-office2pdf = "0.6.5"
+office2pdf = "0.6.6"
 ```
 
 ### CLI
@@ -51,7 +51,7 @@ Every [GitHub release](https://github.com/developer0hye/office2pdf/releases) shi
 On Linux and macOS, download, extract, and place the binary on your `PATH`:
 
 ```sh
-VERSION=v0.6.5
+VERSION=v0.6.6
 TARGET=x86_64-unknown-linux-gnu  # pick your platform's target from the table above
 curl -L "https://github.com/developer0hye/office2pdf/releases/download/${VERSION}/office2pdf-${VERSION}-${TARGET}.tar.gz" | tar xz
 sudo install "office2pdf-${VERSION}-${TARGET}/office2pdf" /usr/local/bin/

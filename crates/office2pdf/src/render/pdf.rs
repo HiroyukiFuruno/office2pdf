@@ -467,6 +467,22 @@ pub(crate) fn font_line_metrics_em(_family: &str) -> Option<(f64, f64, f64)> {
 /// Arial, Calibri, and Malgun Gothic (issues #485, #513).
 pub(crate) const POWERPOINT_LINE_HEIGHT_FACTOR: f64 = 1.2;
 
+#[cfg(not(target_arch = "wasm32"))]
+fn best_face(family: &str) -> Option<typst::text::Font> {
+    let search_context = super::font_context::resolve_font_search_context(&[]);
+    let data = get_fonts_for_extra_paths(search_context.search_paths());
+    super::font_subst::family_candidates(family)
+        .iter()
+        .find_map(|candidate| {
+            data.book.select(
+                &candidate.to_lowercase(),
+                typst::text::FontVariant::default(),
+            )
+        })
+        .and_then(|index| data.fonts.get(index))
+        .and_then(|slot| slot.get())
+}
+
 /// PowerPoint's `(above baseline, below baseline)` split of that line, in em.
 ///
 /// The baseline divides the 1.2em line in the proportion of the font's OS/2
@@ -494,13 +510,13 @@ pub(crate) fn powerpoint_line_box_em(family: &str) -> Option<(f64, f64)> {
         return *cached;
     }
 
-    let search_context = super::font_context::resolve_font_search_context(&[]);
-    let data = get_fonts_for_extra_paths(search_context.search_paths());
-    let split: Option<(f64, f64)> = data
-        .book
-        .select(&key, typst::text::FontVariant::default())
-        .and_then(|index| data.fonts.get(index))
-        .and_then(|slot| slot.get())
+    // Resolve through the same metric-compatible substitute chain Typst sees
+    // in the emitted font list. If none of those faces exists, Typst renders
+    // with its embedded default, so the metrics lookup must end there too.
+    // Otherwise a missing Office face can collapse consecutive paragraphs to
+    // the fallback font's glyph height (issue #705).
+    let split: Option<(f64, f64)> = best_face(family)
+        .or_else(|| best_face(crate::defaults::TYPST_DEFAULT_FONT_FAMILY))
         .and_then(|font| {
             let table = font.ttf().tables().os2?;
             // `usWinDescent` is an unsigned distance *below* the baseline in

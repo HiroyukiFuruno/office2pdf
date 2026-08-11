@@ -247,7 +247,8 @@ pub(super) fn powerpoint_line_height_settings(
     }
     let family: &str = runs
         .iter()
-        .find_map(|run| run.style.font_family.as_deref())?;
+        .find_map(|run| run.style.font_family.as_deref())
+        .unwrap_or(crate::defaults::TYPST_DEFAULT_FONT_FAMILY);
     let (ascent_em, descent_em) = crate::render::pdf::powerpoint_line_box_em(family)?;
     Some(format!(
         "#set text(top-edge: {}em, bottom-edge: -{}em)\n#set par(leading: 0pt)\n",
