@@ -117,7 +117,7 @@ fn generate_table_inner(
     let heading_strip_row_count: usize =
         usize::from(table.prints_headings && !table.rows.is_empty());
     let countable_rows: usize = table.rows.len() - heading_strip_row_count;
-    let header_row_count = table.header_row_count.min(countable_rows);
+    let declared_header_row_count = table.header_row_count.min(countable_rows);
     let default_cell_padding = table.default_cell_padding.unwrap_or(Insets {
         top: 5.0,
         right: 5.0,
@@ -132,7 +132,10 @@ fn generate_table_inner(
     // then need a higher level to keep repeating alongside it.
     let lead_row_count = table
         .non_repeating_header_row_count
-        .min(countable_rows.saturating_sub(header_row_count));
+        .min(countable_rows.saturating_sub(declared_header_row_count));
+    let title_start = heading_strip_row_count + lead_row_count;
+    let header_row_count =
+        header_row_count_covering_rowspans(&table.rows[title_start..], declared_header_row_count);
 
     // Grid boundaries whose upper side repeats on every page while the lower
     // side prints once: the printed-headings letter strip's bottom (issue
@@ -258,6 +261,23 @@ fn generate_table_inner(
 
     out.push_str(")\n");
     Ok(())
+}
+
+/// Keep rows touched by a header-originating rowspan in the same Typst header
+/// block. Typst cannot continue a header cell in the body; splitting such a
+/// merge makes cells in the following rows overflow the available columns.
+fn header_row_count_covering_rowspans(rows: &[TableRow], declared_count: usize) -> usize {
+    let mut covered_count = declared_count.min(rows.len());
+    let mut row_index = 0usize;
+    while row_index < covered_count {
+        for cell in &rows[row_index].cells {
+            covered_count = covered_count
+                .max(row_index.saturating_add(cell.row_span as usize))
+                .min(rows.len());
+        }
+        row_index += 1;
+    }
+    covered_count
 }
 
 #[allow(clippy::too_many_arguments)]
