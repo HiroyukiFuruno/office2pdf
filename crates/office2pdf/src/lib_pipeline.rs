@@ -121,6 +121,7 @@ fn load_additional_fonts(options: &ConvertOptions) -> Result<Vec<typst::text::Fo
     }
 }
 
+#[cfg(any(feature = "pdf-ops", target_arch = "wasm32"))]
 fn effective_last_resort_family(options: &ConvertOptions) -> Option<&str> {
     let configured = options
         .last_resort_font_family
