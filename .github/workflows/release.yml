@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish, for example office2pdf-katana-v0.6.9"
+        description: "Release tag to publish, for example office2pdf-katana-v0.6.10"
         required: true
         type: string
 
