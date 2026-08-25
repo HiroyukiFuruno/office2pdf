@@ -1,9 +1,14 @@
-# office2pdf
+# office2pdf-katana
 
-[![CI](https://github.com/developer0hye/office2pdf/actions/workflows/ci.yml/badge.svg)](https://github.com/developer0hye/office2pdf/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/office2pdf.svg)](https://crates.io/crates/office2pdf)
-[![docs.rs](https://docs.rs/office2pdf/badge.svg)](https://docs.rs/office2pdf)
-[![License](https://img.shields.io/crates/l/office2pdf.svg)](LICENSE)
+[![upstream](https://img.shields.io/badge/upstream-office2pdf-blue)](https://github.com/developer0hye/office2pdf)
+[![crates.io](https://img.shields.io/crates/v/office2pdf-katana.svg)](https://crates.io/crates/office2pdf-katana)
+[![docs.rs](https://docs.rs/office2pdf-katana/badge.svg)](https://docs.rs/office2pdf-katana)
+[![License](https://img.shields.io/crates/l/office2pdf-katana.svg)](LICENSE)
+
+Compatibility-maintenance package for KatanA's registry-only release chain. It is
+based on the latest upstream `office2pdf` 0.6.7 source and carries the remaining
+PPTX table-header fix tracked by upstream issue #1289 and PR #1292. The package
+remains Apache-2.0 licensed and retains the upstream source history.
 
 Pure-Rust library and CLI for converting DOCX, XLSX, and PPTX files to PDF.
 
@@ -26,7 +31,7 @@ No LibreOffice, no Chromium, no Docker — just a single binary powered by [Typs
 
 ```toml
 [dependencies]
-office2pdf = "0.6.7"
+office2pdf = { package = "office2pdf-katana", version = "=0.6.8" }
 ```
 
 ### CLI
@@ -37,24 +42,24 @@ cargo install office2pdf-cli
 
 #### Prebuilt binaries
 
-Every [GitHub release](https://github.com/developer0hye/office2pdf/releases) ships standalone CLI binaries — no Rust toolchain needed:
+Every [fork release](https://github.com/HiroyukiFuruno/office2pdf/releases) ships standalone CLI binaries — no Rust toolchain needed:
 
 | Platform | Asset |
 |----------|-------|
-| Linux x86_64 (glibc) | `office2pdf-<version>-x86_64-unknown-linux-gnu.tar.gz` |
-| Linux x86_64 (static musl) | `office2pdf-<version>-x86_64-unknown-linux-musl.tar.gz` |
-| Linux ARM64 | `office2pdf-<version>-aarch64-unknown-linux-gnu.tar.gz` |
-| macOS Apple Silicon | `office2pdf-<version>-aarch64-apple-darwin.tar.gz` |
-| macOS Intel | `office2pdf-<version>-x86_64-apple-darwin.tar.gz` |
-| Windows x86_64 | `office2pdf-<version>-x86_64-pc-windows-msvc.zip` |
+| Linux x86_64 (glibc) | `<release-tag>-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux x86_64 (static musl) | `<release-tag>-x86_64-unknown-linux-musl.tar.gz` |
+| Linux ARM64 | `<release-tag>-aarch64-unknown-linux-gnu.tar.gz` |
+| macOS Apple Silicon | `<release-tag>-aarch64-apple-darwin.tar.gz` |
+| macOS Intel | `<release-tag>-x86_64-apple-darwin.tar.gz` |
+| Windows x86_64 | `<release-tag>-x86_64-pc-windows-msvc.zip` |
 
 On Linux and macOS, download, extract, and place the binary on your `PATH`:
 
 ```sh
-VERSION=v0.6.7
+VERSION=office2pdf-katana-v0.6.8
 TARGET=x86_64-unknown-linux-gnu  # pick your platform's target from the table above
-curl -L "https://github.com/developer0hye/office2pdf/releases/download/${VERSION}/office2pdf-${VERSION}-${TARGET}.tar.gz" | tar xz
-sudo install "office2pdf-${VERSION}-${TARGET}/office2pdf" /usr/local/bin/
+curl -L "https://github.com/HiroyukiFuruno/office2pdf/releases/download/${VERSION}/${VERSION}-${TARGET}.tar.gz" | tar xz
+sudo install "${VERSION}-${TARGET}/office2pdf" /usr/local/bin/
 ```
 
 On Windows, unzip the archive and add `office2pdf.exe` to your `PATH`.

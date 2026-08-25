@@ -210,6 +210,59 @@ fn test_table_with_repeating_header_rows_uses_table_header() {
 }
 
 #[test]
+fn test_repeating_header_expands_to_cover_rowspan() {
+    let spanning_header = TableCell {
+        content: vec![Block::Paragraph(Paragraph {
+            style: ParagraphStyle::default(),
+            runs: vec![Run {
+                text: "Spanning header".to_string(),
+                style: TextStyle::default(),
+                href: None,
+                footnote: None,
+            }],
+        })],
+        row_span: 3,
+        ..TableCell::default()
+    };
+    let table = Table {
+        rows: vec![
+            TableRow {
+                minimum_height: None,
+                cells: vec![spanning_header, make_text_cell("Year")],
+                height: None,
+            },
+            TableRow {
+                minimum_height: None,
+                cells: vec![make_text_cell("Month")],
+                height: None,
+            },
+            TableRow {
+                minimum_height: None,
+                cells: vec![make_text_cell("Day")],
+                height: None,
+            },
+            TableRow {
+                minimum_height: None,
+                cells: vec![make_text_cell("Body 1"), make_text_cell("Body 2")],
+                height: None,
+            },
+        ],
+        column_widths: vec![100.0, 100.0],
+        header_row_count: 1,
+        ..Table::default()
+    };
+    let doc = make_doc(vec![make_flow_page(vec![Block::Table(table)])]);
+    let result = generate_typst(&doc).unwrap().source;
+    let header_start = result.find("table.header(").expect("header block");
+    let body_start = result.find("Body 1").expect("body row");
+    let header = &result[header_start..body_start];
+
+    assert!(header.contains("Spanning header"), "{result}");
+    assert!(header.contains("Month"), "{result}");
+    assert!(header.contains("Day"), "{result}");
+}
+
+#[test]
 fn test_table_with_colspan() {
     let merged_cell = TableCell {
         content: vec![Block::Paragraph(Paragraph {

@@ -9,12 +9,12 @@ set -euo pipefail
 : "${DEFAULT_BRANCH:?DEFAULT_BRANCH is required}"
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
-if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "::error::Release tag must match vMAJOR.MINOR.PATCH: ${RELEASE_TAG}"
+if [[ ! "${RELEASE_TAG}" =~ ^office2pdf-katana-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "::error::Release tag must match office2pdf-katana-vMAJOR.MINOR.PATCH: ${RELEASE_TAG}"
   exit 1
 fi
 
-version="${RELEASE_TAG#v}"
+version="${RELEASE_TAG#office2pdf-katana-v}"
 gh_cli_bin="${GH_CLI_BIN:-gh}"
 tag_exists=false
 release_commit="${GITHUB_SHA}"
@@ -22,7 +22,7 @@ release_commit="${GITHUB_SHA}"
 if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" >/dev/null; then
   tag_exists=true
   release_commit="$(git rev-list -n 1 "refs/tags/${RELEASE_TAG}")"
-  git checkout --detach "${RELEASE_TAG}"
+  git switch --detach "${RELEASE_TAG}"
 elif [[ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]]; then
   echo "::error::Release event tag ${RELEASE_TAG} is not available in the checkout"
   exit 1
@@ -32,9 +32,9 @@ elif [[ "${GITHUB_REF_NAME}" != "${DEFAULT_BRANCH}" ]]; then
 fi
 
 metadata="$(cargo metadata --locked --no-deps --format-version 1)"
-lib_version="$(jq -r '.packages[] | select(.name == "office2pdf") | .version' <<<"${metadata}")"
+lib_version="$(jq -r '.packages[] | select(.name == "office2pdf-katana") | .version' <<<"${metadata}")"
 cli_version="$(jq -r '.packages[] | select(.name == "office2pdf-cli") | .version' <<<"${metadata}")"
-cli_dependency="$(jq -r '.packages[] | select(.name == "office2pdf-cli") | .dependencies[] | select(.name == "office2pdf") | .req' <<<"${metadata}")"
+cli_dependency="$(jq -r '.packages[] | select(.name == "office2pdf-cli") | .dependencies[] | select(.name == "office2pdf-katana") | .req' <<<"${metadata}")"
 
 if [[ "${lib_version}" != "${version}" || "${cli_version}" != "${version}" ]]; then
   echo "::error::Cargo package versions (${lib_version}, ${cli_version}) do not match ${RELEASE_TAG}"

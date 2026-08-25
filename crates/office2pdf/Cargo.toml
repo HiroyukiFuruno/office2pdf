@@ -1,16 +1,17 @@
 [package]
-name = "office2pdf"
-version = "0.6.7"
+name = "office2pdf-katana"
+version = "0.6.8"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Convert DOCX, XLSX, and PPTX files to PDF using pure Rust"
+description = "KatanA maintenance build of office2pdf for pure-Rust DOCX, XLSX, and PPTX conversion"
 readme = "../../README.md"
 keywords = ["pdf", "docx", "xlsx", "pptx", "converter"]
 categories = ["text-processing"]
 
 [lib]
+name = "office2pdf"
 crate-type = ["cdylib", "rlib"]
 
 [features]

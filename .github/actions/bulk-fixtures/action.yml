@@ -4,6 +4,10 @@ description: >-
   Only the bulk regression gate needs it; the default test suite reads the tracked subset.
 
 inputs:
+  repository:
+    description: Repository that publishes the shared fixture corpus.
+    required: false
+    default: developer0hye/office2pdf
   tag:
     description: Release tag holding the corpus archive.
     required: false
@@ -26,7 +30,7 @@ runs:
     - name: Download and extract corpus
       shell: bash
       env:
-        ARCHIVE_URL: https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/third-party-fixtures.tar.gz
+        ARCHIVE_URL: https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}/third-party-fixtures.tar.gz
         EXPECTED_SHA: ${{ inputs.sha256 }}
         MIN_FILES: ${{ inputs.min-files }}
       run: |
