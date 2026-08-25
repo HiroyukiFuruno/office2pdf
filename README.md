@@ -31,7 +31,7 @@ No LibreOffice, no Chromium, no Docker — just a single binary powered by [Typs
 
 ```toml
 [dependencies]
-office2pdf = { package = "office2pdf-katana", version = "=0.6.8" }
+office2pdf = { package = "office2pdf-katana", version = "=0.6.9" }
 ```
 
 ### CLI
@@ -56,7 +56,7 @@ Every [fork release](https://github.com/HiroyukiFuruno/office2pdf/releases) ship
 On Linux and macOS, download, extract, and place the binary on your `PATH`:
 
 ```sh
-VERSION=office2pdf-katana-v0.6.8
+VERSION=office2pdf-katana-v0.6.9
 TARGET=x86_64-unknown-linux-gnu  # pick your platform's target from the table above
 curl -L "https://github.com/HiroyukiFuruno/office2pdf/releases/download/${VERSION}/${VERSION}-${TARGET}.tar.gz" | tar xz
 sudo install "${VERSION}-${TARGET}/office2pdf" /usr/local/bin/
