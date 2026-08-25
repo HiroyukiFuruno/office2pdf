@@ -19,7 +19,7 @@ quick-xml = "0.38"
 [dev-dependencies]
 # Projection tests render the round-tripped package through the existing
 # converter pipeline and inspect the resulting PDF.
-office2pdf = { path = "../office2pdf" }
+office2pdf = { package = "office2pdf-katana", path = "../office2pdf" }
 pdf-extract = "0.10"
 # Saved containers are re-read with `zip` directly so the model under test
 # never verifies its own output.

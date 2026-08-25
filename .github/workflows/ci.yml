@@ -24,7 +24,7 @@ jobs:
         # the release run's publish job, which is how v0.6.6 shipped binaries
         # but no crates (issue #1041). The CLI cannot be dry-run verified here:
         # it depends on the library version being published first.
-        run: cargo publish --dry-run -p office2pdf --allow-dirty
+        run: cargo publish --dry-run -p office2pdf-katana --allow-dirty
   release-contract:
     name: Release Automation Contract
     runs-on: ubuntu-latest
@@ -43,10 +43,10 @@ jobs:
           fi
 
           version="$(cargo metadata --no-deps --format-version 1 \
-            | jq -r '.packages[] | select(.name == "office2pdf") | .version')"
+            | jq -r '.packages[] | select(.name == "office2pdf-katana") | .version')"
 
           GH_CLI_BIN=true \
-          RELEASE_TAG="v${version}" \
+          RELEASE_TAG="office2pdf-katana-v${version}" \
           GITHUB_EVENT_NAME=workflow_dispatch \
           GITHUB_REF_NAME=main \
           DEFAULT_BRANCH=main \
@@ -54,7 +54,7 @@ jobs:
           bash scripts/release/prepare-release.sh
 
           if GH_CLI_BIN=true \
-            RELEASE_TAG="${version}" \
+            RELEASE_TAG="v${version}" \
             GITHUB_EVENT_NAME=workflow_dispatch \
             GITHUB_REF_NAME=main \
             DEFAULT_BRANCH=main \
@@ -65,7 +65,7 @@ jobs:
           fi
 
           if GH_CLI_BIN=true \
-            RELEASE_TAG="v${version}" \
+            RELEASE_TAG="office2pdf-katana-v${version}" \
             GITHUB_EVENT_NAME=workflow_dispatch \
             GITHUB_REF_NAME=feature \
             DEFAULT_BRANCH=main \
@@ -192,9 +192,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: wasm
-      - run: cargo check --target wasm32-unknown-unknown -p office2pdf
-      - run: cargo check --target wasm32-unknown-unknown -p office2pdf --features wasm
-      - run: cargo check --target wasm32-unknown-unknown -p office2pdf --features wasm-cjk-font
+      - run: cargo check --target wasm32-unknown-unknown -p office2pdf-katana
+      - run: cargo check --target wasm32-unknown-unknown -p office2pdf-katana --features wasm
+      - run: cargo check --target wasm32-unknown-unknown -p office2pdf-katana --features wasm-cjk-font
       - uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack
@@ -234,7 +234,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Compare fixture outcomes with baseline
-        run: cargo test --release -p office2pdf --test bulk_conversion test_bulk_regression_gate -- --ignored --nocapture --exact
+        run: cargo test --release -p office2pdf-katana --test bulk_conversion test_bulk_regression_gate -- --ignored --nocapture --exact
         env:
           BULK_REPORT_DIR: ${{ runner.temp }}/bulk-conversion
       - name: Upload bulk conversion reports
