@@ -1,6 +1,6 @@
 [package]
 name = "office2pdf-katana"
-version = "0.6.9"
+version = "0.6.10"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -9,6 +9,7 @@ description = "KatanA maintenance build of office2pdf for pure-Rust DOCX, XLSX, 
 readme = "../../README.md"
 keywords = ["pdf", "docx", "xlsx", "pptx", "converter"]
 categories = ["text-processing"]
+exclude = ["src/**/*_tests.rs", "tests/**", "benches/**"]
 
 [lib]
 name = "office2pdf"

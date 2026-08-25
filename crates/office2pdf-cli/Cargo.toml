@@ -1,6 +1,6 @@
 [package]
 name = "office2pdf-cli"
-version = "0.6.9"
+version = "0.6.10"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,7 +18,7 @@ path = "src/main.rs"
 server = ["tiny_http"]
 
 [dependencies]
-office2pdf = { package = "office2pdf-katana", version = "0.6.9", path = "../office2pdf", features = ["pdf-ops"] }
+office2pdf = { package = "office2pdf-katana", version = "0.6.10", path = "../office2pdf", features = ["pdf-ops"] }
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 rayon = "1"
