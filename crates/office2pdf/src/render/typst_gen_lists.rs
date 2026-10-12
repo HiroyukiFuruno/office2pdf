@@ -1734,92 +1734,112 @@ fn generate_list_items(
             }
 
             if nested_end > nested_start {
-                let nested_gap = if word_boundary_gaps {
-                    word_boundary_gap
-                } else {
-                    (per_item_gaps && wrapper_spans_full_line)
-                        .then(|| paragraph_space_after(item))
-                        .filter(|gap| *gap > 0.0001)
-                };
-                if nested_gap.is_none() {
-                    write_list_item_trailing_gap(
+                let mut child_start = nested_start;
+                while child_start < nested_end {
+                    // A skipped Word level has no physical item to provide its
+                    // style or indent. Start at the actual level and split when
+                    // a later child returns to a shallower level (#2087).
+                    let child_level = items[child_start].level;
+                    if child_level > base_level.saturating_add(1) {
+                        tracing::trace!(base_level, child_level, "Rendering skipped list level");
+                    }
+                    let mut child_end = child_start + 1;
+                    while child_end < nested_end && items[child_end].level >= child_level {
+                        child_end += 1;
+                    }
+                    let nested_gap = if child_start != nested_start {
+                        // A second child subtree must remain a block; placing
+                        // its list inline after the first adds a parent strut.
+                        Some(0.0)
+                    } else if word_boundary_gaps {
+                        word_boundary_gap
+                    } else {
+                        (per_item_gaps && wrapper_spans_full_line)
+                            .then(|| paragraph_space_after(item))
+                            .filter(|gap| *gap > 0.0001)
+                    };
+                    if child_start == nested_start && nested_gap.is_none() {
+                        write_list_item_trailing_gap(
+                            out,
+                            item,
+                            has_uniform_spacing,
+                            wrapper_spans_full_line,
+                            word_boundary_gap,
+                        );
+                    }
+                    let nested_style = list_style_for_level(list, child_level);
+                    let fallback_marker_style =
+                        common_list_level_text_style(&items[child_start..child_end], child_level);
+                    // Word indents are absolute from the margin, but a nested
+                    // Typst list is laid out inside the parent item's body:
+                    // subtract the parent's text origin so the child marker
+                    // lands at its absolute position (issue #356).
+                    let parent_indent = common_list_level_indent(&items[i..=i], base_level);
+                    let indent =
+                        common_list_level_indent(&items[child_start..child_end], child_level).map(
+                            |mut child| {
+                                if let Some(parent) = parent_indent {
+                                    child.marker_origin_pt = (child.marker_origin_pt
+                                        - (parent.marker_origin_pt + parent.marker_width_pt))
+                                        .max(0.0);
+                                }
+                                child
+                            },
+                        );
+                    // PowerPoint's a:spcAft belongs to the item that declares it.
+                    // A shared nested `spacing:` cannot carry the last child's
+                    // gap across the return to its parent level, so retain every
+                    // child gap on that path (issue #659).
+                    let spacing_pt = if word_boundary_gaps {
+                        Some(0.0)
+                    } else if per_item_gaps {
+                        None
+                    } else {
+                        common_list_level_spacing(
+                            &items[child_start..child_end],
+                            child_level,
+                            wrapper_spans_full_line,
+                        )
+                    };
+                    let nested_start_at = items[child_start].start_at;
+                    if let Some(gap) = nested_gap {
+                        // `#v` immediately after inline parent text creates a new
+                        // line of its own before the nested list. Block spacing
+                        // adds only the resolved paragraph gap to the normal
+                        // parent-to-child line advance (issue #659).
+                        let _ =
+                            writeln!(out, " #block(width: 100%, above: {}pt)[", format_f64(gap));
+                    }
+                    write_list_open(
                         out,
-                        item,
-                        has_uniform_spacing,
-                        wrapper_spans_full_line,
-                        word_boundary_gap,
-                    );
-                }
-                let nested_style = list_style_for_level(list, base_level + 1);
-                let fallback_marker_style =
-                    common_list_level_text_style(&items[nested_start..nested_end], base_level + 1);
-                // Word indents are absolute from the margin, but a nested
-                // Typst list is laid out inside the parent item's body:
-                // subtract the parent's text origin so the child marker
-                // lands at its absolute position (issue #356).
-                let parent_indent = common_list_level_indent(&items[i..=i], base_level);
-                let indent =
-                    common_list_level_indent(&items[nested_start..nested_end], base_level + 1).map(
-                        |mut child| {
-                            if let Some(parent) = parent_indent {
-                                child.marker_origin_pt = (child.marker_origin_pt
-                                    - (parent.marker_origin_pt + parent.marker_width_pt))
-                                    .max(0.0);
-                            }
-                            child
+                        if nested_gap.is_some() { "#" } else { " #" },
+                        &nested_style,
+                        fallback_marker_style.as_ref(),
+                        ListOpenOptions {
+                            indent,
+                            spacing_pt,
+                            start_at: nested_start_at,
+                            baseline_snap: None,
                         },
                     );
-                // PowerPoint's a:spcAft belongs to the item that declares it.
-                // A shared nested `spacing:` cannot carry the last child's
-                // gap across the return to its parent level, so retain every
-                // child gap on that path (issue #659).
-                let spacing_pt = if word_boundary_gaps {
-                    Some(0.0)
-                } else if per_item_gaps {
-                    None
-                } else {
-                    common_list_level_spacing(
-                        &items[nested_start..nested_end],
-                        base_level + 1,
+                    generate_list_items(
+                        out,
+                        list,
+                        &items[child_start..child_end],
+                        child_level,
                         wrapper_spans_full_line,
-                    )
-                };
-                let nested_start_at = items[nested_start].start_at;
-                if let Some(gap) = nested_gap {
-                    // `#v` immediately after inline parent text creates a new
-                    // line of its own before the nested list. Block spacing
-                    // adds only the resolved paragraph gap to the normal
-                    // parent-to-child line advance (issue #659).
-                    let _ = writeln!(out, " #block(width: 100%, above: {}pt)[", format_f64(gap));
-                }
-                write_list_open(
-                    out,
-                    if nested_gap.is_some() { "#" } else { " #" },
-                    &nested_style,
-                    fallback_marker_style.as_ref(),
-                    ListOpenOptions {
-                        indent,
-                        spacing_pt,
-                        start_at: nested_start_at,
-                        baseline_snap: None,
-                    },
-                );
-                generate_list_items(
-                    out,
-                    list,
-                    &items[nested_start..nested_end],
-                    base_level + 1,
-                    wrapper_spans_full_line,
-                    spacing_pt.is_some() || !per_item_gaps,
-                    per_item_gaps,
-                    word_boundary_gaps,
-                    items.get(nested_end).or(following_item),
-                    eojeol_wrap,
-                    ctx,
-                )?;
-                out.push(')');
-                if nested_gap.is_some() {
-                    out.push_str("\n]");
+                        spacing_pt.is_some() || !per_item_gaps,
+                        per_item_gaps,
+                        word_boundary_gaps,
+                        items.get(child_end).or(following_item),
+                        eojeol_wrap,
+                        ctx,
+                    )?;
+                    out.push(')');
+                    if nested_gap.is_some() {
+                        out.push_str("\n]");
+                    }
+                    child_start = child_end;
                 }
                 i = nested_end;
             } else {

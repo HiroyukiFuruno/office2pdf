@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "sha256": "69caf8de313b05d9adca6ec0b25e3c44c2aeaa9107c981b03c913582b9bccd34",
+    "change": "Authored Apache-2.0 derivative: seven named paragraphs at levels 0/1/2/1/2/0/2, added third level, restart flag omitted."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "beb71f14295207604ea9664194893fabd9ed1fec4349ce836c04cdba270919d7"
+  },
+  "before": {
+    "office2pdf_revision": "d5f866b64ee3f9e188c7cba658732980bfee16b0",
+    "pdf_sha256": "5857ca97c7bd2be62fe1725bf407de00e6e78b9166fa822e7b27cd0a2d69e96f"
+  },
+  "after": {
+    "pdf_sha256": "baa283c9eaf9efffc4b0762d7e0f88ea56fdc0e183b08fd95db878156176e5ff",
+    "converter_sha256": "27cb7e6416f55a46696a409b37f442c4f04a163cd0a68ef64996a0b82e7873f6"
+  },
+  "filing_comparison": {
+    "office2pdf_revision": "63a99a43324c30a8a17437fc4c8877fb1d516d34",
+    "note": "compare.jpg remains the original filing-time image; before.jpg uses the merged restart fix."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, 5% pixel diffs, every matched before shift crop, complete heading/list pairs and publication JPEGs at 150 DPI. Before puts the skipped Item G marker/body 18pt left and uses a fallback marker face; current restores the declared third-level origin and Cambria marker. One Letter page retains the heading and seven list items, black Cambria 14pt bold heading and 11pt regular body. No rotation, shape, fill, border/stroke, hairline <=1pt, italic, underline, clipping or overflow occurs. Original searchable content/order and codepoint census match Word. Worst remaining baseline drift is 0.201pt, below 0.5pt and tracked in #1874. Original and no-patch-control pages have no layout failures; all six strict reports have zero material raster clusters. Four-level sequence probes retain the correct bracket/parenthesis marker styles, absolute indents and physical paragraph gaps when returning to a shallower child subtree. Their incorrect implicit-ancestor labels remain in #2091: Item D is (1) rather than (2) in return/siblings; Item C and Item E are (1) rather than (2) in leading. Those three pages fail text-flow/content audits and are not complete visual passes. No additional material finding remains untracked.",
+  "remaining": {
+    "submaterial_baseline": "#1874"
+  },
+  "native_probes": [
+    {
+      "name": "base",
+      "source_sha256": "75a907ad41e91997e66a31e0e0f9043eee7559423515e83d77fd9834726e4466",
+      "native_pdf_sha256": "cab15b86576aabb9e2e0e97aef1610933ff83a8cc62ffc37d0ab9d44f3970c88",
+      "after_pdf_sha256": "baa283c9eaf9efffc4b0762d7e0f88ea56fdc0e183b08fd95db878156176e5ff",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2087/probes/base-layout.json",
+        "text": "tests/visual_audits/issue-2087/probes/base-text.json",
+        "render": "tests/visual_audits/issue-2087/probes/base-render.json",
+        "dispositions": "tests/visual_audits/issue-2087/probes/base-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "control",
+      "source_sha256": "75a907ad41e91997e66a31e0e0f9043eee7559423515e83d77fd9834726e4466",
+      "native_pdf_sha256": "964fc13af2e4bcfda8c7079d240b30dd6a0311ad39450a6d7b1e911c0dfa7f29",
+      "after_pdf_sha256": "baa283c9eaf9efffc4b0762d7e0f88ea56fdc0e183b08fd95db878156176e5ff",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2087/probes/control-layout.json",
+        "text": "tests/visual_audits/issue-2087/probes/control-text.json",
+        "render": "tests/visual_audits/issue-2087/probes/control-render.json",
+        "dispositions": "tests/visual_audits/issue-2087/probes/control-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "return",
+      "source_sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+      "native_pdf_sha256": "b6643feda28407928c4909349cb0a866840f385a6a6787bed3c1e7ac29e19e9e",
+      "after_pdf_sha256": "807761313fa529d778b462da72fb32213aa0b37dd418ac5f4a4a20f5269b86fc",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2087/probes/return-layout.json",
+        "text": "tests/visual_audits/issue-2087/probes/return-text.json",
+        "render": "tests/visual_audits/issue-2087/probes/return-render.json",
+        "dispositions": "tests/visual_audits/issue-2087/probes/return-dispositions.json"
+      },
+      "remaining": "#2091"
+    },
+    {
+      "name": "leading",
+      "source_sha256": "9c4abae85aa4d34650861395e1945e145e3416653a8096c3df87d16a0da5f04e",
+      "native_pdf_sha256": "514d4339c50f70a4d0f8ad47f8767e7cfafd1839d31b6ab38254c46ca02bdeda",
+      "after_pdf_sha256": "579015bcafc3cba2ef69ba73a7d859b38955eea74f737fc7572e265d15613e2d",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2087/probes/leading-layout.json",
+        "text": "tests/visual_audits/issue-2087/probes/leading-text.json",
+        "render": "tests/visual_audits/issue-2087/probes/leading-render.json",
+        "dispositions": "tests/visual_audits/issue-2087/probes/leading-dispositions.json"
+      },
+      "remaining": "#2091"
+    },
+    {
+      "name": "siblings",
+      "source_sha256": "b2c56dbd440520aebff536a10b932bb6111408e470b24c0571ae6d5e75ca0319",
+      "native_pdf_sha256": "21b1feb5571385817852a839e39529b0785d8b236ed2330f07ca8832e5d183e8",
+      "after_pdf_sha256": "97cc91a0718ea23727eb8d731839175da9a6b4ba2138f453f0d4471177b81c88",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2087/probes/siblings-layout.json",
+        "text": "tests/visual_audits/issue-2087/probes/siblings-text.json",
+        "render": "tests/visual_audits/issue-2087/probes/siblings-render.json",
+        "dispositions": "tests/visual_audits/issue-2087/probes/siblings-dispositions.json"
+      },
+      "remaining": "#2091"
+    }
+  ],
+  "control": "No-patch re-ZIP export is layout-identical to base. Only paragraph ilvl values change between four-level sequence variants.",
+  "followup_filing_comparison": {
+    "issue": 2091,
+    "source_sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+    "native_pdf_sha256": "b6643feda28407928c4909349cb0a866840f385a6a6787bed3c1e7ac29e19e9e",
+    "output_pdf_sha256": "64c9dab214ecba84a89312efee8b30623a403a2875966a63169c21110ed42ac4",
+    "office2pdf_revision": "d5f866b64ee3f9e188c7cba658732980bfee16b0"
+  }
+}

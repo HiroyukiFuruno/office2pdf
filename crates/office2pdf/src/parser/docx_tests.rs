@@ -3192,3 +3192,101 @@ fn docx_legal_numbering_override_can_disable_abstract_level_flag() {
     }
     assert!(!text.contains("1.1."));
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_skipped_list_levels_keep_absolute_marker_and_body_origins() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_skipped_levels.docx");
+    let (document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let position = |label: &str| runs.iter().find(|run| run.text == label).unwrap();
+    let first = position("Item C");
+    let skipped = position("Item G");
+    assert!(
+        (first.left_pt - skipped.left_pt).abs() < 0.01,
+        "same-level body origins: {first:?} / {skipped:?}"
+    );
+    let marker = runs
+        .iter()
+        .find(|run| {
+            run.text.starts_with('(') && (run.baseline_pt - skipped.baseline_pt).abs() < 0.01
+        })
+        .unwrap();
+    assert_eq!(
+        marker.family, skipped.family,
+        "marker must use the skipped level's text face"
+    );
+    assert!((marker.font_size_pt - skipped.font_size_pt).abs() < 0.01);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_skipped_list_subtrees_handle_returns_to_shallower_child_levels() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_restart_policy.docx");
+    let (base, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let original_source = crate::render::typst_gen::generate_typst(&base).unwrap();
+    let original_runs = crate::render::pdf::compiled_text_runs(&original_source.source, 0).unwrap();
+    for levels in [
+        [0, 2, 3, 1, 2, 0, 2],
+        [0, 3, 2, 3, 1, 2, 0],
+        [0, 2, 2, 1, 3, 0, 1],
+    ] {
+        let mut document = base.clone();
+        let Page::Flow(page) = &mut document.pages[0] else {
+            panic!("flow page")
+        };
+        let margin = page.margins.left;
+        let list = page
+            .content
+            .iter_mut()
+            .find_map(|element| match element {
+                Block::List(list) => Some(list),
+                _ => None,
+            })
+            .unwrap();
+        let mut deepest = list.level_styles[&2].clone();
+        deepest.numbering_pattern = Some("[1]".to_string());
+        deepest.marker_style = Some(TextStyle {
+            font_size: Some(11.0),
+            ..TextStyle::default()
+        });
+        list.level_styles.insert(3, deepest);
+        for (item, level) in list.items.iter_mut().zip(levels) {
+            item.level = level;
+            item.start_at = Some(1);
+            item.content[0].style.indent_left = Some(18.0 * f64::from(level + 1));
+            item.content[0].style.indent_first_line = Some(-18.0);
+        }
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+        for (index, level) in levels.into_iter().enumerate() {
+            let label = format!("Item {}", char::from(b'A' + index as u8));
+            let body = runs.iter().find(|run| run.text == label).unwrap();
+            let expected = margin + 18.0 * f64::from(level + 1);
+            assert!(
+                (body.left_pt - expected).abs() < 0.01,
+                "levels {levels:?}, {label}: {} expected {expected}",
+                body.left_pt
+            );
+            let original = original_runs.iter().find(|run| run.text == label).unwrap();
+            assert!(
+                (body.baseline_pt - original.baseline_pt).abs() < 0.5,
+                "levels {levels:?}, {label}: baseline {} expected {}",
+                body.baseline_pt,
+                original.baseline_pt
+            );
+            if level == 3 {
+                let marker = runs
+                    .iter()
+                    .find(|run| {
+                        run.text == "[1]" && (run.baseline_pt - body.baseline_pt).abs() < 5.0
+                    })
+                    .unwrap();
+                assert!((marker.font_size_pt - 11.0).abs() < 0.01);
+            }
+        }
+    }
+}
