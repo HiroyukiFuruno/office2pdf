@@ -47,6 +47,12 @@ enum NumberingSeries {
     Numbering(usize),
 }
 
+#[derive(Clone, Copy)]
+struct NumberingCounter {
+    value: u32,
+    is_implicit: bool,
+}
+
 pub(super) type NumberingMap = HashMap<usize, ResolvedNumbering>;
 
 fn serialize_string<T: serde::Serialize>(value: &T) -> Option<String> {
@@ -351,7 +357,7 @@ fn numbering_series(num_id: usize, numberings: &NumberingMap) -> NumberingSeries
 /// ancestor is used; zero never resets. Same/later thresholds lack Word's level
 /// suppression behavior, tracked in #2088.
 fn reset_deeper_numbering_counters(
-    counters: &mut BTreeMap<u32, u32>,
+    counters: &mut BTreeMap<u32, NumberingCounter>,
     used_level: u32,
     numbering: Option<&ResolvedNumbering>,
 ) {
@@ -376,6 +382,32 @@ fn reset_deeper_numbering_counters(
         );
         !should_reset
     });
+}
+
+// Word counts a missing resettable ancestor before its descendant. Never-
+// restarting ancestors initialize only on physical items, as native probes show.
+fn initialize_implicit_numbering_ancestors(
+    counters: &mut BTreeMap<u32, NumberingCounter>,
+    used_level: u32,
+    numbering: &ResolvedNumbering,
+) {
+    for (ancestor_level, level) in numbering.levels.range(..used_level) {
+        if level.style.kind != ListKind::Ordered || level.restart_trigger == Some(0) {
+            continue;
+        }
+        counters.entry(*ancestor_level).or_insert_with(|| {
+            tracing::trace!(
+                used_level,
+                ancestor_level,
+                start = level.start,
+                "Initialized implicit DOCX numbering ancestor"
+            );
+            NumberingCounter {
+                value: level.start,
+                is_implicit: true,
+            }
+        });
+    }
 }
 
 fn apply_numbering_level_indentation(
@@ -441,7 +473,7 @@ pub(super) fn group_into_lists(
 ) -> Vec<Block> {
     let mut result: Vec<Block> = Vec::new();
     let mut current_list: Vec<NumberedItem> = Vec::new();
-    let mut counters: HashMap<NumberingSeries, BTreeMap<u32, u32>> = HashMap::new();
+    let mut counters: HashMap<NumberingSeries, BTreeMap<u32, NumberingCounter>> = HashMap::new();
     let mut last_num_id: HashMap<NumberingSeries, usize> = HashMap::new();
 
     for element in elements {
@@ -491,6 +523,14 @@ pub(super) fn group_into_lists(
                     );
                 }
 
+                if is_ordered {
+                    initialize_implicit_numbering_ancestors(
+                        counters.entry(series).or_default(),
+                        info.level,
+                        resolved_numbering.expect("ordered numbering must be resolved"),
+                    );
+                }
+
                 // Word puts numbers with `w:ind left=0 hanging=0` inline:
                 // number, suffix tab, first-line text, and continuation
                 // lines wrap back to the margin. A hanging-indent list would
@@ -537,9 +577,15 @@ pub(super) fn group_into_lists(
                     let number = if should_restart {
                         level.start
                     } else {
-                        series_counters[&info.level].saturating_add(1)
+                        series_counters[&info.level].value.saturating_add(1)
                     };
-                    series_counters.insert(info.level, number);
+                    series_counters.insert(
+                        info.level,
+                        NumberingCounter {
+                            value: number,
+                            is_implicit: false,
+                        },
+                    );
                     last_num_id.insert(series, info.num_id);
 
                     if !current_list.is_empty() {
@@ -586,13 +632,23 @@ pub(super) fn group_into_lists(
                     let number = if should_restart {
                         level.start
                     } else {
-                        series_counters[&info.level].saturating_add(1)
+                        series_counters[&info.level].value.saturating_add(1)
                     };
-                    series_counters.insert(info.level, number);
+                    let was_implicit: bool = series_counters
+                        .get(&info.level)
+                        .is_some_and(|counter| counter.is_implicit);
+                    series_counters.insert(
+                        info.level,
+                        NumberingCounter {
+                            value: number,
+                            is_implicit: false,
+                        },
+                    );
                     if should_restart
                         || is_first_in_block
                         || changes_series
                         || level.restart_trigger.is_some()
+                        || was_implicit
                     {
                         item.start_at = Some(number);
                     }

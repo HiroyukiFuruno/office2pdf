@@ -46,4 +46,4 @@ Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 Numbering uses its legal decimalization and restart counters. Native case72
 probes calibrate never/earlier-level restart rules; MS-OI29500 2.1.282 confirms
 Word ignores restart rules inside complete level overrides.
-Skipped physical child levels retain their actual style and absolute indentation.
+Native probes calibrate skipped-level styles/indents and implicit counters absent upstream.

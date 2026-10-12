@@ -2841,6 +2841,11 @@ fn docx_mixed_continuous_alignment_only_changes_the_shared_page() {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn rewrite_numbering_part(data: &[u8], edit: impl FnOnce(&str) -> String) -> Vec<u8> {
+    rewrite_docx_part(data, "word/numbering.xml", edit)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn rewrite_docx_part(data: &[u8], part: &str, edit: impl FnOnce(&str) -> String) -> Vec<u8> {
     let mut archive = zip::ZipArchive::new(Cursor::new(data)).unwrap();
     let mut output = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let mut edit = Some(edit);
@@ -2849,7 +2854,7 @@ fn rewrite_numbering_part(data: &[u8], edit: impl FnOnce(&str) -> String) -> Vec
         let name = entry.name().to_string();
         let mut content = Vec::new();
         std::io::Read::read_to_end(&mut entry, &mut content).unwrap();
-        if name == "word/numbering.xml" {
+        if name == part {
             content = edit.take().unwrap()(&String::from_utf8(content).unwrap()).into_bytes();
         }
         output
@@ -3287,6 +3292,128 @@ fn docx_skipped_list_subtrees_handle_returns_to_shallower_child_levels() {
                     .unwrap();
                 assert!((marker.font_size_pt - 11.0).abs() < 0.01);
             }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_skipped_ancestors_advance_later_visible_level_numbers() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    for start in [1, 7] {
+        for (levels, labels) in [
+            ([0, 2, 3, 1, 2, 0, 2], vec![("Item D", start + 1)]),
+            (
+                [0, 3, 2, 3, 1, 2, 0],
+                vec![("Item C", 2), ("Item E", start + 1)],
+            ),
+            ([0, 2, 2, 1, 3, 0, 1], vec![("Item D", start + 1)]),
+        ] {
+            let data = rewrite_numbering_part(base, |xml| {
+                let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                format!(
+                    "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                    child.replacen(
+                        "<w:start w:val=\"1\"/>",
+                        &format!("<w:start w:val=\"{start}\"/>"),
+                        1
+                    )
+                )
+            });
+            let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+                let mut parts = xml.split("<w:ilvl w:val=\"");
+                let mut output = parts.next().unwrap().to_string();
+                for (part, level) in parts.zip(levels) {
+                    let (_, rest) = part.split_once('"').unwrap();
+                    output.push_str(&format!("<w:ilvl w:val=\"{level}\"{rest}"));
+                }
+                output
+            });
+            let text = converted_numbering_text(&data);
+            let normalized: String = text.split_whitespace().collect();
+            for (label, value) in labels {
+                let label: String = label.split_whitespace().collect();
+                assert!(
+                    normalized.contains(&format!("({value}){label}")),
+                    "levels {levels:?}, start {start}: {text}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_implicit_ancestor_numbers_respect_never_restart_across_roots() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    for never in [false, true] {
+        let data = rewrite_docx_part(base, "word/document.xml", |xml| {
+            let paragraph = xml
+                .split("</w:p>")
+                .find(|part| part.contains("<w:t>Item D</w:t>"))
+                .unwrap();
+            let (_, content) = paragraph.rsplit_once("<w:p>").unwrap();
+            let extra = format!("<w:p>{content}</w:p>").replace("Item D", "Item H");
+            xml.replacen("<w:sectPr", &format!("{extra}<w:sectPr"), 1)
+        });
+        let data = rewrite_numbering_part(&data, |xml| {
+            if !never {
+                return xml.to_string();
+            }
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            format!(
+                "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                child.replacen("</w:lvl>", "<w:lvlRestart w:val=\"0\"/></w:lvl>", 1)
+            )
+        });
+        let text = converted_numbering_text(&data);
+        let normalized: String = text.split_whitespace().collect();
+        assert!(
+            normalized.contains(if never { "(1)ItemD" } else { "(2)ItemD" }),
+            "never {never}: {text}"
+        );
+        assert!(normalized.contains("(2)ItemH"), "never {never}: {text}");
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_implicit_ancestors_follow_each_levels_restart_policy() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    let data = rewrite_docx_part(base, "word/document.xml", |xml| {
+        let mut parts = xml.split("<w:ilvl w:val=\"");
+        let mut output = parts.next().unwrap().to_string();
+        for (part, level) in parts.zip([0, 3, 2, 3, 1, 2, 0]) {
+            let (_, rest) = part.split_once('"').unwrap();
+            output.push_str(&format!("<w:ilvl w:val=\"{level}\"{rest}"));
+        }
+        output
+    });
+    for (restart, first, later) in [(None, 2, 1), (Some(0), 1, 2), (Some(1), 2, 3)] {
+        let data = rewrite_numbering_part(&data, |xml| {
+            let Some(restart) = restart else {
+                return xml.to_string();
+            };
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"2\">").unwrap();
+            format!(
+                "{prefix}<w:lvl w:ilvl=\"2\">{}",
+                child.replacen(
+                    "</w:lvl>",
+                    &format!("<w:lvlRestart w:val=\"{restart}\"/></w:lvl>"),
+                    1
+                )
+            )
+        });
+        let text = converted_numbering_text(&data);
+        let normalized: String = text.split_whitespace().collect();
+        for (item, number) in [('C', first), ('E', 2), ('F', later)] {
+            assert!(
+                normalized.contains(&format!("({number})Item{item}")),
+                "restart {restart:?}: {text}"
+            );
         }
     }
 }
