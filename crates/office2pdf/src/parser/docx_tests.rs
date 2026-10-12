@@ -4082,3 +4082,114 @@ fn docx_inline_numbering_honors_space_and_nothing_suffixes() {
         }
     }
 }
+fn numbering_marker_properties_fixture(
+    properties: &str,
+    full_override: bool,
+    inline: bool,
+) -> Vec<u8> {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    rewrite_numbering_part(base, |xml| {
+        let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+        let end = child.find("</w:lvl>").unwrap();
+        let mut child_level = format!(
+            "<w:lvl w:ilvl=\"1\">{}<w:rPr>{properties}</w:rPr></w:lvl>",
+            &child[..end]
+        );
+        if inline {
+            child_level = child_level.replace(
+                "w:left=\"720\" w:hanging=\"360\"",
+                "w:left=\"0\" w:hanging=\"0\"",
+            );
+        }
+        if full_override {
+            let start_num = xml.find("<w:num w:numId=\"100\">").unwrap();
+            let end_num = start_num + xml[start_num..].find("</w:num>").unwrap();
+            format!(
+                "{}<w:lvlOverride w:ilvl=\"1\">{child_level}</w:lvlOverride>{}",
+                &xml[..end_num],
+                &xml[end_num..]
+            )
+        } else {
+            format!("{prefix}{child_level}{}", &child[end + "</w:lvl>".len()..])
+        }
+    })
+}
+
+#[test]
+fn docx_numbering_marker_run_properties_survive_abstract_and_override_levels() {
+    for full_override in [false, true] {
+        for (family, size, bold, italic, color) in [
+            (
+                "Times New Roman",
+                16.0,
+                true,
+                false,
+                Color::new(192, 32, 64),
+            ),
+            ("Arial", 22.0, false, true, Color::new(16, 80, 160)),
+        ] {
+            let properties = format!(
+                r#"<w:rFonts w:ascii="{family}" w:hAnsi="{family}"/><w:sz w:val="{}"/><w:b w:val="{bold}"/><w:i w:val="{italic}"/><w:color w:val="{:02X}{:02X}{:02X}"/>"#,
+                size * 2.0,
+                color.r,
+                color.g,
+                color.b
+            );
+            let data = numbering_marker_properties_fixture(&properties, full_override, false);
+            let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+            let list = all_blocks(&document)
+                .iter()
+                .find_map(|block| match block {
+                    Block::List(list) => Some(list),
+                    _ => None,
+                })
+                .unwrap();
+            let marker = list.level_styles[&1]
+                .marker_style
+                .as_ref()
+                .expect("numbering-level run properties retained");
+            assert_eq!(marker.font_family.as_deref(), Some(family));
+            assert_eq!(marker.font_size, Some(size));
+            assert_eq!(marker.bold, Some(bold));
+            assert_eq!(marker.italic, Some(italic));
+            assert_eq!(marker.color, Some(color));
+            assert_eq!(list.level_styles[&0].marker_style, None);
+            for item in list.items.iter().filter(|item| item.level == 1) {
+                let body = &item.content[0].runs[0].style;
+                assert_eq!(body.font_size, Some(11.0));
+                assert_ne!(body.color, Some(color));
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_numbering_marker_sizes_apply_without_changing_body_size() {
+    for inline in [false, true] {
+        for size in [16.0, 22.0] {
+            let properties = format!(
+                r#"<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="{}"/>"#,
+                size * 2.0
+            );
+            let data = numbering_marker_properties_fixture(&properties, false, inline);
+            let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+            let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+            let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+            let mut count = 0;
+            for label in ["(7)", "(8)", "(9)", "(10)"] {
+                let marker = runs.iter().find(|run| run.text.trim() == label).unwrap();
+                assert!(
+                    (marker.font_size_pt - size).abs() < 0.01,
+                    "inline {inline}, marker {marker:?} expected {size}pt"
+                );
+                count += 1;
+            }
+            assert_eq!(count, 4);
+            for body in runs.iter().filter(|run| run.text == "Continuous item") {
+                assert!((body.font_size_pt - 11.0).abs() < 0.01, "{body:?}");
+            }
+        }
+    }
+}

@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "source": {
+    "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+    "sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+    "upstream": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "license": "Apache-2.0 derivative; no font binaries submitted",
+    "control": "Native no-patch re-ZIP layout matched the original start-7 control in issue-2089."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "integrity": "All eight fresh native PDFs passed check_gt_integrity.py.",
+    "exports": [
+      {
+        "name": "space",
+        "source_sha256": "6201335403c4e6860a0b25e3f27cefb2a68f4502581c7a5e59d6959aad2e05dd",
+        "native_sha256": "4396ba465283e89b1348ac9b29209e5082de03ec7203450fa28a956d7f309b68",
+        "before_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+        "native_export": "Word 16.113.4; existing document count before=110, after=110"
+      },
+      {
+        "name": "space-explicit-times",
+        "source_sha256": "13777a0bd7edb22ceea58b4b8e08ca5a0840811f979c01f0917a077508228476",
+        "native_sha256": "92060256196249e6ebfadf454f0d83650ed8d635c6787d8bea285a896a2b4680",
+        "before_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+        "native_export": "Word 16.113.4; existing document count before=110, after=110"
+      },
+      {
+        "name": "space-marker-size16",
+        "source_sha256": "24e2cfcc58e568586a9de86b325150d14c01047bacd7e6e87c8550db96e9f6cc",
+        "native_sha256": "e96fe609088ced3f36acdcbcd595e30660e4271cb8b61bbdc193416eb4465a5e",
+        "before_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+        "native_export": "Word 16.113.4; existing document count before=110, after=110"
+      },
+      {
+        "name": "space-size16",
+        "source_sha256": "2d4701148ab0d27b8f71c519694ca945832644012d15438894f08e742dcc3340",
+        "native_sha256": "e2f5d86889b3e5a392f464e05c8af05c391f198dffdd077fb3d9fb8ee0a7d586",
+        "before_sha256": "e91a1d5baa41d8a9f14f022104fc6cde65b0b0e44a7e7434deeef178d1a196a7",
+        "native_export": "Word 16.113.4; existing document count before=110, after=110"
+      },
+      {
+        "name": "inline-times",
+        "base_probe": "inline-space",
+        "properties_xml": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/></w:rPr>",
+        "complete_level_override": false,
+        "source_sha256": "714bb5442b66fd95da1a36433f51d2b7971ea31033adc4b803e73ab59fb53fe9",
+        "native_sha256": "09c1a5aab71bd38f086c1588b6ec04ee1ab9cca59a65b36faef6d41294e4989d",
+        "before_sha256": "37b31093a322013d94e7ede884f797eb3b53e628141cb09fc1760bc2b731b343",
+        "after_sha256": "4e5c382c9d16626e566dda0bccdd7f48b5336f0f81e7d556a2be7a4df269f6ca",
+        "native_export": "Word 16.113.4; existing document count before=110, after=111"
+      },
+      {
+        "name": "inline-size16",
+        "base_probe": "inline-space",
+        "properties_xml": "<w:rPr><w:sz w:val=\"32\"/></w:rPr>",
+        "complete_level_override": false,
+        "source_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "native_sha256": "bcf0ce01c7dbc0d4d91f5df1babb0f36058c065ff2cfa6f6aa3526469ee24a5e",
+        "before_sha256": "37b31093a322013d94e7ede884f797eb3b53e628141cb09fc1760bc2b731b343",
+        "after_sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028",
+        "native_export": "Word 16.113.4; existing document count before=111, after=112"
+      },
+      {
+        "name": "bullet-styled",
+        "base_probe": "bullet-space",
+        "properties_xml": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"32\"/><w:b/><w:color w:val=\"C02040\"/></w:rPr>",
+        "complete_level_override": false,
+        "source_sha256": "6e28ae5a5f0ae065071f6b365fa9a4edcdf7374fcd27ec153bf14e9601127c05",
+        "native_sha256": "e8dfe98b0757c9b348b8d9fe43ee036ef16c6f832136016a0bca6468e3f63d4c",
+        "before_sha256": "1808a75e6ea79d748b37975edbbad5fb5ec1127ff9cbd852f3ce9288fd8274c3",
+        "after_sha256": "7bc096631e8a0edff220e649a8604beac818cc978aff956bfa01829d7b9d6c8b",
+        "native_export": "Word 16.113.4; existing document count before=112, after=113"
+      },
+      {
+        "name": "override-styled",
+        "base_probe": "space",
+        "properties_xml": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"32\"/><w:b/><w:color w:val=\"C02040\"/></w:rPr>",
+        "complete_level_override": true,
+        "source_sha256": "634c0114138d0cfea074b9a8839882836a30b24f80bb9b924ee3e0f77661cf30",
+        "native_sha256": "76f53421cdf7032cf1e6afda5509dd221d5a6a826262525be9da66070a19eafb",
+        "before_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+        "after_sha256": "952c258429f0f851c3495ef22cd9a4440e36aa3d6e762cef3815dd2880d9fbe7",
+        "native_export": "Word 16.113.4; existing document count before=113, after=114"
+      }
+    ]
+  },
+  "before": {
+    "revision": "d6fd1c8c0cf16a5f90d2eb99850e9b9e86004239",
+    "converter_sha256": "9c5189a3f6dace34b0c18180881a3a77a54c5a2461a10b1f62aea838fe20a578"
+  },
+  "after": {
+    "converter_sha256": "12e2b20dac4833af13cfda86deab2e6849dc9e20965d0c3d0b0de56d8b07d603"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all eight native/before/current full pages, 5% pixel diffs, heading/list crops and all thirty matched before/current shifted crops at 150 DPI. Each remains one Letter page with a Cambria 14pt bold black heading, two parent items and four children, correct labels and punctuation. The level font probe now paints Times New Roman markers with the native body origins; the marker-size probe paints 16pt Cambria markers over unchanged 11pt body, removing the prior 18.921pt accumulated drift. Its current worst baseline difference is 0.103pt. Default 11pt and body-wide 16pt controls are unchanged. Inline Times markers and 16pt inline markers now retain their declared face/size and the requested separator. Bullets and complete overrides retain their red C02040, bold Times New Roman 16pt markers while the body stays black Cambria 11pt. No missing elements, fills, strokes/borders/hairlines <=1pt, rotation, italics, underline, clipping, overflow or page-order change appears. Large inline markers still accumulate 6.053pt of vertical drift, tracked in #2102. The styled bullet/override probes retain reference placement drift <=1.043pt and pitch drift <=0.302pt; these smaller geometry findings and passing-page drift <=0.276pt remain under #1874, not antialiasing. All current raster reports have zero material clusters; visible smaller diff fragments were inspected as well. No other material deviation was found.",
+  "remaining": {
+    "#2102": "Large inline marker proportional advance: baseline drift <=6.053pt; pitch drift <=2.052pt.",
+    "#1874": "All sub-material findings, including styled bullet/override baselines <=1.043pt and pitch <=0.302pt; passing-page baseline <=0.276pt."
+  },
+  "no_patch_rezip_controls": [
+    {
+      "base_probe": "space",
+      "no_patch_rezip_is_byte_identical": true,
+      "sha256": "6201335403c4e6860a0b25e3f27cefb2a68f4502581c7a5e59d6959aad2e05dd"
+    },
+    {
+      "base_probe": "inline-space",
+      "no_patch_rezip_is_byte_identical": true,
+      "sha256": "792ef81fe6eaa9d6392ae7b5ccf4d584028bc8995ff8982f785df4d5ca730c0b"
+    },
+    {
+      "base_probe": "bullet-space",
+      "no_patch_rezip_is_byte_identical": true,
+      "sha256": "db5e80a5a9a980b4de53176b57367c7762c55a6dae12b996b202491802d9b320"
+    }
+  ],
+  "probes": [
+    {
+      "name": "space",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "level": 1,
+        "w:suff": "space"
+      },
+      "source_sha256": "6201335403c4e6860a0b25e3f27cefb2a68f4502581c7a5e59d6959aad2e05dd",
+      "native_pdf_sha256": "4396ba465283e89b1348ac9b29209e5082de03ec7203450fa28a956d7f309b68",
+      "before_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "after_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/space-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/space-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/space-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/space-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-explicit-times",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:rPr/w:rFonts": {
+          "w:ascii": "Times New Roman",
+          "w:hAnsi": "Times New Roman"
+        }
+      },
+      "source_sha256": "13777a0bd7edb22ceea58b4b8e08ca5a0840811f979c01f0917a077508228476",
+      "native_pdf_sha256": "92060256196249e6ebfadf454f0d83650ed8d635c6787d8bea285a896a2b4680",
+      "before_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "after_pdf_sha256": "a50a9263cf310375ec0eb30be6f25b108a56341e2fa17bd910dd5df72f609202",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/space-explicit-times-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/space-explicit-times-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/space-explicit-times-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/space-explicit-times-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-marker-size16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:rPr/w:sz": 32
+      },
+      "source_sha256": "24e2cfcc58e568586a9de86b325150d14c01047bacd7e6e87c8550db96e9f6cc",
+      "native_pdf_sha256": "e96fe609088ced3f36acdcbcd595e30660e4271cb8b61bbdc193416eb4465a5e",
+      "before_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "after_pdf_sha256": "f524d930d0ed29c193c507faada1fd0d51bb9f9189e13de2edd88526dfa7c3a7",
+      "reports": {
+        "layout": "assets/bugfixes/issue-2100/layout-audit.json",
+        "text": "tests/visual_audits/issue-2100/text-layer.json",
+        "render": "assets/bugfixes/issue-2100/render-clusters-page-1.json",
+        "dispositions": "tests/visual_audits/issue-2100/cluster-dispositions-page-1.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-size16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "word/styles.xml/w:rPrDefault": {
+          "w:sz": 32,
+          "w:szCs": 32
+        }
+      },
+      "source_sha256": "2d4701148ab0d27b8f71c519694ca945832644012d15438894f08e742dcc3340",
+      "native_pdf_sha256": "e2f5d86889b3e5a392f464e05c8af05c391f198dffdd077fb3d9fb8ee0a7d586",
+      "before_pdf_sha256": "e91a1d5baa41d8a9f14f022104fc6cde65b0b0e44a7e7434deeef178d1a196a7",
+      "after_pdf_sha256": "e91a1d5baa41d8a9f14f022104fc6cde65b0b0e44a7e7434deeef178d1a196a7",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/space-size16-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/space-size16-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/space-size16-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/space-size16-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "inline-times",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base_changes": {
+          "base": "space",
+          "level": 1,
+          "w:pPr/w:ind": {
+            "w:left": 0,
+            "w:hanging": 0
+          }
+        },
+        "level": 1,
+        "w:rPr": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/></w:rPr>",
+        "complete_level_override": false
+      },
+      "source_sha256": "714bb5442b66fd95da1a36433f51d2b7971ea31033adc4b803e73ab59fb53fe9",
+      "native_pdf_sha256": "09c1a5aab71bd38f086c1588b6ec04ee1ab9cca59a65b36faef6d41294e4989d",
+      "before_pdf_sha256": "37b31093a322013d94e7ede884f797eb3b53e628141cb09fc1760bc2b731b343",
+      "after_pdf_sha256": "4e5c382c9d16626e566dda0bccdd7f48b5336f0f81e7d556a2be7a4df269f6ca",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/inline-times-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/inline-times-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/inline-times-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/inline-times-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "inline-size16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base_changes": {
+          "base": "space",
+          "level": 1,
+          "w:pPr/w:ind": {
+            "w:left": 0,
+            "w:hanging": 0
+          }
+        },
+        "level": 1,
+        "w:rPr": "<w:rPr><w:sz w:val=\"32\"/></w:rPr>",
+        "complete_level_override": false
+      },
+      "source_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+      "native_pdf_sha256": "bcf0ce01c7dbc0d4d91f5df1babb0f36058c065ff2cfa6f6aa3526469ee24a5e",
+      "before_pdf_sha256": "37b31093a322013d94e7ede884f797eb3b53e628141cb09fc1760bc2b731b343",
+      "after_pdf_sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/inline-size16-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/inline-size16-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/inline-size16-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/inline-size16-dispositions.json"
+      },
+      "remaining": "#2102 and #1874"
+    },
+    {
+      "name": "bullet-styled",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base_changes": {
+          "base": "space",
+          "level": 1,
+          "w:numFmt": "bullet",
+          "w:lvlText": "\u2022"
+        },
+        "level": 1,
+        "w:rPr": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"32\"/><w:b/><w:color w:val=\"C02040\"/></w:rPr>",
+        "complete_level_override": false
+      },
+      "source_sha256": "6e28ae5a5f0ae065071f6b365fa9a4edcdf7374fcd27ec153bf14e9601127c05",
+      "native_pdf_sha256": "e8dfe98b0757c9b348b8d9fe43ee036ef16c6f832136016a0bca6468e3f63d4c",
+      "before_pdf_sha256": "1808a75e6ea79d748b37975edbbad5fb5ec1127ff9cbd852f3ce9288fd8274c3",
+      "after_pdf_sha256": "7bc096631e8a0edff220e649a8604beac818cc978aff956bfa01829d7b9d6c8b",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/bullet-styled-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/bullet-styled-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/bullet-styled-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/bullet-styled-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "override-styled",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base_changes": {
+          "level": 1,
+          "w:suff": "space"
+        },
+        "level": 1,
+        "w:rPr": "<w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"32\"/><w:b/><w:color w:val=\"C02040\"/></w:rPr>",
+        "complete_level_override": true
+      },
+      "source_sha256": "634c0114138d0cfea074b9a8839882836a30b24f80bb9b924ee3e0f77661cf30",
+      "native_pdf_sha256": "76f53421cdf7032cf1e6afda5509dd221d5a6a826262525be9da66070a19eafb",
+      "before_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "after_pdf_sha256": "952c258429f0f851c3495ef22cd9a4440e36aa3d6e762cef3815dd2880d9fbe7",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2100/probes/override-styled-layout.json",
+        "text": "tests/visual_audits/issue-2100/probes/override-styled-text.json",
+        "render": "tests/visual_audits/issue-2100/probes/override-styled-render.json",
+        "dispositions": "tests/visual_audits/issue-2100/probes/override-styled-dispositions.json"
+      },
+      "remaining": "#1874"
+    }
+  ]
+}
