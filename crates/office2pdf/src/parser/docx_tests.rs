@@ -4392,3 +4392,264 @@ fn docx_inline_numbering_preserves_literal_letters_and_percent_signs() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_large_inline_markers_keep_native_paragraph_advance() {
+    let mut marker_height_deltas = std::collections::BTreeMap::new();
+    for (marker_size, line, expected_pitch) in [
+        (16, 240, 27.6),
+        (16, 276, 29.52),
+        (16, 480, 40.56),
+        (22, 276, 35.28),
+    ] {
+        for suffix in ["space", "nothing", "tab"] {
+            let data = numbering_marker_properties_fixture(
+                &format!("<w:sz w:val=\"{}\"/>", marker_size * 2),
+                false,
+                true,
+            );
+            let data = rewrite_numbering_part(&data, |xml| {
+                xml.replace(
+                    "<w:lvlRestart w:val=\"0\"/>",
+                    &format!("<w:lvlRestart w:val=\"0\"/><w:suff w:val=\"{suffix}\"/>"),
+                )
+            });
+            let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+                xml.replace(
+                    "<w:pPr><w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr></w:pPr>",
+                    &format!("<w:pPr><w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr><w:spacing w:line=\"{line}\" w:lineRule=\"auto\"/></w:pPr>"),
+                )
+            });
+            let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+            let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+            let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+            let body: Vec<_> = runs
+                .iter()
+                .filter(|run| run.text == "Continuous item")
+                .collect();
+            assert_eq!(body.len(), 4);
+            // Metric lookup can resolve a substitute. Native absolute pitches
+            // apply only when the actual painted label/body face is Cambria.
+            let uses_native_fonts = body.iter().all(|run| run.family == "Cambria")
+                && runs
+                    .iter()
+                    .filter(|run| run.text.starts_with('('))
+                    .all(|run| run.family == "Cambria")
+                && (suffix != "space"
+                    || runs
+                        .iter()
+                        .filter(|run| run.text == " ")
+                        .all(|run| run.family == "Arial"));
+            for first in [0, 2] {
+                let pitch = body[first + 1].baseline_pt - body[first].baseline_pt;
+                if uses_native_fonts {
+                    assert!(
+                        (pitch - expected_pitch).abs() < 0.3,
+                        "marker {marker_size}pt, line {line}, suffix {suffix}: pitch {pitch}, native {expected_pitch}"
+                    );
+                }
+            }
+            for label in ["(7)", "(8)", "(9)", "(10)"] {
+                let marker = runs.iter().find(|run| run.text.trim() == label).unwrap();
+                assert!((marker.font_size_pt - f64::from(marker_size)).abs() < 0.01);
+            }
+            assert!(
+                body.iter()
+                    .all(|run| (run.font_size_pt - 11.0).abs() < 0.01)
+            );
+            // The native calibration also checks that changing paragraph
+            // leading leaves the label's extra ascent unchanged.
+            let control = rewrite_numbering_part(&data, |xml| {
+                xml.replace(
+                    &format!("<w:sz w:val=\"{}\"/>", marker_size * 2),
+                    "<w:sz w:val=\"22\"/>",
+                )
+            });
+            let (control_document, _) = DocxParser
+                .parse(&control, &ConvertOptions::default())
+                .unwrap();
+            let control_source =
+                crate::render::typst_gen::generate_typst(&control_document).unwrap();
+            let control_runs =
+                crate::render::pdf::compiled_text_runs(&control_source.source, 0).unwrap();
+            let control_body: Vec<_> = control_runs
+                .iter()
+                .filter(|run| run.text == "Continuous item")
+                .collect();
+            assert_eq!(control_body.len(), 4);
+            let extra_height = (body[1].baseline_pt - body[0].baseline_pt)
+                - (control_body[1].baseline_pt - control_body[0].baseline_pt);
+            if uses_native_fonts {
+                let natural_extra_height = marker_height_deltas
+                    .entry((marker_size, suffix))
+                    .or_insert(extra_height);
+                assert!(
+                    (extra_height - *natural_extra_height).abs() < 0.3,
+                    "paragraph leading stretched label height for {marker_size}pt/{suffix}: {extra_height} vs {natural_extra_height}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_inline_markers_without_font_metrics_keep_ordinary_paragraph_fallback() {
+    let data = numbering_marker_properties_fixture("<w:sz w:val=\"32\"/>", false, true);
+    let (mut document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let missing_family = "Unavailable quarterly report face";
+    assert!(crate::render::pdf::font_line_metrics_em(missing_family).is_none());
+    for page in &mut document.pages {
+        if let Page::Flow(page) = page {
+            for block in &mut page.content {
+                if let Block::Paragraph(paragraph) = block {
+                    for run in &mut paragraph.runs {
+                        run.style.font_family = Some(missing_family.to_string());
+                    }
+                }
+            }
+        }
+    }
+    let inline = crate::render::typst_gen::generate_typst(&document).unwrap();
+    for page in &mut document.pages {
+        if let Page::Flow(page) = page {
+            for block in &mut page.content {
+                if let Block::Paragraph(paragraph) = block {
+                    paragraph.style.has_inline_list_number = false;
+                }
+            }
+        }
+    }
+    let ordinary = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let placement = |source: &str| {
+        crate::render::pdf::compiled_text_runs(source, 0)
+            .unwrap()
+            .into_iter()
+            .map(|run| {
+                (
+                    run.text,
+                    run.family,
+                    run.font_size_pt,
+                    run.left_pt,
+                    run.baseline_pt,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let inline_runs = placement(&inline.source);
+    assert_eq!(
+        inline_runs
+            .iter()
+            .filter(|run| run.0 == "Continuous item")
+            .count(),
+        4
+    );
+    assert_eq!(inline_runs, placement(&ordinary.source));
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_large_inline_markers_preserve_body_continuation_advance() {
+    let data = numbering_marker_properties_fixture("<w:sz w:val=\"32\"/>", false, true);
+    let data = rewrite_numbering_part(&data, |xml| {
+        xml.replace(
+            "<w:lvlRestart w:val=\"0\"/>",
+            "<w:lvlRestart w:val=\"0\"/><w:suff w:val=\"space\"/>",
+        )
+    });
+    let text = format!(
+        "Continuous item repeated body words {}",
+        "describing realistic content across the entire available text measure. ".repeat(4)
+    );
+    let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+        xml.replace("Continuous item", &text)
+    });
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let first_lines: Vec<_> = runs
+        .iter()
+        .filter(|run| run.text.starts_with("Continuous item repeated body words"))
+        .collect();
+    assert_eq!(first_lines.len(), 4);
+    let uses_native_fonts = first_lines.iter().all(|run| run.family == "Cambria")
+        && runs
+            .iter()
+            .filter(|run| run.text.starts_with('('))
+            .all(|run| run.family == "Cambria")
+        && runs
+            .iter()
+            .filter(|run| run.text == " ")
+            .all(|run| run.family == "Arial");
+    for first in [0, 2] {
+        let pitch = first_lines[first + 1].baseline_pt - first_lines[first].baseline_pt;
+        if uses_native_fonts {
+            assert!(
+                (pitch - 73.92).abs() < 0.5,
+                "item pitch {pitch}, native 73.92pt"
+            );
+        }
+    }
+    let first = first_lines[0];
+    let second = first_lines[1];
+    let mut continuation_baselines: Vec<f64> = runs
+        .iter()
+        .filter(|run| {
+            run.baseline_pt > first.baseline_pt + 0.01
+                && run.baseline_pt < second.baseline_pt - 0.01
+                && (run.font_size_pt - 11.0).abs() < 0.01
+        })
+        .map(|run| run.baseline_pt)
+        .collect();
+    continuation_baselines.sort_by(f64::total_cmp);
+    continuation_baselines.dedup_by(|a, b| (*a - *b).abs() < 0.01);
+    assert_eq!(continuation_baselines.len(), 3);
+    let mut previous = first.baseline_pt;
+    for (baseline, native_pitch) in continuation_baselines.iter().zip([14.64, 14.88, 14.88]) {
+        if uses_native_fonts {
+            assert!(
+                (baseline - previous - native_pitch).abs() < 0.3,
+                "continuation pitch {}, native {native_pitch}",
+                baseline - previous
+            );
+        }
+        previous = *baseline;
+    }
+    // Triangulate on the same host's font: enlarging only the label must not
+    // change later body-line advances, even when Cambria is substituted.
+    let control = rewrite_numbering_part(&data, |xml| {
+        xml.replace("<w:sz w:val=\"32\"/>", "<w:sz w:val=\"22\"/>")
+    });
+    let (control_document, _) = DocxParser
+        .parse(&control, &ConvertOptions::default())
+        .unwrap();
+    let control_source = crate::render::typst_gen::generate_typst(&control_document).unwrap();
+    let control_runs = crate::render::pdf::compiled_text_runs(&control_source.source, 0).unwrap();
+    let control_first_lines: Vec<_> = control_runs
+        .iter()
+        .filter(|run| run.text.starts_with("Continuous item repeated body words"))
+        .collect();
+    assert_eq!(control_first_lines.len(), 4);
+    let mut control_continuations: Vec<f64> = control_runs
+        .iter()
+        .filter(|run| {
+            run.baseline_pt > control_first_lines[0].baseline_pt + 0.01
+                && run.baseline_pt < control_first_lines[1].baseline_pt - 0.01
+                && (run.font_size_pt - 11.0).abs() < 0.01
+        })
+        .map(|run| run.baseline_pt)
+        .collect();
+    control_continuations.sort_by(f64::total_cmp);
+    control_continuations.dedup_by(|a, b| (*a - *b).abs() < 0.01);
+    assert_eq!(continuation_baselines.len(), control_continuations.len());
+    for (actual, control) in continuation_baselines
+        .windows(2)
+        .zip(control_continuations.windows(2))
+    {
+        assert!(
+            ((actual[1] - actual[0]) - (control[1] - control[0])).abs() < 0.3,
+            "later body advances changed with marker size: {actual:?} vs {control:?}"
+        );
+    }
+}

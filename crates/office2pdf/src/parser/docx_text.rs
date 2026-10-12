@@ -307,6 +307,7 @@ pub(super) fn extract_run_style_from_json(rp: &serde_json::Value) -> TextStyle {
     let all_caps: Option<bool> = rp.get("caps").and_then(serde_json::Value::as_bool);
 
     TextStyle {
+        line_box: None,
         bold: rp.get("bold").and_then(serde_json::Value::as_bool),
         italic: rp.get("italic").and_then(serde_json::Value::as_bool),
         underline: rp

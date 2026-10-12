@@ -692,6 +692,7 @@ pub(super) fn group_into_lists(
                 if is_inline_numbered {
                     let level = resolved_level.expect("ordered level must be resolved");
                     paragraph.style.has_inline_list_number = true;
+                    paragraph.style.numbering_suffix = level.paragraph_style.numbering_suffix;
                     if !is_flush_numbered {
                         // The list renderer emits item runs without their paragraph frame.
                         // Inline numbering lets normal paragraph codegen keep shading and borders.

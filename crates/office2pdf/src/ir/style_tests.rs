@@ -64,6 +64,10 @@ fn test_text_style_caps() {
 #[test]
 fn text_style_merge_from_all_none_source_preserves_target() {
     let mut target = TextStyle {
+        line_box: Some(LineBox {
+            ascent_em: 0.9,
+            descent_em: 0.3,
+        }),
         font_family: Some("Arial".to_string()),
         east_asian_font_family: None,
         font_size: Some(12.0),
@@ -92,6 +96,10 @@ fn text_style_merge_from_all_none_source_preserves_target() {
 #[test]
 fn text_style_merge_from_all_some_source_overwrites_target() {
     let mut target = TextStyle {
+        line_box: Some(LineBox {
+            ascent_em: 0.8,
+            descent_em: 0.2,
+        }),
         font_family: Some("Arial".to_string()),
         east_asian_font_family: None,
         font_size: Some(12.0),
@@ -110,6 +118,10 @@ fn text_style_merge_from_all_some_source_overwrites_target() {
         pair_kerning: Some(PairKerning::Never),
     };
     let source = TextStyle {
+        line_box: Some(LineBox {
+            ascent_em: 0.95,
+            descent_em: 0.45,
+        }),
         font_family: Some("Times".to_string()),
         east_asian_font_family: None,
         font_size: Some(24.0),
