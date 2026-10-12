@@ -265,8 +265,9 @@ first-page selection, and front/back placement. Custom `FlowPage` values use
 
 DOCX legal numbering renders a list level's placeholders as decimal, preserving
 the parent's own format. On/off flags and complete level overrides are honored.
-Inline multilevel/nondecimal prefixes (#2099) and numbering-level marker
-formatting (#2100) are not yet supported.
+Numbering-level run properties format marker fonts, sizes, weight and color
+without changing body text. Inline multilevel/nondecimal prefixes remain
+unsupported (#2099). Large inline markers can inflate paragraph advance (#2102).
 
 DOCX child numbering supports never-restart and earlier-level restart rules;
 omitted rules restart after any higher-level item. Word ignores restart rules

@@ -1,0 +1,156 @@
+{
+ "pages": [
+  {
+   "lines": {
+    "gt": 7,
+    "out": 7,
+    "matched": 7,
+    "missing": 0,
+    "extra": 0,
+    "deviant": 5,
+    "missing_text": [],
+    "extra_text": []
+   },
+   "baseline": {
+    "mean_abs_dy": 0.45701257142857593,
+    "worst_dy": 1.0430800000000033,
+    "worst_dy_signed": 1.0430800000000033,
+    "worst_line": "(10)Continuousitem"
+   },
+   "dx0": {
+    "mean_abs": 0.0,
+    "worst": 0.0
+   },
+   "width": {
+    "mean_abs_pct": 0.03297172784424098,
+    "worst_pct": 0.049659192937858844
+   },
+   "instances": {
+    "compared": 7,
+    "large_shift_threshold": 5.0,
+    "large_shift_count": 0,
+    "large_shifts": [],
+    "fine_shift_threshold": 0.5,
+    "fine_shift_count": 3,
+    "fine_shifts": [
+     {
+      "label": "(8)Continuousitem",
+      "gt_x": 108.0,
+      "gt_y": 169.92002,
+      "out_x": 108.0,
+      "out_y": 170.48993,
+      "dx": 0.0,
+      "dy": 0.569909999999993,
+      "width_pct": -0.049659192937858844
+     },
+     {
+      "label": "(9)Continuousitem",
+      "gt_x": 108.0,
+      "gt_y": 224.16001999999997,
+      "out_x": 108.0,
+      "out_y": 224.90174,
+      "dx": 0.0,
+      "dy": 0.741720000000015,
+      "width_pct": -0.049659192937858844
+     },
+     {
+      "label": "(10)Continuousitem",
+      "gt_x": 108.0,
+      "gt_y": 253.44002,
+      "out_x": 108.0,
+      "out_y": 254.4831,
+      "dx": 0.0,
+      "dy": 1.0430800000000033,
+      "width_pct": -0.046000422127569426
+     }
+    ]
+   },
+   "visibility": {
+    "mismatch_count": 0,
+    "mismatches": [],
+    "unmatched_hidden_gt": 0,
+    "unmatched_hidden_out": 0,
+    "unmatched_hidden_gt_text": [],
+    "unmatched_hidden_out_text": []
+   },
+   "visible_fills": {
+    "mismatch_count": 0,
+    "mismatches": []
+   },
+   "pitch": {
+    "pairs": 6,
+    "worst_delta": 0.30142000000000735
+   },
+   "wraps": {
+    "count": 0,
+    "samples": []
+   },
+   "topology": {
+    "groups": 0,
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "reflow": {
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "rects": {
+    "gt_count": 0,
+    "out_count": 0,
+    "canonical_gt_count": 0,
+    "canonical_out_count": 0,
+    "matched": 0,
+    "unmatched_gt": 0,
+    "unmatched_out": 0,
+    "mean_center_delta": 0.0,
+    "geometry_threshold": 0.5,
+    "raw_geometry_mismatch_count": 0,
+    "raw_geometry_mismatch_samples": [],
+    "coverage_equivalent_count": 0,
+    "coverage_unmodeled_count": 0,
+    "geometry_mismatch_count": 0,
+    "geometry_mismatch_samples": [],
+    "samples": [],
+    "x": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "y": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "width": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "height": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "edges": {
+     "left": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "top": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "right": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "bottom": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     }
+    }
+   },
+   "noise_floor": 0.12
+  }
+ ],
+ "gt_pages": 1,
+ "out_pages": 1
+}

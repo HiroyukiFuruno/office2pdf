@@ -479,7 +479,6 @@ impl Parser for DocxParser {
         let mut images = build_image_map(&docx);
         images.extend(metafile_images);
         let hyperlinks = build_hyperlink_map(&docx);
-        let numberings = build_numbering_map(&docx.numberings);
         let style_map = build_style_map(
             &docx.styles,
             &theme_fonts,
@@ -488,6 +487,7 @@ impl Parser for DocxParser {
             &style_word_wraps,
             &pair_kerning,
         );
+        let numberings = build_numbering_map(&docx.numberings, &style_map, &theme_fonts);
 
         let header_footer_styles = HeaderFooterStyleContext {
             style_map: &style_map,

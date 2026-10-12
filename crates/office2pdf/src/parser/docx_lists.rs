@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::ir::{
     Block, List, ListItem, ListKind, ListLevelStyle, ListMarkerSuffix, Paragraph, ParagraphStyle,
-    Run, TabAlignment, TabLeader, TabStop,
+    Run, TabAlignment, TabLeader, TabStop, TextStyle,
 };
 
 /// Numbering info extracted from a paragraph's numPr.
@@ -36,6 +36,7 @@ struct RawListLevel {
     number_format: String,
     level_text: String,
     paragraph_style: ParagraphStyle,
+    marker_style: Option<TextStyle>,
     has_start_override: bool,
     uses_legal_numbering: bool,
     restart_trigger: Option<u32>,
@@ -147,7 +148,11 @@ fn build_typst_numbering_pattern(
     Some((pattern, saw_parent_level))
 }
 
-fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
+fn extract_raw_level(
+    level: &docx_rs::Level,
+    style_map: &super::StyleMap,
+    theme_fonts: &super::ThemeFonts,
+) -> RawListLevel {
     // Word allows restart thresholds 0..=7. Native probes above that range
     // retain child markers and count physical items only, as a zero does.
     let restart_trigger: Option<u32> =
@@ -174,11 +179,17 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
         docx_rs::LevelSuffixType::Space => ListMarkerSuffix::Space,
         docx_rs::LevelSuffixType::Nothing => ListMarkerSuffix::Nothing,
     });
+    // Level run properties format the generated marker, not the body runs.
+    // Resolve its character style/theme like ordinary text; unspecified
+    // properties inherit surrounding list text at render time.
+    let marker_style =
+        super::resolve_run_style(&level.run_property, false, None, style_map, theme_fonts);
     RawListLevel {
         start: serialize_u32(&level.start).unwrap_or(1),
         number_format: level.format.val.clone(),
         level_text: serialize_string(&level.text).unwrap_or_default(),
         paragraph_style,
+        marker_style: (marker_style != TextStyle::default()).then_some(marker_style),
         has_start_override: false,
         uses_legal_numbering: level.is_lgl.is_some(),
         restart_trigger,
@@ -188,6 +199,8 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
 fn resolve_numbering(
     num: &docx_rs::Numbering,
     numberings: &docx_rs::Numberings,
+    style_map: &super::StyleMap,
+    theme_fonts: &super::ThemeFonts,
 ) -> ResolvedNumbering {
     let abstract_num = numberings
         .abstract_nums
@@ -199,7 +212,12 @@ fn resolve_numbering(
             abstract_num
                 .levels
                 .iter()
-                .map(|level| (level.level as u32, extract_raw_level(level)))
+                .map(|level| {
+                    (
+                        level.level as u32,
+                        extract_raw_level(level, style_map, theme_fonts),
+                    )
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -210,7 +228,7 @@ fn resolve_numbering(
             let abstract_restart_trigger = raw_levels
                 .get(&level_index)
                 .and_then(|level| level.restart_trigger);
-            let mut raw_level = extract_raw_level(level);
+            let mut raw_level = extract_raw_level(level, style_map, theme_fonts);
             raw_level.has_start_override = true;
             // Word ignores lvlRestart in complete level overrides (MS-OI29500
             // 2.1.282); the abstract policy remains in force.
@@ -229,6 +247,7 @@ fn resolve_numbering(
                     number_format: "decimal".to_string(),
                     level_text: format!("%{}.", level_index + 1),
                     paragraph_style: ParagraphStyle::default(),
+                    marker_style: None,
                     has_start_override: true,
                     uses_legal_numbering: false,
                     restart_trigger: None,
@@ -267,7 +286,7 @@ fn resolve_numbering(
                         marker_text: (kind == ListKind::Unordered)
                             .then(|| level.level_text.clone())
                             .filter(|text| !text.is_empty()),
-                        marker_style: None,
+                        marker_style: level.marker_style.clone(),
                     },
                     paragraph_style: level.paragraph_style.clone(),
                     start: level.start,
@@ -284,11 +303,20 @@ fn resolve_numbering(
     }
 }
 
-pub(super) fn build_numbering_map(numberings: &docx_rs::Numberings) -> NumberingMap {
+pub(super) fn build_numbering_map(
+    numberings: &docx_rs::Numberings,
+    style_map: &super::StyleMap,
+    theme_fonts: &super::ThemeFonts,
+) -> NumberingMap {
     numberings
         .numberings
         .iter()
-        .map(|numbering| (numbering.id, resolve_numbering(numbering, numberings)))
+        .map(|numbering| {
+            (
+                numbering.id,
+                resolve_numbering(numbering, numberings, style_map, theme_fonts),
+            )
+        })
         .collect()
 }
 
@@ -672,11 +700,14 @@ pub(super) fn group_into_lists(
                     }
                     let label =
                         format_inline_number(&level.level_text, &level.number_format, number);
-                    let prefix_style = paragraph
+                    let mut prefix_style = paragraph
                         .runs
                         .first()
                         .map(|run| run.style.clone())
                         .unwrap_or_default();
+                    if let Some(marker_style) = &level.style.marker_style {
+                        prefix_style.merge_from(marker_style);
+                    }
                     let suffix = level
                         .paragraph_style
                         .numbering_suffix
