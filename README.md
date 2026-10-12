@@ -291,6 +291,12 @@ XML they do not model — and saving rewrites only edited entries. The
 `office2pdf` rendering pipeline stays a derived projection for PDF
 preview/export; it is not the editable source of truth.
 
+DOCX internal HTML/MHTML `altChunk` imports retain text, inline formatting,
+headings, basic tables, and simple lists. Tag/class/id and inline CSS support
+font, color, alignment, spacing, indentation, and cell widths. Images and row
+spans in imports emit warnings while retaining surrounding text; RTF and
+external imports are skipped with warnings. This is not a browser CSS engine.
+
 ## DOCX compatibility triage
 
 The [docxide-pdf reference](references/docxide-pdf.md) documents a pinned external

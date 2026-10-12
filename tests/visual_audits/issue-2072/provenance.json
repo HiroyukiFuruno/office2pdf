@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source": {
+    "path": "tests/fixtures/docx/altchunk_html.docx",
+    "sha256": "20763ae339984cd3284659504e78d651f9972034f51fa5276ae2daaf83c7d3c0",
+    "provenance": "Original synthetic fixture authored for the regression; no external document text or fonts"
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "79ae2056e3a826f7002179b7b72600221bcd0e1d3af31c65440bea8725dba979"
+  },
+  "before": {
+    "office2pdf_revision": "d588cf6aca3c9d6194705a10a8c043c38974691a",
+    "pdf_sha256": "17ac0174fa9f17f8226306e7230c6772107870965e3cf52d52e7a95692242c01"
+  },
+  "after": {
+    "pdf_sha256": "6eda28b5a2d5ba71bec629b06b5436e2a89e9b1ac0d8c2a0fd3a47543afaf32b"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Before: one blank Letter page; the entire imported sentence and bold span are missing. After: the full sentence appears at the native left/top position; Times New Roman 12pt, regular text and bold important text match the native crop. Inspected full GT/before/after pages, side-by-side images, 5% diff and matched text crops at full resolution. No missing/extra text, changed wrapping, visibility, clipping, page-order, fill, or outline deviation remains on this synthetic page. There are no material current clusters. No hairlines, borders, italic or underlined text occur."
+}

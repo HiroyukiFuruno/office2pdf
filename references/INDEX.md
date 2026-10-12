@@ -20,6 +20,7 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 
 | Project | Lang | Focus | Detail |
 |---------|------|-------|--------|
+| [html5ever / mailparse](https://github.com/servo/html5ever) | Rust | HTML and MIME decoding for DOCX imports | [html-import.md](html-import.md) |
 | [docxide-pdf](https://github.com/sverrejb/docxide-pdf) | Rust | Word-based DOCX fixtures and direct PDF rendering | [docxide-pdf.md](docxide-pdf.md) |
 | [pandoc](https://github.com/jgm/pandoc) | Haskell | Universal converter (DOCX reader + Typst writer) | [pandoc.md](pandoc.md) |
 | [mammoth.js](https://github.com/mwilliamson/mammoth.js) | JS | DOCX → semantic HTML | [mammoth.md](mammoth.md) |

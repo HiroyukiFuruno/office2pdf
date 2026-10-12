@@ -4,6 +4,8 @@ pub(crate) mod chart_drawing;
 pub(crate) mod chart_style;
 pub(crate) mod cond_fmt;
 pub mod docx;
+mod docx_alt_chunk;
+mod docx_html_import;
 pub(crate) mod drawingml;
 pub(crate) mod embedded_fonts;
 #[path = "pptx_emf.rs"]
