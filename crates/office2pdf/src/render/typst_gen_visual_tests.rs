@@ -57,6 +57,7 @@ fn page_anchored_text_box_position_does_not_follow_flow_position() {
                 page_numbering: None,
                 page_borders: None,
                 line_numbering: None,
+                vertical_alignment: None,
                 size: PageSize {
                     width: 612.0,
                     height: 792.0,
@@ -293,6 +294,7 @@ fn floating_text_box_margin_alignment_tracks_a_different_page_geometry() {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -404,6 +406,7 @@ fn test_floating_image_square_wrap_codegen() {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -464,6 +467,7 @@ fn test_floating_image_top_and_bottom_codegen() {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -519,6 +523,7 @@ fn test_floating_image_behind_codegen() {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     };

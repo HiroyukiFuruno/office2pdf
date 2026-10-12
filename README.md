@@ -263,6 +263,13 @@ DOCX line-based section page borders support page/text offsets, per-edge paint,
 first-page selection, and front/back placement. Custom `FlowPage` values use
 `page_borders: None` to omit decorations. Decorative art borders are not supported.
 
+DOCX section body text supports top, centered and bottom page alignment,
+including paragraph after-spacing and page breaks. Continuous sections use their
+common alignment; mixed alignments fall back to top on their shared explicit
+page. Automatic pagination within mixed continuous sections is approximate and
+warns. Vertical justification (`both`) warns and retains top-aligned content.
+Custom `FlowPage` values use `vertical_alignment: None` for top alignment.
+
 DOCX section line numbering supports intervals, starts, page/section restarts,
 continuous numbering and margin clearance. The start is a zero-based offset
 (default 0 displays 1). A missing or zero interval disables numbering.

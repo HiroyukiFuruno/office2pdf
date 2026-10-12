@@ -2530,3 +2530,311 @@ fn docx_line_numbers_stay_disabled_without_a_positive_interval() {
         ["5", "10"]
     );
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn compiled_section_titles(
+    document: &Document,
+    page: usize,
+) -> (bool, Vec<crate::render::pdf::PlacedTextRun>) {
+    let output = crate::render::typst_gen::generate_typst(document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&output.source, page).unwrap();
+    let uses_native_fonts = runs.iter().all(|run| run.family == "Cambria");
+    (
+        uses_native_fonts,
+        runs.into_iter()
+            .filter(|run| run.text == "Vertically Centered Title")
+            .collect(),
+    )
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_centered_section_matches_native_title_page() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_vertical_center.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let (native_fonts, centered) = compiled_section_titles(&document, 0);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.vertical_alignment = Some(PageVerticalAlignment::Top);
+    let (_, top) = compiled_section_titles(&document, 0);
+    assert!(centered[0].baseline_pt - top[0].baseline_pt > 200.0);
+    if native_fonts {
+        assert!(
+            (centered[0].baseline_pt - 377.76002).abs() < 0.5,
+            "{:?}",
+            centered[0]
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_continuous_sections_use_a_uniform_page_alignment() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_alignment_continuous.docx");
+    let (mut top_document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    for page in &mut top_document.pages {
+        let (Page::Flow(page) | Page::FlowContinuous(page)) = page else {
+            panic!("flow section")
+        };
+        page.vertical_alignment = Some(PageVerticalAlignment::Top);
+    }
+    let (_, top_titles) = compiled_section_titles(&top_document, 0);
+    let mut center_baselines = Vec::new();
+    for (first, second, expected) in [
+        (
+            PageVerticalAlignment::Center,
+            PageVerticalAlignment::Center,
+            [336.72002, 418.80002],
+        ),
+        (
+            PageVerticalAlignment::Bottom,
+            PageVerticalAlignment::Bottom,
+            [578.88002, 660.72002],
+        ),
+        (
+            PageVerticalAlignment::Center,
+            PageVerticalAlignment::Top,
+            [94.80002, 176.88002],
+        ),
+        (
+            PageVerticalAlignment::Top,
+            PageVerticalAlignment::Center,
+            [94.80002, 176.88002],
+        ),
+        (
+            PageVerticalAlignment::Center,
+            PageVerticalAlignment::Bottom,
+            [94.80002, 176.88002],
+        ),
+    ] {
+        let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+        assert_eq!(document.pages.len(), 2);
+        assert!(matches!(document.pages[1], Page::FlowContinuous(_)));
+        for (page, alignment) in document.pages.iter_mut().zip([first, second]) {
+            let (Page::Flow(page) | Page::FlowContinuous(page)) = page else {
+                panic!("flow section")
+            };
+            page.vertical_alignment = Some(alignment);
+        }
+        let (native_fonts, titles) = compiled_section_titles(&document, 0);
+        assert_eq!(titles.len(), 2);
+        for (i, (title, expected)) in titles.iter().zip(expected).enumerate() {
+            if native_fonts {
+                assert!(
+                    (title.baseline_pt - expected).abs() < 0.5,
+                    "{first:?}/{second:?}: {title:?}"
+                );
+            }
+            if first != second {
+                assert!((title.baseline_pt - top_titles[i].baseline_pt).abs() < 0.001);
+            } else if first == PageVerticalAlignment::Center {
+                assert!(title.baseline_pt - top_titles[i].baseline_pt > 200.0);
+                center_baselines.push(title.baseline_pt);
+            } else {
+                assert!(
+                    (title.baseline_pt
+                        - top_titles[i].baseline_pt
+                        - 2.0 * (center_baselines[i] - top_titles[i].baseline_pt))
+                        .abs()
+                        < 0.001
+                );
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_section_alignment_applies_on_each_page_and_resets() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_vertical_center.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let (_, centered) = compiled_section_titles(&document, 0);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.vertical_alignment = Some(PageVerticalAlignment::Top);
+    let (native_fonts, top) = compiled_section_titles(&document, 0);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.vertical_alignment = Some(PageVerticalAlignment::Bottom);
+    let (_, bottom) = compiled_section_titles(&document, 0);
+    assert!(
+        (bottom[0].baseline_pt
+            - top[0].baseline_pt
+            - 2.0 * (centered[0].baseline_pt - top[0].baseline_pt))
+            .abs()
+            < 0.001
+    );
+    if native_fonts {
+        assert!((bottom[0].baseline_pt - 660.72002).abs() < 0.5);
+    }
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.vertical_alignment = Some(PageVerticalAlignment::Center);
+    let copy = page.content.clone();
+    page.content.push(Block::PageBreak);
+    page.content.extend(copy);
+    let (_, second_page) = compiled_section_titles(&document, 1);
+    assert!((second_page[0].baseline_pt - centered[0].baseline_pt).abs() < 0.001);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.content.truncate(2);
+    let mut plain = page.clone();
+    plain.vertical_alignment = None;
+    document.pages.push(Page::Flow(plain));
+    let (_, reset) = compiled_section_titles(&document, 1);
+    assert!((reset[0].baseline_pt - top[0].baseline_pt).abs() < 0.001);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_section_alignment_counts_declared_paragraph_spaces() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_vertical_center.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let (_, original) = compiled_section_titles(&document, 0);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    let Block::Paragraph(body) = &mut page.content[1] else {
+        panic!("body paragraph")
+    };
+    body.style.space_before = Some(20.0);
+    body.style.space_after = Some(30.0);
+    let (native_fonts, changed) = compiled_section_titles(&document, 0);
+    assert!((original[0].baseline_pt - changed[0].baseline_pt - 15.0).abs() < 0.001);
+    if native_fonts {
+        assert!((changed[0].baseline_pt - 362.88002).abs() < 0.5);
+    }
+}
+
+#[test]
+fn docx_section_alignment_reads_only_current_namespace_properties() {
+    let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:foreign"><w:body>
+        <w:p><w:pPr><w:sectPr><w:vAlign w:val="center"/><w:sectPrChange><w:sectPr><w:vAlign w:val="bottom"/></w:sectPr></w:sectPrChange></w:sectPr></w:pPr></w:p>
+        <w:tbl><w:tr><w:tc><w:p><w:pPr><w:sectPr><w:vAlign w:val="bottom"/></w:sectPr></w:pPr></w:p></w:tc></w:tr></w:tbl>
+        <w:sectPr><w:vAlign x:val="bottom"/></w:sectPr><x:sectPr><w:vAlign w:val="bottom"/></x:sectPr>
+        <w:sectPr><w:vAlign w:val="bottom"/></w:sectPr><w:sectPr><w:vAlign w:val="both"/></w:sectPr>
+    </w:body></w:document>"#;
+    for xml in [
+        xml.to_string(),
+        xml.replace(
+            "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+            "http://purl.oclc.org/ooxml/wordprocessingml/main",
+        ),
+    ] {
+        assert_eq!(
+            contexts::scan_section_alignment(&xml),
+            [
+                Some(PageVerticalAlignment::Center),
+                None,
+                Some(PageVerticalAlignment::Bottom),
+                Some(PageVerticalAlignment::Justified)
+            ]
+        );
+    }
+}
+
+#[test]
+fn docx_section_vertical_justification_warns_without_losing_text() {
+    let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Filing body retained.</w:t></w:r></w:p><w:sectPr><w:vAlign w:val="both"/></w:sectPr></w:body></w:document>"#;
+    let data = build_docx_with_math(xml);
+    let (document, warnings) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning.to_string().contains("vertical justification"))
+    );
+    let Page::Flow(page) = &document.pages[0] else {
+        panic!("flow section")
+    };
+    assert!(page.content.iter().any(|block| matches!(block,Block::Paragraph(paragraph) if paragraph.runs.iter().any(|run|run.text == "Filing body retained."))));
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_section_alignment_keeps_header_and_footer_anchors() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_vertical_center.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let story = |label: &str| HeaderFooter {
+        distance_from_edge: Some(36.0),
+        sheet_print_scale: None,
+        shapes: Vec::new(),
+        paragraphs: vec![HeaderFooterParagraph {
+            style: ParagraphStyle {
+                space_after: Some(20.0),
+                ..ParagraphStyle::default()
+            },
+            elements: vec![HFInline::Run(Run {
+                text: label.to_string(),
+                style: TextStyle::default(),
+                href: None,
+                footnote: None,
+                inline_box: None,
+            })],
+            border: None,
+            border_space: None,
+            frame: None,
+            sheet_section_is_rich: false,
+        }],
+    };
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.header = Some(story("Filing header"));
+    page.footer = Some(story("Filing footer"));
+    page.vertical_alignment = Some(PageVerticalAlignment::Top);
+    let positions = |doc: &Document| {
+        let output = crate::render::typst_gen::generate_typst(doc).unwrap();
+        crate::render::pdf::compiled_text_runs(&output.source, 0)
+            .unwrap()
+            .into_iter()
+            .filter(|run| run.text.starts_with("Filing "))
+            .map(|run| (run.text, run.baseline_pt))
+            .collect::<Vec<_>>()
+    };
+    let top = positions(&document);
+    assert_eq!(top.len(), 2);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.vertical_alignment = Some(PageVerticalAlignment::Center);
+    let centered = positions(&document);
+    assert_eq!(top, centered);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_mixed_continuous_alignment_only_changes_the_shared_page() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_alignment_multipage.docx");
+    let (document, warnings) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning.to_string().contains("automatic pagination"))
+    );
+    let original =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/section_vertical_center.docx");
+    let (original, _) = DocxParser
+        .parse(original, &ConvertOptions::default())
+        .unwrap();
+    let (_, centered) = compiled_section_titles(&original, 0);
+    let (native_fonts, first) = compiled_section_titles(&document, 0);
+    let (_, second) = compiled_section_titles(&document, 1);
+    assert_eq!(first.len(), 1);
+    assert_eq!(second.len(), 2);
+    assert!((first[0].baseline_pt - centered[0].baseline_pt).abs() < 0.001);
+    if native_fonts {
+        assert!((second[0].baseline_pt - 94.80002).abs() < 0.5);
+        assert!((second[1].baseline_pt - 176.88002).abs() < 0.5);
+    }
+}

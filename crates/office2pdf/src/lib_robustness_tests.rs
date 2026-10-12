@@ -358,6 +358,7 @@ fn test_edge_image_only_docx() {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     };

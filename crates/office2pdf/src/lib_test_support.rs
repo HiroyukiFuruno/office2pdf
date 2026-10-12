@@ -26,6 +26,7 @@ pub(super) fn make_simple_document(text: &str) -> Document {
             page_numbering: None,
             page_borders: None,
             line_numbering: None,
+            vertical_alignment: None,
         })],
         styles: StyleSheet::default(),
     }

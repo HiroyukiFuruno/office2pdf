@@ -29,8 +29,8 @@ use self::contexts::{
     build_chart_context_from_xml, build_math_context_from_xml, build_note_context_from_xml,
     build_wrap_context_from_xml, extract_column_layout_from_section_property,
     is_note_reference_run, read_zip_text, scan_column_layouts, scan_line_numbering,
-    scan_page_borders, scan_page_numbering, scan_style_paragraph_shading, scan_style_word_wrap,
-    seq_identifier, toc_caption_identifier, toc_heading_depth,
+    scan_page_borders, scan_page_numbering, scan_section_alignment, scan_style_paragraph_shading,
+    scan_style_word_wrap, seq_identifier, toc_caption_identifier, toc_heading_depth,
 };
 use self::lists::{
     NumberingMap, TaggedElement, build_numbering_map, extract_num_info, group_into_lists,
@@ -250,6 +250,7 @@ struct ZipPreParseAssets {
     page_numbering: Vec<Option<PageNumbering>>,
     page_borders: Vec<Option<crate::ir::PageBorders>>,
     line_numbering: Vec<Option<crate::ir::LineNumbering>>,
+    section_alignment: Vec<Option<crate::ir::PageVerticalAlignment>>,
     metafile_images: ImageMap,
     theme_fonts: ThemeFonts,
     default_paragraph_style_id: Option<String>,
@@ -313,6 +314,10 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 .as_deref()
                 .map(scan_page_borders)
                 .unwrap_or_default();
+            let section_alignment = doc_xml
+                .as_deref()
+                .map(scan_section_alignment)
+                .unwrap_or_default();
             let line_numbering = doc_xml
                 .as_deref()
                 .map(scan_line_numbering)
@@ -361,6 +366,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 page_numbering,
                 page_borders,
                 line_numbering,
+                section_alignment,
                 metafile_images,
                 theme_fonts,
                 default_paragraph_style_id,
@@ -397,6 +403,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             page_numbering: Vec::new(),
             page_borders: Vec::new(),
             line_numbering: Vec::new(),
+            section_alignment: Vec::new(),
             metafile_images: ImageMap::new(),
             theme_fonts: ThemeFonts::default(),
             default_paragraph_style_id: None,
@@ -428,6 +435,7 @@ impl Parser for DocxParser {
             page_numbering,
             page_borders,
             line_numbering,
+            section_alignment,
             metafile_images,
             theme_fonts,
             default_paragraph_style_id,
@@ -437,6 +445,23 @@ impl Parser for DocxParser {
             default_language,
         } = build_zip_preparse_assets(data);
 
+        if section_alignment
+            .iter()
+            .flatten()
+            .any(|alignment| *alignment == crate::ir::PageVerticalAlignment::Justified)
+        {
+            tracing::warn!(
+                format = "DOCX",
+                feature = "section vertical justification",
+                fallback = "top",
+                "Unsupported section alignment"
+            );
+            warnings.push(ConvertWarning::ParseSkipped {
+                format: "DOCX".to_string(),
+                reason: "Section vertical justification is unsupported; rendering at the top"
+                    .to_string(),
+            });
+        }
         let docx = docx_rs::read_docx(data).map_err(|e| {
             crate::parser::parse_err(format!("Failed to parse DOCX (docx-rs): {e}"))
         })?;
@@ -592,6 +617,10 @@ impl Parser for DocxParser {
                         page_numbering: page_numbering.get(section_layout_index).copied().flatten(),
                         page_borders: page_borders.get(section_layout_index).cloned().flatten(),
                         line_numbering: line_numbering.get(section_layout_index).cloned().flatten(),
+                        vertical_alignment: section_alignment
+                            .get(section_layout_index)
+                            .copied()
+                            .flatten(),
                     },
                     header_footer_styles,
                     &mut warnings,
@@ -634,6 +663,10 @@ impl Parser for DocxParser {
                 page_numbering: page_numbering.get(section_layout_index).copied().flatten(),
                 page_borders: page_borders.get(section_layout_index).cloned().flatten(),
                 line_numbering: line_numbering.get(section_layout_index).cloned().flatten(),
+                vertical_alignment: section_alignment
+                    .get(section_layout_index)
+                    .copied()
+                    .flatten(),
             },
             header_footer_styles,
             &mut warnings,
@@ -646,6 +679,35 @@ impl Parser for DocxParser {
                 Page::Flow(final_flow_page)
             },
         );
+
+        // The renderer can isolate explicit pages, but has no physical-page
+        // boundaries for automatic flow inside differing continuous sections.
+        let alignment = |page: &Page| match page {
+            Page::Flow(flow) | Page::FlowContinuous(flow) => match flow.vertical_alignment {
+                Some(crate::ir::PageVerticalAlignment::Center) => {
+                    crate::ir::PageVerticalAlignment::Center
+                }
+                Some(crate::ir::PageVerticalAlignment::Bottom) => {
+                    crate::ir::PageVerticalAlignment::Bottom
+                }
+                _ => crate::ir::PageVerticalAlignment::Top,
+            },
+            _ => crate::ir::PageVerticalAlignment::Top,
+        };
+        if pages.windows(2).any(|pair| {
+            matches!(pair[1], Page::FlowContinuous(_)) && alignment(&pair[0]) != alignment(&pair[1])
+        }) {
+            tracing::warn!(
+                format = "DOCX",
+                feature = "mixed continuous section alignment",
+                fallback = "top within shared explicit segment",
+                "Automatic pagination alignment is approximate"
+            );
+            warnings.push(ConvertWarning::ParseSkipped {
+                format: "DOCX".to_string(),
+                reason: "Mixed continuous section alignment is approximate during automatic pagination; explicit page breaks delimit the top-aligned shared segment".to_string(),
+            });
+        }
 
         Ok((
             Document {
