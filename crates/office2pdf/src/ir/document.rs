@@ -125,6 +125,7 @@ pub struct FlowPage {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LineNumbering {
     pub count_by: u32,
+    /// Word's zero-based start offset: 0 displays 1 on the first line.
     pub start: i32,
     pub distance: Option<f64>,
     pub restart: LineNumberRestart,

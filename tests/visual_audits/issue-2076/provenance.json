@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case70/input.docx",
+    "sha256": "fa3602e5cf95d906b15ae94158d9acd6658f05713865558fb1748dfc53ae826b",
+    "change": "Only lnNumType restart changes from continuous to newPage."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "0b374a017fed5f7b0c0dc73e9d1abf5edc9d983b53ce0bd3c562d6217ee018d4"
+  },
+  "before": {
+    "office2pdf_revision": "6caa474c72ddc6f66e52bfa0794b2e4521ecde50",
+    "pdf_sha256": "5defd469149d5dde6bb9eb6d3ce4548e763ecd11467baef43b94aeebb1960d18"
+  },
+  "after": {
+    "pdf_sha256": "0bf5f3f90e03209c65750c7effc52c9f65f2e46533466a3b4388b66ec0dbb5ab"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, the 5% diff, all four matched body/margin crop groups at 150 DPI and final JPEGs. Every pre-fix margin label is one too low (1\u201312 against native 2\u201313); after restores 2\u201313. One Letter page, Cambria regular body/margin text, black color, left body alignment, right-aligned margin clearance, wrapping and twelve-line paragraph spacing match. No missing shape, fill, rotation, clipping, border, hairline <=1pt, italic or underline appears. Current strict report has zero material clusters. Remaining native rounding has worst vertical anchor 0.204pt and horizontal anchor 0.299pt, below the 0.5pt threshold and tracked in #1874; those geometry deltas are not classified as antialiasing.",
+  "calibration": {
+    "no_patch_control_pixels_ae": 0,
+    "native_first_labels": {
+      "newPage_start0": 1,
+      "newPage_start1": 2,
+      "newSection_start1": 2,
+      "enabled_without_start": 1
+    },
+    "two_page_first_labels": {
+      "newPage_start1": [
+        2,
+        2
+      ],
+      "newSection_start1": [
+        2,
+        5
+      ],
+      "continuous_start1": [
+        2,
+        5
+      ]
+    },
+    "note": "Additional probes calibrate numeric settings; their whole-page visual parity is not claimed."
+  }
+}

@@ -50,7 +50,7 @@ pub(in crate::parser) fn scan_line_numbering(xml: &str) -> Vec<Option<LineNumber
                         start: values
                             .get("start")
                             .and_then(|v| v.parse::<i32>().ok())
-                            .unwrap_or(1),
+                            .unwrap_or(0),
                         distance: values
                             .get("distance")
                             .and_then(|v| v.parse::<f64>().ok())
