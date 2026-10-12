@@ -3699,3 +3699,143 @@ fn docx_out_of_range_abstract_restart_survives_complete_overrides() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn assert_wide_numbering_body_tabs(data: &[u8], interval: f64, explicit_stop: Option<f64>) {
+    let (document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let text = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let glyphs = crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+    let mut checked = 0;
+    for marker in text.iter().filter(|run| run.text.starts_with('(')) {
+        let body = text
+            .iter()
+            .find(|run| {
+                run.text.starts_with("Continuous item")
+                    && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+            })
+            .unwrap();
+        let shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
+        let end = marker.left_pt + shape.width_pt();
+        // The native probes preserve the nominal body origin for a fitting
+        // marker, otherwise use a custom stop or the document's tab grid.
+        let expected = if end < 126.0 - 0.01 {
+            126.0
+        } else if let Some(stop) = explicit_stop.filter(|stop| *stop > end + 0.01) {
+            stop
+        } else {
+            90.0 + (((end - 90.0) / interval).floor() + 1.0) * interval
+        };
+        assert!(
+            (body.left_pt - expected).abs() < 0.01,
+            "{} ends at {end}; body at {}, expected {expected}",
+            marker.text,
+            body.left_pt
+        );
+        assert!((marker.left_pt - 108.0).abs() < 0.01);
+        checked += 1;
+    }
+    assert_eq!(checked, 4);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_wide_numbering_markers_follow_default_and_custom_tabs() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    for start in [7, 98, 998] {
+        let data = rewrite_numbering_part(base, |xml| {
+            xml.replace(
+                "<w:start w:val=\"7\"/>",
+                &format!("<w:start w:val=\"{start}\"/>"),
+            )
+        });
+        assert_wide_numbering_body_tabs(&data, 36.0, None);
+        let shorter = rewrite_docx_part(&data, "word/settings.xml", |xml| {
+            xml.replace(
+                "<w:defaultTabStop w:val=\"720\"/>",
+                "<w:defaultTabStop w:val=\"480\"/>",
+            )
+        });
+        assert_wide_numbering_body_tabs(&shorter, 24.0, None);
+        let custom = rewrite_numbering_part(&data, |xml| {
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            format!(
+                "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                child.replacen(
+                    "<w:pPr>",
+                    "<w:pPr><w:tabs><w:tab w:val=\"num\" w:pos=\"1260\"/></w:tabs>",
+                    1
+                )
+            )
+        });
+        assert_wide_numbering_body_tabs(&custom, 36.0, Some(153.0));
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_wide_numbering_tab_keeps_continuation_lines_at_declared_indent() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    let data = rewrite_docx_part(base, "word/document.xml", |xml| {
+        let (prefix, suffix) = xml.rsplit_once("Continuous item").unwrap();
+        format!(
+            "{prefix}Continuous item with a long explanation about the final wide numbering marker and the paragraph continuation origin. This sentence continues across several physical lines to test wrapping at the declared left margin.{suffix}"
+        )
+    });
+    assert_wide_numbering_body_tabs(&data, 36.0, None);
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let first = runs
+        .iter()
+        .find(|run| run.text.starts_with("Continuous item with"))
+        .unwrap();
+    let continuations: Vec<_> = runs
+        .iter()
+        .filter(|run| run.baseline_pt > first.baseline_pt + 1.0)
+        .collect();
+    assert!(continuations.len() >= 2, "{continuations:?}");
+    for line in continuations {
+        assert!((line.left_pt - 126.0).abs() < 0.01, "{line:?}");
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_non_tab_numbering_suffix_does_not_acquire_tab_clearance() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    for suffix in ["space", "nothing"] {
+        let data = rewrite_numbering_part(base, |xml| {
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            format!(
+                "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                child.replacen(
+                    "<w:lvlText",
+                    &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
+                    1
+                )
+            )
+        });
+        let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+        let marker = runs.iter().find(|run| run.text == "(10)").unwrap();
+        let body = runs
+            .iter()
+            .find(|run| {
+                run.text == "Continuous item" && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+            })
+            .unwrap();
+        let glyphs = crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+        let shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
+        let next_tab =
+            90.0 + (((marker.left_pt + shape.width_pt() - 90.0) / 36.0).floor() + 1.0) * 36.0;
+        assert!(
+            body.left_pt < next_tab - 0.01,
+            "suffix {suffix} must not gain a tab jump: body {body:?}, next tab {next_tab}"
+        );
+    }
+}

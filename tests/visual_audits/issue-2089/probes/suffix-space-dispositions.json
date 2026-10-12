@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "kind": "issue",
+      "issue": "#2097",
+      "cluster_ids": [
+        "p1-8759b29aed14",
+        "p1-27dd5b3cc5aa"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 use super::*;
+use crate::ir::ListMarkerSuffix;
 
 const PPTX_BLANK_LIST_ITEM_SENTINEL: &str = "\u{E000}\u{E001}";
 
@@ -187,8 +188,8 @@ fn write_ordered_list_numbering_function(
 
 fn write_marker_box_open(out: &mut String, width_pt: f64) {
     // Typst normally sizes the marker column from the glyph. Word instead
-    // fixes the body at the numbering level's left indent, so reserve the
-    // complete hanging-indent span even for narrow bullets and digits.
+    // reserves the nominal hanging-indent span for narrow bullets and digits.
+    // Wide Word numbers advance only the first body line to its next tab.
     let _ = write!(out, "#box(width: {}pt, align(left)[", format_f64(width_pt));
 }
 
@@ -589,6 +590,7 @@ pub(super) fn generate_list_with_spacing_model(
         word_boundary_gaps,
         None,
         &eojeol_wrap,
+        &[],
         ctx,
     )?;
     out.push_str(")\n");
@@ -1704,6 +1706,93 @@ pub(super) struct ListEojeolWrap {
     pub(super) baseline_snap: Option<PowerPointBaselineSnap>,
 }
 
+/// Word advances an overflowing marker's suffix tab without moving the
+/// paragraph's continuation lines. Like docxide-pdf's `list_label::text_hanging`,
+/// measure the actual styled label and choose source stops before default tabs.
+fn write_word_numbering_tab_advance(
+    out: &mut String,
+    style: &EffectiveListStyle<'_>,
+    fallback_marker_style: Option<&TextStyle>,
+    paragraph_style: &ParagraphStyle,
+    numbers: &[u32],
+    default_tab_width_pt: f64,
+) {
+    if paragraph_style.numbering_suffix != Some(ListMarkerSuffix::Tab) {
+        return;
+    }
+    let Some(indent) = paragraph_list_indent(paragraph_style) else {
+        return;
+    };
+    let marker_style = merge_marker_style(fallback_marker_style, style.marker_style);
+    let marker_style = marker_style
+        .as_ref()
+        .filter(|style| has_text_properties(style));
+    let body_origin_pt = indent.marker_origin_pt + indent.marker_width_pt;
+    let interval = paragraph_default_tab_width_pt(paragraph_style, default_tab_width_pt);
+    out.push_str("#context { let word_list_marker = [");
+    if let Some(marker_style) = marker_style {
+        out.push_str("#text(");
+        write_text_params(out, marker_style);
+        out.push_str(")[");
+    }
+    let _ = write!(
+        out,
+        "#numbering(\"{}\"",
+        escape_typst_string(style.numbering_pattern.unwrap_or("1."))
+    );
+    let values = if style.full_numbering {
+        numbers
+    } else {
+        &numbers[numbers.len() - 1..]
+    };
+    for number in values {
+        let _ = write!(out, ", {number}");
+    }
+    out.push(')');
+    if marker_style.is_some() {
+        out.push(']');
+    }
+    let _ = write!(
+        out,
+        "]; let word_marker_end = {}pt + measure(word_list_marker).width; if word_marker_end >= {}pt - 0.01pt {{ let word_body_tab = ",
+        format_f64(indent.marker_origin_pt),
+        format_f64(body_origin_pt)
+    );
+    let mut stops: Vec<f64> = paragraph_style
+        .tab_stops
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .filter(|stop| stop.alignment == TabAlignment::Left && stop.position.is_finite())
+        .map(|stop| stop.position)
+        .collect();
+    stops.sort_by(f64::total_cmp);
+    stops.dedup();
+    let stop_count = stops.len();
+    for stop in stops {
+        let _ = write!(
+            out,
+            "if word_marker_end + 0.01pt < {}pt {{ {}pt }} else {{ ",
+            format_f64(stop),
+            format_f64(stop)
+        );
+    }
+    let _ = write!(
+        out,
+        "(calc.floor(word_marker_end / {}pt) + 1) * {}pt",
+        format_f64(interval),
+        format_f64(interval)
+    );
+    for _ in 0..stop_count {
+        out.push_str(" }");
+    }
+    let _ = write!(
+        out,
+        "; h(calc.max(0pt, word_body_tab - {}pt)) }} }}",
+        format_f64(body_origin_pt)
+    );
+}
+
 /// Recursively generate list items, grouping consecutive items at the same or deeper level.
 #[allow(clippy::too_many_arguments)]
 fn generate_list_items(
@@ -1717,13 +1806,39 @@ fn generate_list_items(
     word_boundary_gaps: bool,
     following_item: Option<&crate::ir::ListItem>,
     eojeol_wrap: &ListEojeolWrap,
+    parent_numbers: &[u32],
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
     let style = list_style_for_level(list, base_level);
     let (_, item_func) = list_funcs(style.kind);
+    let marker_fallback = common_list_level_text_style(items, base_level);
+    let uses_word_tabs = eojeol_wrap.breaks_hangul_at_eojeol
+        && style.kind == ListKind::Ordered
+        && common_list_level_indent(items, base_level).is_some()
+        && items
+            .iter()
+            .filter(|item| item.level == base_level)
+            .any(|item| {
+                item.content.first().is_some_and(|paragraph| {
+                    paragraph.style.numbering_suffix == Some(ListMarkerSuffix::Tab)
+                })
+            });
+    if uses_word_tabs {
+        tracing::debug!(
+            base_level,
+            default_tab_width_pt = ctx.default_tab_width_pt,
+            "Enabled Word numbering tab clearance"
+        );
+    }
+    let mut number = items.first().and_then(|item| item.start_at).unwrap_or(1);
     let mut i = 0;
     while i < items.len() {
         let item = &items[i];
+        number = item.start_at.unwrap_or(number);
+        let mut item_numbers = parent_numbers.to_vec();
+        if style.kind == ListKind::Ordered && eojeol_wrap.breaks_hangul_at_eojeol {
+            item_numbers.push(number);
+        }
         let word_boundary_gap: Option<f64> = word_boundary_gaps
             .then(|| items.get(i + 1).or(following_item))
             .flatten()
@@ -1738,6 +1853,16 @@ fn generate_list_items(
         out.push('[');
         if let Some(snap) = eojeol_wrap.baseline_snap {
             snap.write_open(out);
+        }
+        if uses_word_tabs && let Some(paragraph) = item.content.first() {
+            write_word_numbering_tab_advance(
+                out,
+                &style,
+                marker_fallback.as_ref(),
+                &paragraph.style,
+                &item_numbers,
+                ctx.default_tab_width_pt,
+            );
         }
         write_list_item_content(out, item, eojeol_wrap, ctx)?;
         if eojeol_wrap.baseline_snap.is_some() {
@@ -1851,6 +1976,7 @@ fn generate_list_items(
                         word_boundary_gaps,
                         items.get(child_end).or(following_item),
                         eojeol_wrap,
+                        &item_numbers,
                         ctx,
                     )?;
                     out.push(')');
@@ -1882,6 +2008,7 @@ fn generate_list_items(
         }
 
         out.push_str("],\n");
+        number = number.saturating_add(1);
     }
     Ok(())
 }

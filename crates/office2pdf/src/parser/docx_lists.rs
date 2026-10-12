@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::ir::{
-    Block, List, ListItem, ListKind, ListLevelStyle, Paragraph, ParagraphStyle, Run, TabAlignment,
-    TabLeader, TabStop,
+    Block, List, ListItem, ListKind, ListLevelStyle, ListMarkerSuffix, Paragraph, ParagraphStyle,
+    Run, TabAlignment, TabLeader, TabStop,
 };
 
 /// Numbering info extracted from a paragraph's numPr.
@@ -168,11 +168,17 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
                     trigger
                 }
             });
+    let mut paragraph_style = super::text::extract_paragraph_style(&level.paragraph_property);
+    paragraph_style.numbering_suffix = Some(match level.suffix {
+        docx_rs::LevelSuffixType::Tab => ListMarkerSuffix::Tab,
+        docx_rs::LevelSuffixType::Space => ListMarkerSuffix::Space,
+        docx_rs::LevelSuffixType::Nothing => ListMarkerSuffix::Nothing,
+    });
     RawListLevel {
         start: serialize_u32(&level.start).unwrap_or(1),
         number_format: level.format.val.clone(),
         level_text: serialize_string(&level.text).unwrap_or_default(),
-        paragraph_style: super::text::extract_paragraph_style(&level.paragraph_property),
+        paragraph_style,
         has_start_override: false,
         uses_legal_numbering: level.is_lgl.is_some(),
         restart_trigger,
@@ -438,6 +444,7 @@ fn apply_numbering_level_indentation(
     };
 
     let style = &mut paragraph.style;
+    style.numbering_suffix = level_style.numbering_suffix;
     style.indent_left = style.indent_left.or(level_style.indent_left);
     style.indent_right = style.indent_right.or(level_style.indent_right);
     style.indent_first_line = style.indent_first_line.or(level_style.indent_first_line);
