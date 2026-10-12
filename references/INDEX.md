@@ -20,6 +20,7 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 
 | Project | Lang | Focus | Detail |
 |---------|------|-------|--------|
+| [docxide-pdf](https://github.com/sverrejb/docxide-pdf) | Rust | Word-based DOCX fixtures and direct PDF rendering | [docxide-pdf.md](docxide-pdf.md) |
 | [pandoc](https://github.com/jgm/pandoc) | Haskell | Universal converter (DOCX reader + Typst writer) | [pandoc.md](pandoc.md) |
 | [mammoth.js](https://github.com/mwilliamson/mammoth.js) | JS | DOCX → semantic HTML | [mammoth.md](mammoth.md) |
 | [ONLYOFFICE Document Server](https://github.com/ONLYOFFICE/DocumentServer) | Mixed | DOCX document editing and section layout | [onlyoffice.md](onlyoffice.md) |
