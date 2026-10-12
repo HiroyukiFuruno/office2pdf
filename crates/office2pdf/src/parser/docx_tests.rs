@@ -2458,7 +2458,7 @@ fn docx_line_numbers_change_at_continuous_section_boundaries() {
     let mut next = page.clone();
     next.line_numbering.as_mut().unwrap().start = 8;
     let mut plain = page.clone();
-    plain.line_numbering = None;
+    plain.line_numbering.as_mut().unwrap().count_by = 0;
     document.pages.push(Page::FlowContinuous(next));
     document.pages.push(Page::FlowContinuous(plain));
     let numbers = compiled_margin_numbers(&document, 0);
@@ -2502,5 +2502,31 @@ fn docx_line_number_default_start_displays_one() {
             .map(|run| run.text.as_str())
             .collect::<Vec<_>>(),
         ["1"]
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_line_numbers_stay_disabled_without_a_positive_interval() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/line_numbering_disabled.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    assert!(compiled_margin_numbers(&document, 0).is_empty());
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    assert_eq!(page.content.len(), 12);
+    page.line_numbering.as_mut().unwrap().count_by = 0;
+    assert!(compiled_margin_numbers(&document, 0).is_empty());
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.line_numbering.as_mut().unwrap().count_by = 5;
+    assert_eq!(
+        compiled_margin_numbers(&document, 0)
+            .iter()
+            .map(|run| run.text.as_str())
+            .collect::<Vec<_>>(),
+        ["5", "10"]
     );
 }

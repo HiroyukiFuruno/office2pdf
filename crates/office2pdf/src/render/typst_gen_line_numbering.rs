@@ -3,7 +3,7 @@ use crate::ir::{FlowPage, LineNumberRestart};
 use std::fmt::Write;
 
 pub(super) fn write_line_numbering(out: &mut String, page: &FlowPage, ctx: &mut GenCtx) {
-    let Some(numbering) = &page.line_numbering else {
+    let Some(numbering) = page.line_numbering.as_ref().filter(|n| n.count_by > 0) else {
         if ctx.has_flow_line_numbering {
             out.push_str("#set par.line(numbering: none)\n");
             ctx.has_flow_line_numbering = false;
@@ -46,7 +46,7 @@ pub(super) fn write_line_numbering(out: &mut String, page: &FlowPage, ctx: &mut 
     let _ = writeln!(
         out,
         "#set par.line(numbering: n => context {{ {body} if value >= 1 and calc.rem(value, {}) == 0 {{ text({text_parameters}fill: black, str(value)) }} }}, number-align: right, number-margin: left, number-clearance: {}pt, numbering-scope: \"document\")",
-        numbering.count_by.max(1),
+        numbering.count_by,
         format_f64(numbering.distance.unwrap_or(18.0))
     );
     out.push_str("#show table: set par.line(numbering: none)\n");

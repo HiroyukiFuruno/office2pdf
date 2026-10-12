@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case70/input.docx",
+    "sha256": "890e066f5bd148b5d998055466e1b37578e3cb67762d183360b7c6ef86387aea",
+    "change": "Only lnNumType attributes removed; all other package parts unchanged."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "513de3f84ec3ff4591273f1fb457945cba21cc7c30e60da8957fbe63a7dde4b8"
+  },
+  "before": {
+    "office2pdf_revision": "4add9afeca2d1e3f69995f3140f5456bef0c0633",
+    "pdf_sha256": "5defd469149d5dde6bb9eb6d3ce4548e763ecd11467baef43b94aeebb1960d18"
+  },
+  "after": {
+    "pdf_sha256": "9955174e9c2e5d35fe2a2bfd97879afa76f5baf1ea15595d85449658f33d4f4f"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, the 5% pixel diff, all four matched body/margin crop pairs at 150 DPI and publication JPEGs. The before output adds twelve unwanted labels 1\u201312; the after output leaves the margin empty as Word does. One Letter page retains all twelve Cambria regular body lines, black color, left alignment, wrapping, size and paragraph spacing. No rotation, shape, fill, border, hairline <=1pt, italic, underline, clipping or overflow occurs. The current strict raster report contains zero material clusters. Small native anchor rounding is below 0.5pt and tracked in #1874; geometry deltas are not classified as antialiasing."
+}

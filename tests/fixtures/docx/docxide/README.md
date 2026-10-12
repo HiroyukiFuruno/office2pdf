@@ -11,3 +11,6 @@ No fonts or reference PDFs are copied from the upstream corpus.
 
 `line_numbering_page_restart.docx` changes only case70’s section line-number
 restart to `newPage`; native Word still displays 2–13 for `start=1`.
+
+`line_numbering_disabled.docx` removes case70’s line-number attributes.
+Fresh native Word renders its twelve body lines without margin numbers.

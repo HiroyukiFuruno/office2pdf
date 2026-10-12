@@ -124,6 +124,7 @@ pub struct FlowPage {
 /// Word's section line-numbering policy; distances are in points.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LineNumbering {
+    /// A zero interval disables margin numbers.
     pub count_by: u32,
     /// Word's zero-based start offset: 0 displays 1 on the first line.
     pub start: i32,

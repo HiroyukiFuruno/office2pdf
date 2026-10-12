@@ -265,7 +265,8 @@ first-page selection, and front/back placement. Custom `FlowPage` values use
 
 DOCX section line numbering supports intervals, starts, page/section restarts,
 continuous numbering and margin clearance. The start is a zero-based offset
-(default 0 displays 1). Numbers use the document default font;
+(default 0 displays 1). A missing or zero interval disables numbering.
+Numbers use the document default font;
 custom line-number styles and paragraph suppression are not supported. Multi-column
 number placement follows Typst's outside-margin behavior. Custom `FlowPage` values
 use `line_numbering: None` to disable numbering.
