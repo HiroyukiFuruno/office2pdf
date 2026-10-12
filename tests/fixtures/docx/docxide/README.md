@@ -44,3 +44,7 @@ native Word probes for missing ancestors and later visible counters.
 `numbering_restart_suppression.docx` sets the three-level policy fixture’s level 2
 restart to 2. PDF tests check suppressed markers, numbering versus paragraph indents,
 bullet/numbered levels and continuation spacing against native Word probes.
+
+`numbering_out_of_range_restarts.docx` sets the four-level derivative’s level 2
+restart to 8. PDF tests vary levels, starts, thresholds and complete overrides
+against native Word probes for continuing physical counters.

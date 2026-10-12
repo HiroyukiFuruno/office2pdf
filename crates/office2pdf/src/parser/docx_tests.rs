@@ -3573,3 +3573,129 @@ fn docx_suppressed_restart_preserves_paragraph_and_descendant_origins() {
         }
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_out_of_range_restart_continues_child_labels() {
+    let data = include_bytes!(
+        "../../../../tests/fixtures/docx/docxide/numbering_out_of_range_restarts.docx"
+    );
+    let text = converted_numbering_text(data);
+    assert_eq!(
+        text.split_whitespace().collect::<String>(),
+        "Numberingrestartpolicy1.ItemA(1)ItemB[1]ItemC(2)ItemD(2)ItemE2.ItemF(3)ItemG",
+        "{text}"
+    );
+    let boundary = rewrite_numbering_part(data, |xml| {
+        xml.replace("<w:lvlRestart w:val=\"8\"/>", "<w:lvlRestart w:val=\"7\"/>")
+    });
+    let text = converted_numbering_text(&boundary);
+    assert_eq!(
+        text.split_whitespace().collect::<String>(),
+        "Numberingrestartpolicy1.ItemAItemB[1]ItemC(2)ItemDItemE2.ItemFItemG",
+        "{text}"
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_out_of_range_restart_counts_physical_items_across_levels() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    for level in [1, 2, 3] {
+        for restart in [8, 9, 65535] {
+            for start in [1, 7] {
+                let data = rewrite_numbering_part(base, |xml| {
+                    let opener = format!("<w:lvl w:ilvl=\"{level}\">");
+                    let (prefix, child) = xml.split_once(&opener).unwrap();
+                    let (current, rest) = child.split_once("</w:lvl>").unwrap();
+                    format!(
+                        "{prefix}{opener}{}<w:lvlRestart w:val=\"{restart}\"/></w:lvl>{rest}",
+                        current.replace(
+                            "<w:start w:val=\"1\"/>",
+                            &format!("<w:start w:val=\"{start}\"/>")
+                        )
+                    )
+                });
+                let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+                    if level == 1 {
+                        let paragraph = xml
+                            .split("</w:p>")
+                            .find(|part| part.contains("<w:t>Item D</w:t>"))
+                            .unwrap();
+                        let (_, content) = paragraph.rsplit_once("<w:p>").unwrap();
+                        let next = format!("<w:p>{content}</w:p>").replace("Item D", "Item H");
+                        xml.replace("<w:sectPr", &format!("{next}<w:sectPr"))
+                    } else if level == 3 {
+                        let mut levels = [0, 3, 2, 3, 1, 2, 0].into_iter();
+                        xml.split_inclusive("<w:ilvl w:val=\"")
+                            .enumerate()
+                            .map(|(index, part)| {
+                                if index == 0 {
+                                    return part.to_string();
+                                }
+                                let (_, rest) = part.split_once('"').unwrap();
+                                format!("{}\"{rest}", levels.next().unwrap())
+                            })
+                            .collect()
+                    } else {
+                        xml.to_string()
+                    }
+                });
+                let expected = match level {
+                    1 => format!(
+                        "Numberingrestartpolicy1.ItemA(1)ItemB[1]ItemC({start})ItemD(1)ItemE2.ItemF(1)ItemG({})ItemH",
+                        start + 1
+                    ),
+                    2 => format!(
+                        "Numberingrestartpolicy1.ItemA({start})ItemB[1]ItemC(2)ItemD({})ItemE2.ItemF({})ItemG",
+                        start + 1,
+                        start + 2
+                    ),
+                    3 => format!(
+                        "Numberingrestartpolicy1.ItemA[{start}]ItemB(2)ItemC[{}]ItemD(2)ItemE(1)ItemF2.ItemG",
+                        start + 1
+                    ),
+                    _ => unreachable!(),
+                };
+                let text = converted_numbering_text(&data);
+                assert_eq!(
+                    text.split_whitespace().collect::<String>(),
+                    expected,
+                    "level {level}, restart {restart}, start {start}: {text}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_out_of_range_abstract_restart_survives_complete_overrides() {
+    let base = include_bytes!(
+        "../../../../tests/fixtures/docx/docxide/numbering_out_of_range_restarts.docx"
+    );
+    for override_restart in [1, 8, 65535] {
+        let data = rewrite_numbering_part(base, |xml| {
+            let level = xml
+                .split_once("<w:lvl w:ilvl=\"2\">")
+                .unwrap()
+                .1
+                .split_once("</w:lvl>")
+                .unwrap()
+                .0;
+            let overridden = level.replace(
+                "<w:lvlRestart w:val=\"8\"/>",
+                &format!("<w:lvlRestart w:val=\"{override_restart}\"/>"),
+            );
+            xml.replace("<w:num w:numId=\"100\"><w:abstractNumId w:val=\"100\"/></w:num>",
+                &format!("<w:num w:numId=\"100\"><w:abstractNumId w:val=\"100\"/><w:lvlOverride w:ilvl=\"2\"><w:lvl w:ilvl=\"2\">{overridden}</w:lvl></w:lvlOverride></w:num>"))
+        });
+        let text = converted_numbering_text(&data);
+        assert_eq!(
+            text.split_whitespace().collect::<String>(),
+            "Numberingrestartpolicy1.ItemA(1)ItemB[1]ItemC(2)ItemD(2)ItemE2.ItemF(3)ItemG",
+            "override restart {override_restart}: {text}"
+        );
+    }
+}

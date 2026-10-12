@@ -271,10 +271,10 @@ DOCX child numbering supports never-restart and earlier-level restart rules;
 omitted rules restart after any higher-level item. Word ignores restart rules
 inside complete level overrides. Skipped child levels retain their actual style
 and indentation. Skipped resettable ancestors advance later visible counters;
-never-restarting ancestors count physical items only. Child restart values 1–7
+child levels with restart values of 0 or above 7 count physical items only.
+Child restart values 1–7
 suppress markers and numbering indents when they name the same/later level;
-root flags are ignored. Out-of-range restart values (#2094) and wide-marker tab
-clearance (#2089) remain unsupported.
+root flags are ignored. Wide-marker tab clearance (#2089) remains unsupported.
 
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their
