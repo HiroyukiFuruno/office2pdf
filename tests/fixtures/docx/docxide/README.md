@@ -21,3 +21,8 @@ continuous section boundary with the same centered alignment.
 `section_alignment_multipage.docx` adds an explicit second centered page, then
 a top-aligned continuous section sharing only that second page. All retain the
 upstream Apache-2.0 attribution above; native calibration variants stay external.
+
+`legal_numbering.docx` is the unmodified synthetic case71 from the same revision
+and Apache-2.0 license. Native Word retains Roman parent labels while legal
+child labels use decimal references. The independent nested spacing defect is
+tracked in #2083.

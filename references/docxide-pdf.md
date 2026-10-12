@@ -12,8 +12,8 @@ implementation references: `src/docx/alt_chunk.rs` (HTML/MHTML imports),
 Our Typst backend already handles some features this renderer lacks, including
 complex-script shaping; copy patterns only after reproducing a missing behavior.
 
-The pinned corpus has 393 inputs/391 references; the published comparison has
-376 cases and identifies office2pdf only by release version. Re-run current code.
+The pinned corpus has 393 inputs/391 references; 376 published cases identify
+office2pdf by release version only. Re-run current code.
 
 ```sh
 python3 scripts/audit_docxide_corpus.py --corpus-root /path/to/pinned/docxide-pdf \
@@ -36,14 +36,14 @@ as an image/path, and extraction order or font availability can change scores.
 Every selected fix still needs fresh native GT, all comparison axes, direct image
 inspection, and explicit issue dispositions under our visual contract.
 
-HTML import adopts its CSS mapping with Rust [html5ever](https://github.com/servo/html5ever)
-and [mailparse](https://github.com/staktrace/mailparse), feeding the same expanded
-XML to docx-rs and contextual scans.
+HTML expansion follows its CSS mapping, using Rust [html5ever](https://github.com/servo/html5ever) and
+[mailparse](https://github.com/staktrace/mailparse); docx-rs and contextual scans read the expanded XML.
 
-Section line numbering maps Word starts, intervals and restarts onto Typst margin
-labels. The synthetic case70 native export checks font, clearance and baselines;
-page/section restart and suppression at section boundaries have compiled regressions.
+Section line numbering maps starts, intervals and restarts to Typst margin labels.
+Case70 native exports check fonts/clearance; compiled tests cover section suppression.
 
 Section alignment maps `sections.rs` properties into Typst page flow. Fresh
 Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 `both` and mixed automatic pagination warn; mixed explicit shared pages use top.
+
+Legal numbering follows `numbering.rs`: decimalize each placeholder in that level.

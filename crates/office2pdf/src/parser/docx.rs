@@ -462,9 +462,16 @@ impl Parser for DocxParser {
                     .to_string(),
             });
         }
-        let docx = docx_rs::read_docx(data).map_err(|e| {
+        let mut docx = docx_rs::read_docx(data).map_err(|e| {
             crate::parser::parse_err(format!("Failed to parse DOCX (docx-rs): {e}"))
         })?;
+
+        let numbering_xml = zip::ZipArchive::new(std::io::Cursor::new(data))
+            .ok()
+            .and_then(|mut archive| read_zip_text(&mut archive, "word/numbering.xml"));
+        if let Some(xml) = numbering_xml {
+            contexts::normalize_legal_numbering(&xml, &mut docx.numberings);
+        }
 
         // Populate locale-specific footnote/endnote style IDs from docx styles
         ctx.notes.populate_style_ids(&docx.styles);

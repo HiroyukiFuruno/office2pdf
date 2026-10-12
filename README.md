@@ -263,6 +263,10 @@ DOCX line-based section page borders support page/text offsets, per-edge paint,
 first-page selection, and front/back placement. Custom `FlowPage` values use
 `page_borders: None` to omit decorations. Decorative art borders are not supported.
 
+DOCX legal numbering renders a list level's placeholders as decimal, preserving
+the parent's own format. On/off flags and complete level overrides are honored.
+Inline multilevel and nondecimal prefixes are not yet supported.
+
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their
 common alignment; mixed alignments fall back to top on their shared explicit

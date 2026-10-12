@@ -2838,3 +2838,109 @@ fn docx_mixed_continuous_alignment_only_changes_the_shared_page() {
         assert!((second[1].baseline_pt - 176.88002).abs() < 0.5);
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn rewrite_numbering_part(data: &[u8], edit: impl FnOnce(&str) -> String) -> Vec<u8> {
+    let mut archive = zip::ZipArchive::new(Cursor::new(data)).unwrap();
+    let mut output = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let mut edit = Some(edit);
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).unwrap();
+        let name = entry.name().to_string();
+        let mut content = Vec::new();
+        std::io::Read::read_to_end(&mut entry, &mut content).unwrap();
+        if name == "word/numbering.xml" {
+            content = edit.take().unwrap()(&String::from_utf8(content).unwrap()).into_bytes();
+        }
+        output
+            .start_file(name, zip::write::FileOptions::default())
+            .unwrap();
+        std::io::Write::write_all(&mut output, &content).unwrap();
+    }
+    output.finish().unwrap().into_inner()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn converted_numbering_text(data: &[u8]) -> String {
+    let result = crate::convert_bytes(
+        data,
+        crate::config::Format::Docx,
+        &ConvertOptions::default(),
+    )
+    .unwrap();
+    pdf_extract::extract_text_from_mem(&result.pdf).unwrap()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_legal_numbering_uses_decimal_references_only_when_enabled() {
+    let original = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    for (flag, enabled) in [
+        ("<w:isLgl/>", true),
+        ("<w:isLgl w:val=\"true\"/>", true),
+        ("<w:isLgl w:val=\"1\"/>", true),
+        ("<w:isLgl w:val=\"on\"/>", true),
+        ("<w:isLgl w:val=\"false\"/>", false),
+        ("<w:isLgl w:val=\"0\"/>", false),
+        ("<w:isLgl w:val=\"off\"/>", false),
+        ("", false),
+        ("<f:isLgl xmlns:f=\"urn:foreign\"/>", false),
+        ("<w:isLgl xmlns:f=\"urn:foreign\" f:val=\"false\"/>", true),
+    ] {
+        let data = rewrite_numbering_part(original, |xml| xml.replace("<w:isLgl/>", flag));
+        let text = converted_numbering_text(&data);
+        let (expected, unexpected) = if enabled {
+            (["1.1.", "1.2.", "2.1."], ["I.1.", "I.2.", "II.1."])
+        } else {
+            (["I.1.", "I.2.", "II.1."], ["1.1.", "1.2.", "2.1."])
+        };
+        for label in expected {
+            assert!(text.contains(label), "{flag}: missing {label}: {text}");
+        }
+        for label in unexpected {
+            assert!(!text.contains(label), "{flag}: unexpected {label}: {text}");
+        }
+        for body in [
+            "First section",
+            "Sub one",
+            "Sub two",
+            "Second section",
+            "Sub one again",
+        ] {
+            assert!(text.contains(body), "{flag}: missing body {body}");
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_legal_numbering_forces_current_and_ancestor_formats_to_decimal() {
+    let original = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    let data = rewrite_numbering_part(original, |xml| {
+        xml.replace("upperRoman", "upperLetter")
+            .replace("w:val=\"decimal\"", "w:val=\"lowerRoman\"")
+    });
+    let text = converted_numbering_text(&data);
+    for label in ["A.", "B.", "1.1.", "1.2.", "2.1."] {
+        assert!(text.contains(label), "missing {label}: {text}");
+    }
+    assert!(!text.contains("A.i."));
+    assert!(!text.contains("B.i."));
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_legal_numbering_override_can_disable_abstract_level_flag() {
+    let original = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    let data = rewrite_numbering_part(original, |xml| {
+        let start = xml.find("<w:num w:numId=\"100\">").unwrap();
+        let end = start + xml[start..].find("</w:num>").unwrap();
+        let level = r#"<w:lvlOverride w:ilvl="1"><w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:isLgl w:val="false"/><w:lvlText w:val="%1.%2."/><w:pPr><w:ind w:left="1440" w:hanging="432"/></w:pPr></w:lvl></w:lvlOverride>"#;
+        format!("{}{}{}", &xml[..end], level, &xml[end..])
+    });
+    let text = converted_numbering_text(&data);
+    for label in ["I.1.", "I.2.", "II.1."] {
+        assert!(text.contains(label), "missing {label}: {text}");
+    }
+    assert!(!text.contains("1.1."));
+}

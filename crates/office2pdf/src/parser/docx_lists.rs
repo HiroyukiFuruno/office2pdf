@@ -36,6 +36,7 @@ struct RawListLevel {
     level_text: String,
     paragraph_style: ParagraphStyle,
     has_start_override: bool,
+    uses_legal_numbering: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -108,7 +109,11 @@ fn build_typst_numbering_pattern(
 
             let referenced_level: u32 = digits.parse::<u32>().ok()?.checked_sub(1)?;
             let referenced = levels.get(&referenced_level)?;
-            let symbol = typst_counter_symbol(&referenced.number_format)?;
+            let symbol = if levels.get(&current_level)?.uses_legal_numbering {
+                "1"
+            } else {
+                typst_counter_symbol(&referenced.number_format)?
+            };
             pattern.push_str(symbol);
             if referenced_level == current_level {
                 saw_current_level = true;
@@ -123,7 +128,11 @@ fn build_typst_numbering_pattern(
 
     if !saw_current_level {
         let current = levels.get(&current_level)?;
-        let symbol = typst_counter_symbol(&current.number_format)?;
+        let symbol = if current.uses_legal_numbering {
+            "1"
+        } else {
+            typst_counter_symbol(&current.number_format)?
+        };
         pattern.insert_str(0, symbol);
     }
 
@@ -137,6 +146,7 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
         level_text: serialize_string(&level.text).unwrap_or_default(),
         paragraph_style: super::text::extract_paragraph_style(&level.paragraph_property),
         has_start_override: false,
+        uses_legal_numbering: level.is_lgl.is_some(),
     }
 }
 
@@ -179,6 +189,7 @@ fn resolve_numbering(
                     level_text: format!("%{}.", level_index + 1),
                     paragraph_style: ParagraphStyle::default(),
                     has_start_override: true,
+                    uses_legal_numbering: false,
                 });
         }
     }
@@ -199,7 +210,11 @@ fn resolve_numbering(
                 *level_index,
                 ResolvedListLevel {
                     level_text: level.level_text.clone(),
-                    number_format: level.number_format.clone(),
+                    number_format: if level.uses_legal_numbering {
+                        "decimal".to_string()
+                    } else {
+                        level.number_format.clone()
+                    },
                     style: ListLevelStyle {
                         kind,
                         numbering_pattern,
@@ -300,9 +315,8 @@ struct NumberedItem {
     item: ListItem,
 }
 
-/// Substitute the current counter into a Word `lvlText` placeholder
-/// ("제%1조" → "제3조"). Only the level's own placeholder participates for
-/// inline-numbered paragraphs.
+/// Format an inline prefix from the current counter.
+/// TODO(referenced-level numbering): this path lacks ancestor counters and formats.
 fn format_inline_number(level_text: &str, number_format: &str, number: u32) -> String {
     let formatted: String = match number_format {
         "decimalZero" => format!("{number:02}"),

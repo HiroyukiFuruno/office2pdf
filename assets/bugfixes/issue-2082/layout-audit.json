@@ -1,0 +1,187 @@
+{
+ "pages": [
+  {
+   "lines": {
+    "gt": 6,
+    "out": 6,
+    "matched": 6,
+    "missing": 0,
+    "extra": 0,
+    "deviant": 3,
+    "missing_text": [],
+    "extra_text": []
+   },
+   "baseline": {
+    "mean_abs_dy": 5.10216724999999,
+    "worst_dy": 20.071219999999983,
+    "worst_dy_signed": -20.071219999999983,
+    "worst_line": "2.1.Suboneagain"
+   },
+   "dx0": {
+    "mean_abs": 6.000000000838668e-05,
+    "worst": 9.600000001341868e-05
+   },
+   "width": {
+    "mean_abs_pct": 0.06183528732565855,
+    "worst_pct": 0.17360768720984862
+   },
+   "instances": {
+    "compared": 8,
+    "large_shift_threshold": 5.0,
+    "large_shift_count": 3,
+    "large_shifts": [
+     {
+      "label": "II.",
+      "gt_x": 104.39990399999999,
+      "gt_y": 186.00001999999998,
+      "out_x": 104.4,
+      "out_y": 175.81836,
+      "dx": 9.600000001341868e-05,
+      "dy": -10.181659999999965,
+      "width_pct": -0.12814847533424553
+     },
+     {
+      "label": "Secondsection",
+      "gt_x": 126.0,
+      "gt_y": 186.00001999999998,
+      "out_x": 126.0,
+      "out_y": 175.81836,
+      "dx": 0.0,
+      "dy": -10.181659999999965,
+      "width_pct": -0.01449183943241889
+     },
+     {
+      "label": "2.1.Suboneagain",
+      "gt_x": 140.399904,
+      "gt_y": 210.72001999999998,
+      "out_x": 140.4,
+      "out_y": 190.6488,
+      "dx": 9.600000001341868e-05,
+      "dy": -20.071219999999983,
+      "width_pct": -0.03882779625623996
+     }
+    ],
+    "fine_shift_threshold": 0.5,
+    "fine_shift_count": 3,
+    "fine_shifts": [
+     {
+      "label": "II.",
+      "gt_x": 104.39990399999999,
+      "gt_y": 186.00001999999998,
+      "out_x": 104.4,
+      "out_y": 175.81836,
+      "dx": 9.600000001341868e-05,
+      "dy": -10.181659999999965,
+      "width_pct": -0.12814847533424553
+     },
+     {
+      "label": "Secondsection",
+      "gt_x": 126.0,
+      "gt_y": 186.00001999999998,
+      "out_x": 126.0,
+      "out_y": 175.81836,
+      "dx": 0.0,
+      "dy": -10.181659999999965,
+      "width_pct": -0.01449183943241889
+     },
+     {
+      "label": "2.1.Suboneagain",
+      "gt_x": 140.399904,
+      "gt_y": 210.72001999999998,
+      "out_x": 140.4,
+      "out_y": 190.6488,
+      "dx": 9.600000001341868e-05,
+      "dy": -20.071219999999983,
+      "width_pct": -0.03882779625623996
+     }
+    ]
+   },
+   "visibility": {
+    "mismatch_count": 0,
+    "mismatches": [],
+    "unmatched_hidden_gt": 0,
+    "unmatched_hidden_out": 0,
+    "unmatched_hidden_gt_text": [],
+    "unmatched_hidden_out_text": []
+   },
+   "visible_fills": {
+    "mismatch_count": 0,
+    "mismatches": []
+   },
+   "pitch": {
+    "pairs": 5,
+    "worst_delta": 10.12961999999996
+   },
+   "wraps": {
+    "count": 0,
+    "samples": []
+   },
+   "topology": {
+    "groups": 0,
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "reflow": {
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "rects": {
+    "gt_count": 0,
+    "out_count": 0,
+    "canonical_gt_count": 0,
+    "canonical_out_count": 0,
+    "matched": 0,
+    "unmatched_gt": 0,
+    "unmatched_out": 0,
+    "mean_center_delta": 0.0,
+    "geometry_threshold": 0.5,
+    "raw_geometry_mismatch_count": 0,
+    "raw_geometry_mismatch_samples": [],
+    "coverage_equivalent_count": 0,
+    "coverage_unmodeled_count": 0,
+    "geometry_mismatch_count": 0,
+    "geometry_mismatch_samples": [],
+    "samples": [],
+    "x": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "y": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "width": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "height": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "edges": {
+     "left": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "top": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "right": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "bottom": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     }
+    }
+   },
+   "noise_floor": 0.12
+  }
+ ],
+ "gt_pages": 1,
+ "out_pages": 1
+}
