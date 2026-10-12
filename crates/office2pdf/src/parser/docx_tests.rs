@@ -2872,6 +2872,143 @@ fn converted_numbering_text(data: &[u8]) -> String {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_numbering_never_restart_keeps_child_labels_across_parents() {
+    let original =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_restarts.docx");
+    for start in [1, 7] {
+        for never_restarts in [false, true] {
+            for inline in [false, true] {
+                let data = rewrite_numbering_part(original, |xml| {
+                    let (prefix, custom) = xml
+                        .split_once("<w:abstractNum w:abstractNumId=\"100\">")
+                        .unwrap();
+                    let (parent, child) = custom.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                    let child = child.replacen(
+                        "<w:start w:val=\"1\"/>",
+                        &format!("<w:start w:val=\"{start}\"/>"),
+                        1,
+                    );
+                    let mut xml = format!(
+                        "{prefix}<w:abstractNum w:abstractNumId=\"100\">{parent}<w:lvl w:ilvl=\"1\">{child}"
+                    );
+                    if !never_restarts {
+                        xml = xml.replace("<w:lvlRestart w:val=\"0\"/>", "");
+                    }
+                    if inline {
+                        xml = xml
+                            .replace(
+                                "w:left=\"360\" w:hanging=\"360\"",
+                                "w:left=\"0\" w:hanging=\"0\"",
+                            )
+                            .replace(
+                                "w:left=\"720\" w:hanging=\"360\"",
+                                "w:left=\"0\" w:hanging=\"0\"",
+                            );
+                    }
+                    xml
+                });
+                let text = converted_numbering_text(&data);
+                let labels: Vec<String> = text
+                    .split('(')
+                    .skip(1)
+                    .filter_map(|part| part.split_once(')').map(|(value, _)| format!("({value})")))
+                    .collect();
+                let expected: Vec<String> = (0..4)
+                    .map(|index| {
+                        format!(
+                            "({})",
+                            start + if never_restarts { index } else { index % 2 }
+                        )
+                    })
+                    .collect();
+                assert_eq!(
+                    labels, expected,
+                    "start {start}, never {never_restarts}, inline {inline}: {text}"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_numbering_restart_uses_the_requested_earlier_level() {
+    let original =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_restart_policy.docx");
+    for (restart, expected) in [
+        ("<w:lvlRestart w:val=\"0\"/>", [1, 2, 3]),
+        ("", [1, 1, 1]),
+        ("<w:lvlRestart w:val=\"1\"/>", [1, 2, 1]),
+    ] {
+        let data = rewrite_numbering_part(original, |xml| {
+            xml.replace("<w:lvlRestart w:val=\"0\"/>", restart)
+        });
+        let text = converted_numbering_text(&data);
+        let normalized: String = text.split_whitespace().collect();
+        for (item, number) in ['C', 'E', 'G'].into_iter().zip(expected) {
+            assert!(
+                normalized.contains(&format!("({number})Item{item}")),
+                "restart {restart}: {text}"
+            );
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_numbering_restart_in_level_overrides_keeps_the_abstract_policy() {
+    let original =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_restarts.docx");
+    for abstract_never_restarts in [false, true] {
+        let data = rewrite_numbering_part(original, |xml| {
+            let level = xml
+                .split_once("<w:lvl w:ilvl=\"1\">")
+                .unwrap()
+                .1
+                .split_once("</w:lvl>")
+                .unwrap()
+                .0;
+            let override_level = format!("<w:lvl w:ilvl=\"1\">{level}</w:lvl>");
+            let mut xml = if abstract_never_restarts {
+                xml.to_string()
+            } else {
+                xml.replace("<w:lvlRestart w:val=\"0\"/>", "")
+            };
+            let override_level = if abstract_never_restarts {
+                override_level.replace("<w:lvlRestart w:val=\"0\"/>", "<w:lvlRestart w:val=\"1\"/>")
+            } else {
+                override_level
+            };
+            xml = xml.replace("<w:num w:numId=\"100\"><w:abstractNumId w:val=\"100\"/></w:num>", &format!("<w:num w:numId=\"100\"><w:abstractNumId w:val=\"100\"/><w:lvlOverride w:ilvl=\"1\">{override_level}</w:lvlOverride></w:num>"));
+            xml
+        });
+        let text = converted_numbering_text(&data);
+        let labels: Vec<String> = text
+            .split('(')
+            .skip(1)
+            .filter_map(|part| part.split_once(')').map(|(value, _)| format!("({value})")))
+            .collect();
+        let expected: Vec<String> = (0..4)
+            .map(|index| {
+                format!(
+                    "({})",
+                    1 + if abstract_never_restarts {
+                        index
+                    } else {
+                        index % 2
+                    }
+                )
+            })
+            .collect();
+        assert_eq!(
+            labels, expected,
+            "abstract never {abstract_never_restarts}: {text}"
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn compiled_legal_list_baselines(document: &Document) -> (Vec<f64>, String) {
     let output = crate::render::typst_gen::generate_typst(document).unwrap();
     let runs = crate::render::pdf::compiled_text_runs(&output.source, 0).unwrap();

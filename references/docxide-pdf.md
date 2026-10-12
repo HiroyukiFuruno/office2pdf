@@ -35,15 +35,14 @@ This is triage, not a visual pass: missing searchable text can still be painted
 as an image/path, and extraction order or font availability can change scores.
 Every selected fix still needs fresh native GT, all comparison axes, direct image
 inspection, and explicit issue dispositions under our visual contract.
-
 HTML expansion follows its CSS mapping, using Rust [html5ever](https://github.com/servo/html5ever) and
 [mailparse](https://github.com/staktrace/mailparse); docx-rs and contextual scans read the expanded XML.
-
 Section line numbering maps starts, intervals and restarts to Typst margin labels.
 Case70 native exports check fonts/clearance; compiled tests cover section suppression.
 
 Section alignment maps `sections.rs` properties into Typst page flow. Fresh
 Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 `both` and mixed automatic pagination warn; mixed explicit shared pages use top.
-
-Legal numbering follows `numbering.rs`: decimalize each placeholder in that level.
+Numbering uses its legal decimalization and restart counters. Native case72
+probes calibrate never/earlier-level restart rules; MS-OI29500 2.1.282 confirms
+Word ignores restart rules inside complete level overrides.
