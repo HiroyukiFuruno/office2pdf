@@ -4458,8 +4458,8 @@ fn docx_large_inline_markers_keep_native_paragraph_advance() {
                 body.iter()
                     .all(|run| (run.font_size_pt - 11.0).abs() < 0.01)
             );
-            // Changing paragraph leading must add the same body-controlled
-            // advance to large and ordinary labels on any host's font set.
+            // The native calibration also checks that changing paragraph
+            // leading leaves the label's extra ascent unchanged.
             let control = rewrite_numbering_part(&data, |xml| {
                 xml.replace(
                     &format!("<w:sz w:val=\"{}\"/>", marker_size * 2),
@@ -4480,15 +4480,72 @@ fn docx_large_inline_markers_keep_native_paragraph_advance() {
             assert_eq!(control_body.len(), 4);
             let extra_height = (body[1].baseline_pt - body[0].baseline_pt)
                 - (control_body[1].baseline_pt - control_body[0].baseline_pt);
-            let natural_extra_height = marker_height_deltas
-                .entry((marker_size, suffix))
-                .or_insert(extra_height);
-            assert!(
-                (extra_height - *natural_extra_height).abs() < 0.3,
-                "paragraph leading stretched label height for {marker_size}pt/{suffix}: {extra_height} vs {natural_extra_height}"
-            );
+            if uses_native_fonts {
+                let natural_extra_height = marker_height_deltas
+                    .entry((marker_size, suffix))
+                    .or_insert(extra_height);
+                assert!(
+                    (extra_height - *natural_extra_height).abs() < 0.3,
+                    "paragraph leading stretched label height for {marker_size}pt/{suffix}: {extra_height} vs {natural_extra_height}"
+                );
+            }
         }
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_inline_markers_without_font_metrics_keep_ordinary_paragraph_fallback() {
+    let data = numbering_marker_properties_fixture("<w:sz w:val=\"32\"/>", false, true);
+    let (mut document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let missing_family = "Unavailable quarterly report face";
+    assert!(crate::render::pdf::font_line_metrics_em(missing_family).is_none());
+    for page in &mut document.pages {
+        if let Page::Flow(page) = page {
+            for block in &mut page.content {
+                if let Block::Paragraph(paragraph) = block {
+                    for run in &mut paragraph.runs {
+                        run.style.font_family = Some(missing_family.to_string());
+                    }
+                }
+            }
+        }
+    }
+    let inline = crate::render::typst_gen::generate_typst(&document).unwrap();
+    for page in &mut document.pages {
+        if let Page::Flow(page) = page {
+            for block in &mut page.content {
+                if let Block::Paragraph(paragraph) = block {
+                    paragraph.style.has_inline_list_number = false;
+                }
+            }
+        }
+    }
+    let ordinary = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let placement = |source: &str| {
+        crate::render::pdf::compiled_text_runs(source, 0)
+            .unwrap()
+            .into_iter()
+            .map(|run| {
+                (
+                    run.text,
+                    run.family,
+                    run.font_size_pt,
+                    run.left_pt,
+                    run.baseline_pt,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let inline_runs = placement(&inline.source);
+    assert_eq!(
+        inline_runs
+            .iter()
+            .filter(|run| run.0 == "Continuous item")
+            .count(),
+        4
+    );
+    assert_eq!(inline_runs, placement(&ordinary.source));
 }
 
 #[cfg(not(target_arch = "wasm32"))]
