@@ -26,3 +26,9 @@ upstream Apache-2.0 attribution above; native calibration variants stay external
 and Apache-2.0 license. Native Word retains Roman parent labels while legal
 child labels use decimal references. Native spacing probes and compiled
 geometry tests cover the independent nested-list transition defect #2083.
+
+`numbering_restarts.docx` is the unmodified synthetic case72 from the same
+revision and Apache-2.0 license. Its children continue across parent items.
+`numbering_restart_policy.docx` derives a three-level sequence from case72;
+compiled PDF-text tests vary the restart trigger and complete level overrides.
+Native calibration packages and PDFs remain outside git.

@@ -267,6 +267,11 @@ DOCX legal numbering renders a list level's placeholders as decimal, preserving
 the parent's own format. On/off flags and complete level overrides are honored.
 Inline multilevel and nondecimal prefixes are not yet supported.
 
+DOCX child numbering supports never-restart and earlier-level restart rules;
+omitted rules restart after any higher-level item. Word ignores restart rules
+inside complete level overrides. Skipped-level indentation and suppression of
+levels with same/later restart thresholds remain tracked in #2087 and #2088.
+
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their
 common alignment; mixed alignments fall back to top on their shared explicit

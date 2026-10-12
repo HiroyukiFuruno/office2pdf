@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "sha256": "d180ef2d63cc2609f6072583cc32f270af99c7d022a2deabc6c5dd977b2819ab",
+    "change": "Unmodified synthetic package; Apache-2.0."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "2689bfa8fa585720f618c3da54f3b5c26b9d13db16b95fb440516395e3a8f17d"
+  },
+  "before": {
+    "office2pdf_revision": "63a99a43324c30a8a17437fc4c8877fb1d516d34",
+    "pdf_sha256": "ecc366116f02cd42ceb87a0630d2b9d4057927323de952a7ec2946b85dea69b5"
+  },
+  "after": {
+    "pdf_sha256": "edb8784ecc408e2d3b38096e06065fe2de34175e62029d894d715dab6a1f9bdf",
+    "converter_sha256": "dc1b2f4924c187e4a5644039939dbdaa14b24fe2dbbd33ff1da7f32851c3be6c"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, 5% pixel diffs, matched complete heading/list crops and publication JPEGs at 150 DPI. The original one-page Letter fixture retains all seven text lines, black Cambria 14pt bold heading and 11pt regular list text. Before repeats (1)/(2) after the second parent; current continues (3)/(4). Horizontal indents and gaps match Word. No rotation, shape, fill, border/stroke, hairline <=1pt, italic, underline, clipping or overflow occurs. Default searchable content/order and codepoint census match. The largest remaining native baseline shift is 0.201pt, below 0.5pt and tracked in #1874. Strict raster report has zero material clusters. Three-level never/omitted/earlier-trigger probes confirm label sequences but retain a skipped-level marker style/18pt indent defect (#2087); same/later threshold probes retain labels/indent that Word suppresses (#2088). The start-7 probe reaches (10) correctly but overlaps its body instead of advancing 36pt to the next tab (#2089). Neither zero raster clusters nor correct counters imply those probes pass layout.",
+  "remaining": {
+    "submaterial_baseline": "#1874"
+  },
+  "native_probes": [
+    {
+      "name": "policy-base",
+      "source_sha256": "4e71ff497491520089a8300b68c8e9bd987a7611b305f3a4c1aa9e2f9d9c250b",
+      "native_pdf_sha256": "eb122b50076798d1c66be8ed174959183656d06f2edbbc7d6fa4211acd355a6b",
+      "after_pdf_sha256": "bed980e8134aaaa2f75100a2eed9f720fa8eb881c0767bf11a976c724059fd6e",
+      "remaining": "#2087"
+    },
+    {
+      "name": "policy-omitted",
+      "source_sha256": "69caf8de313b05d9adca6ec0b25e3c44c2aeaa9107c981b03c913582b9bccd34",
+      "native_pdf_sha256": "beb71f14295207604ea9664194893fabd9ed1fec4349ce836c04cdba270919d7",
+      "after_pdf_sha256": "5857ca97c7bd2be62fe1725bf407de00e6e78b9166fa822e7b27cd0a2d69e96f",
+      "remaining": "#2087"
+    },
+    {
+      "name": "policy-trigger1",
+      "source_sha256": "9fa2c4d1684d125d7870e4531f63f21de741d7362420cfb013c0816ef9c5340f",
+      "native_pdf_sha256": "8eb87181b1b8fcdb1c1329f7a4ccf6961d976c4217886ecf6e01b20355531b05",
+      "after_pdf_sha256": "8deb1176b2f2b8395453826f7a5044767727fde9e6fdd76e57e323a7f7c8409b",
+      "remaining": "#2087"
+    },
+    {
+      "name": "override-ignored",
+      "source_sha256": "0d637d2e83bcb75d3ae33be36d4088cf910cd17e4217be340f6c59c10b38b211",
+      "native_pdf_sha256": "7e7e93c8417056bfacb322063464b9431d15a9af7c4dd074b317e6b8f7f5ff92",
+      "after_pdf_sha256": "ecc366116f02cd42ceb87a0630d2b9d4057927323de952a7ec2946b85dea69b5",
+      "remaining": "#1874"
+    },
+    {
+      "name": "override-abstract-never",
+      "source_sha256": "2717a0fbcd5856cedcff7a90190dba67da82a30ea2935a065368f04f2aa06e96",
+      "native_pdf_sha256": "6811ab4f8008b91779a3c400447f657045523a57b13bcd91c636eda2f4af8993",
+      "after_pdf_sha256": "edb8784ecc408e2d3b38096e06065fe2de34175e62029d894d715dab6a1f9bdf",
+      "remaining": "#1874"
+    },
+    {
+      "name": "original-start7",
+      "source_sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+      "native_pdf_sha256": "970a2383a9f69d14a9d2fa274b34ce2948725166d94695d19d9d7bfa2eeb5872",
+      "after_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "remaining": "#2089"
+    },
+    {
+      "name": "policy-trigger2",
+      "source_sha256": "49329da32fcd7fd1981d7d652bb46ce9ba57d89c4eb0c2c9369f657350e7a0da",
+      "native_pdf_sha256": "f75cb95672b1b6ddb6b54978b7e4c2ec4ce0955551c052d5ebfef189b9d2db3c",
+      "after_pdf_sha256": "5857ca97c7bd2be62fe1725bf407de00e6e78b9166fa822e7b27cd0a2d69e96f",
+      "remaining": "#2088"
+    }
+  ],
+  "followup_filing_comparisons": [
+    {
+      "issue": 2087,
+      "source_sha256": "69caf8de313b05d9adca6ec0b25e3c44c2aeaa9107c981b03c913582b9bccd34",
+      "native_pdf_sha256": "beb71f14295207604ea9664194893fabd9ed1fec4349ce836c04cdba270919d7",
+      "filing_output_pdf_sha256": "5857ca97c7bd2be62fe1725bf407de00e6e78b9166fa822e7b27cd0a2d69e96f",
+      "filing_converter": "63a99a43; native output is byte-identical after spacing fallback correction",
+      "defect": "Skipped level marker/body 18pt left, marker font falls back."
+    },
+    {
+      "issue": 2088,
+      "source_sha256": "49329da32fcd7fd1981d7d652bb46ce9ba57d89c4eb0c2c9369f657350e7a0da",
+      "native_pdf_sha256": "f75cb95672b1b6ddb6b54978b7e4c2ec4ce0955551c052d5ebfef189b9d2db3c",
+      "filing_output_pdf_sha256": "5857ca97c7bd2be62fe1725bf407de00e6e78b9166fa822e7b27cd0a2d69e96f",
+      "filing_converter": "63a99a43; native output is byte-identical after spacing fallback correction",
+      "defect": "Same/later restart thresholds retain labels and indent instead of native suppression."
+    },
+    {
+      "issue": 2089,
+      "source_sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+      "native_pdf_sha256": "970a2383a9f69d14a9d2fa274b34ce2948725166d94695d19d9d7bfa2eeb5872",
+      "filing_output_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "filing_converter": "current restart candidate based on 90dbe56c",
+      "defect": "(10) body 36pt left and overlapping marker instead of advancing tab."
+    }
+  ],
+  "policy_source": "https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/140a2cd9-2f26-456d-9760-ae6ecef4e8b5"
+}

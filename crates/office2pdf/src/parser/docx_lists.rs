@@ -18,6 +18,7 @@ struct ResolvedListLevel {
     paragraph_style: ParagraphStyle,
     start: u32,
     has_start_override: bool,
+    restart_trigger: Option<u32>,
     /// Raw Word `lvlText` (e.g. "제%1조") for inline-numbered paragraphs.
     level_text: String,
     number_format: String,
@@ -37,6 +38,7 @@ struct RawListLevel {
     paragraph_style: ParagraphStyle,
     has_start_override: bool,
     uses_legal_numbering: bool,
+    restart_trigger: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -147,6 +149,7 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
         paragraph_style: super::text::extract_paragraph_style(&level.paragraph_property),
         has_start_override: false,
         uses_legal_numbering: level.is_lgl.is_some(),
+        restart_trigger: level.level_restart.as_ref().and_then(serialize_u32),
     }
 }
 
@@ -172,8 +175,14 @@ fn resolve_numbering(
     for override_level in &num.level_overrides {
         let level_index = override_level.level as u32;
         if let Some(level) = &override_level.override_level {
+            let abstract_restart_trigger = raw_levels
+                .get(&level_index)
+                .and_then(|level| level.restart_trigger);
             let mut raw_level = extract_raw_level(level);
             raw_level.has_start_override = true;
+            // Word ignores lvlRestart in complete level overrides (MS-OI29500
+            // 2.1.282); the abstract policy remains in force.
+            raw_level.restart_trigger = abstract_restart_trigger;
             raw_levels.insert(level_index, raw_level);
         }
         if let Some(start) = override_level.override_start {
@@ -190,6 +199,7 @@ fn resolve_numbering(
                     paragraph_style: ParagraphStyle::default(),
                     has_start_override: true,
                     uses_legal_numbering: false,
+                    restart_trigger: None,
                 });
         }
     }
@@ -230,6 +240,7 @@ fn resolve_numbering(
                     paragraph_style: level.paragraph_style.clone(),
                     start: level.start,
                     has_start_override: level.has_start_override,
+                    restart_trigger: level.restart_trigger,
                 },
             )
         })
@@ -336,6 +347,37 @@ fn numbering_series(num_id: usize, numberings: &NumberingMap) -> NumberingSeries
         .unwrap_or(NumberingSeries::Numbering(num_id))
 }
 
+/// A one-based trigger resets the child when its named ancestor or an earlier
+/// ancestor is used; zero never resets. Same/later thresholds lack Word's level
+/// suppression behavior, tracked in #2088.
+fn reset_deeper_numbering_counters(
+    counters: &mut BTreeMap<u32, u32>,
+    used_level: u32,
+    numbering: Option<&ResolvedNumbering>,
+) {
+    counters.retain(|counter_level, _| {
+        if *counter_level <= used_level {
+            return true;
+        }
+        let restart_trigger: Option<u32> = numbering
+            .and_then(|numbering| numbering.levels.get(counter_level))
+            .and_then(|level| level.restart_trigger);
+        let should_reset: bool = match restart_trigger {
+            Some(0) => false,
+            Some(trigger) => used_level < trigger,
+            None => true,
+        };
+        tracing::trace!(
+            used_level,
+            counter_level = *counter_level,
+            restart_trigger = ?restart_trigger,
+            should_reset,
+            "Resolved DOCX child-level numbering restart"
+        );
+        !should_reset
+    });
+}
+
 fn apply_numbering_level_indentation(
     paragraph: &mut Paragraph,
     level_style: Option<&ParagraphStyle>,
@@ -406,9 +448,9 @@ pub(super) fn group_into_lists(
         match element {
             TaggedElement::ListParagraph { info, paragraph } => {
                 let series = numbering_series(info.num_id, numberings);
-                let resolved_level = numberings
-                    .get(&info.num_id)
-                    .and_then(|numbering| numbering.levels.get(&info.level));
+                let resolved_numbering = numberings.get(&info.num_id);
+                let resolved_level =
+                    resolved_numbering.and_then(|numbering| numbering.levels.get(&info.level));
                 let is_ordered =
                     resolved_level.is_some_and(|level| level.style.kind == ListKind::Ordered);
                 let is_num_id_change = last_num_id
@@ -441,6 +483,13 @@ pub(super) fn group_into_lists(
                 }
                 let is_first_in_block = current_list.is_empty();
                 let mut paragraph = paragraph;
+                if let Some(series_counters) = counters.get_mut(&series) {
+                    reset_deeper_numbering_counters(
+                        series_counters,
+                        info.level,
+                        resolved_numbering,
+                    );
+                }
 
                 // Word puts numbers with `w:ind left=0 hanging=0` inline:
                 // number, suffix tab, first-line text, and continuation
@@ -491,7 +540,6 @@ pub(super) fn group_into_lists(
                         series_counters[&info.level].saturating_add(1)
                     };
                     series_counters.insert(info.level, number);
-                    series_counters.retain(|item_level, _| *item_level <= info.level);
                     last_num_id.insert(series, info.num_id);
 
                     if !current_list.is_empty() {
@@ -541,8 +589,11 @@ pub(super) fn group_into_lists(
                         series_counters[&info.level].saturating_add(1)
                     };
                     series_counters.insert(info.level, number);
-                    series_counters.retain(|level, _| *level <= info.level);
-                    if should_restart || is_first_in_block || changes_series {
+                    if should_restart
+                        || is_first_in_block
+                        || changes_series
+                        || level.restart_trigger.is_some()
+                    {
                         item.start_at = Some(number);
                     }
                 }
