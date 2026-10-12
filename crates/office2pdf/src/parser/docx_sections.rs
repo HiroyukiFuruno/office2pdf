@@ -402,6 +402,7 @@ pub(super) struct SectionOverrides {
     pub(super) column_layout: Option<ColumnLayout>,
     pub(super) page_numbering: Option<PageNumbering>,
     pub(super) page_borders: Option<crate::ir::PageBorders>,
+    pub(super) line_numbering: Option<crate::ir::LineNumbering>,
 }
 
 pub(super) fn build_flow_page_from_section(
@@ -502,6 +503,7 @@ pub(super) fn build_flow_page_from_section(
         first_footer,
         page_numbering: overrides.page_numbering,
         page_borders: overrides.page_borders,
+        line_numbering: overrides.line_numbering,
         columns: overrides
             .column_layout
             .or_else(|| extract_column_layout_from_section_property(section_prop)),

@@ -9,13 +9,16 @@ use quick_xml::{
 };
 use std::collections::HashMap;
 
-fn is_word(namespace: ResolveResult<'_>) -> bool {
+pub(super) fn is_word(namespace: ResolveResult<'_>) -> bool {
     matches!(namespace, ResolveResult::Bound(n) if matches!(n.as_ref(),
         b"http://schemas.openxmlformats.org/wordprocessingml/2006/main" |
         b"http://purl.oclc.org/ooxml/wordprocessingml/main"))
 }
 
-fn attributes(reader: &NsReader<&[u8]>, element: &BytesStart<'_>) -> HashMap<String, String> {
+pub(super) fn attributes(
+    reader: &NsReader<&[u8]>,
+    element: &BytesStart<'_>,
+) -> HashMap<String, String> {
     element
         .attributes()
         .flatten()

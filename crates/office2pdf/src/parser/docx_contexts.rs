@@ -132,3 +132,7 @@ impl DocxConversionContext {
         }
     }
 }
+
+#[path = "docx_context_line_numbering.rs"]
+mod line_numbering;
+pub(super) use line_numbering::scan_line_numbering;

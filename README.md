@@ -263,6 +263,12 @@ DOCX line-based section page borders support page/text offsets, per-edge paint,
 first-page selection, and front/back placement. Custom `FlowPage` values use
 `page_borders: None` to omit decorations. Decorative art borders are not supported.
 
+DOCX section line numbering supports intervals, starts, page/section restarts,
+continuous numbering and margin clearance. Numbers use the document default font;
+custom line-number styles and paragraph suppression are not supported. Multi-column
+number placement follows Typst's outside-margin behavior. Custom `FlowPage` values
+use `line_numbering: None` to disable numbering.
+
 DOCX and PPTX default language tags set the PDF language and text-layout language.
 Per-run languages and DOCX East Asian/complex-script language tags are not yet used.
 

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": {
+    "url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case70/input.docx",
+    "sha256": "2f1f41b41f86b3139b353891f61ed0882120502754a2f70fc96131de5729ac67"
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "6852e6936664ac0e08fcf5f902a3d5a3ed664f246a4cfa9e6b2234e2c9d7f287"
+  },
+  "before": {
+    "office2pdf_revision": "39bcb28992e8c1a643e7430b220134747b03b830",
+    "pdf_sha256": "9955174e9c2e5d35fe2a2bfd97879afa76f5baf1ea15595d85449658f33d4f4f"
+  },
+  "after": {
+    "pdf_sha256": "0bf5f3f90e03209c65750c7effc52c9f65f2e46533466a3b4388b66ec0dbb5ab"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected full native/before/current pages, the 5% pixel diff, all four matched body/margin crop groups at 150 DPI, and publication JPEGs. Before lacks all twelve margin labels. After restores Cambria regular labels 2\u201313 at the body baselines, with right-aligned 18pt clearance. One Letter page, all body text, wrapping, line spacing, alignment and black color match. No rotation, clipping, missing element, fill, outline, hairline <=1pt, italic or underline occurs. There are no material current diff clusters. Remaining sub-material native grid/rounding differences have worst matched baseline 0.204pt and horizontal anchor 0.299pt, within the 0.5pt audit threshold, tracked in #1874; these geometry deltas are not called antialiasing. Dispersed raster differences are glyph edges without a material font-weight/style defect."
+}

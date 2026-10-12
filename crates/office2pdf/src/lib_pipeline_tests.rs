@@ -135,6 +135,7 @@ fn test_should_resolve_font_context_true_when_document_requests_font_family() {
             line_grid_snaps_lines: false,
             page_numbering: None,
             page_borders: None,
+            line_numbering: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -174,6 +175,7 @@ fn bundled_noto_serif_is_loaded_only_for_the_poster_families() {
             line_grid_snaps_lines: false,
             page_numbering: None,
             page_borders: None,
+            line_numbering: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -236,6 +238,7 @@ fn bundled_sans_families_are_loaded_only_for_their_document_requests() {
             line_grid_snaps_lines: false,
             page_numbering: None,
             page_borders: None,
+            line_numbering: None,
         })],
         styles: StyleSheet::default(),
     };
