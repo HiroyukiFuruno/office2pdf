@@ -354,8 +354,7 @@ fn numbering_series(num_id: usize, numberings: &NumberingMap) -> NumberingSeries
 }
 
 /// A one-based trigger resets the child when its named ancestor or an earlier
-/// ancestor is used; zero never resets. Same/later thresholds lack Word's level
-/// suppression behavior, tracked in #2088.
+/// ancestor is used; zero never resets.
 fn reset_deeper_numbering_counters(
     counters: &mut BTreeMap<u32, NumberingCounter>,
     used_level: u32,
@@ -507,7 +506,12 @@ pub(super) fn group_into_lists(
                         info.level <= root_level
                             && resolved_level.is_some_and(|level| level.style.kind != root_kind)
                     });
-                if starts_new_list {
+                // A continuation can start at a child after a plain paragraph.
+                // A later shallower item needs its own root style and indent.
+                let returns_to_shallower_root: bool = current_list
+                    .first()
+                    .is_some_and(|numbered| info.level < numbered.item.level);
+                if starts_new_list || returns_to_shallower_root {
                     result.push(Block::List(finalize_list(
                         std::mem::take(&mut current_list),
                         numberings,
@@ -529,6 +533,51 @@ pub(super) fn group_into_lists(
                         info.level,
                         resolved_numbering.expect("ordered numbering must be resolved"),
                     );
+                }
+
+                // Within Word's documented 0..=7 range, same/later triggers
+                // suppress a child level's marker and numbering indent. Root
+                // flags are ignored; paragraph-owned formatting remains intact.
+                let suppresses_marker: bool = info.level > 0
+                    && resolved_level.is_some_and(|level| {
+                        level.restart_trigger.is_some_and(|trigger| {
+                            (1..=7).contains(&trigger) && trigger >= info.level
+                        })
+                    });
+                if suppresses_marker {
+                    if is_ordered {
+                        let level = resolved_level.expect("ordered level must be resolved");
+                        let series_counters = counters.entry(series).or_default();
+                        let number: u32 = if has_explicit_restart {
+                            level.start
+                        } else {
+                            series_counters
+                                .get(&info.level)
+                                .map_or(level.start, |counter| counter.value.saturating_add(1))
+                        };
+                        series_counters.insert(
+                            info.level,
+                            NumberingCounter {
+                                value: number,
+                                is_implicit: false,
+                            },
+                        );
+                    }
+                    last_num_id.insert(series, info.num_id);
+                    if !current_list.is_empty() {
+                        result.push(Block::List(finalize_list(
+                            std::mem::take(&mut current_list),
+                            numberings,
+                        )));
+                    }
+                    tracing::trace!(
+                        num_id = info.num_id,
+                        level = info.level,
+                        restart_trigger = ?resolved_level.and_then(|level| level.restart_trigger),
+                        "Suppressed DOCX numbering marker and level indentation"
+                    );
+                    result.push(Block::Paragraph(*paragraph));
+                    continue;
                 }
 
                 // Word puts numbers with `w:ind left=0 hanging=0` inline:

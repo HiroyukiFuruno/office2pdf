@@ -40,3 +40,7 @@ origins and face, then vary nesting and marker format to cover shallower returns
 `numbering_implicit_ancestors.docx` derives a four-level 0/2/3/1/2/0/2 sequence
 from case72. PDF-text tests vary starts, level order and restart rules against
 native Word probes for missing ancestors and later visible counters.
+
+`numbering_restart_suppression.docx` sets the three-level policy fixture’s level 2
+restart to 2. PDF tests check suppressed markers, numbering versus paragraph indents,
+bullet/numbered levels and continuation spacing against native Word probes.

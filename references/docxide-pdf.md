@@ -43,7 +43,6 @@ Case70 native exports check fonts/clearance; compiled tests cover section suppre
 Section alignment maps `sections.rs` properties into Typst page flow. Fresh
 Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 `both` and mixed automatic pagination warn; mixed explicit shared pages use top.
-Numbering uses its legal decimalization and restart counters. Native case72
-probes calibrate never/earlier-level restart rules; MS-OI29500 2.1.282 confirms
-Word ignores restart rules inside complete level overrides.
-Native probes calibrate skipped-level styles/indents and implicit counters absent upstream.
+Numbering follows its legal decimalization. Native case72 probes calibrate
+restart/suppression, implicit counters and skipped-level origins; MS-OI29500
+2.1.282 confirms Word ignores restart rules inside complete level overrides.
