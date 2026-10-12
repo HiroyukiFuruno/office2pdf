@@ -4082,6 +4082,7 @@ fn docx_inline_numbering_honors_space_and_nothing_suffixes() {
         }
     }
 }
+#[cfg(not(target_arch = "wasm32"))]
 fn numbering_marker_properties_fixture(
     properties: &str,
     full_override: bool,
@@ -4116,6 +4117,7 @@ fn numbering_marker_properties_fixture(
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn docx_numbering_marker_run_properties_survive_abstract_and_override_levels() {
     for full_override in [false, true] {
