@@ -2872,6 +2872,110 @@ fn converted_numbering_text(data: &[u8]) -> String {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn compiled_legal_list_baselines(document: &Document) -> (Vec<f64>, String) {
+    let output = crate::render::typst_gen::generate_typst(document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&output.source, 0).unwrap();
+    let labels = [
+        "First section",
+        "Sub one",
+        "Sub two",
+        "Second section",
+        "Sub one again",
+    ];
+    let baselines: Vec<f64> = labels
+        .iter()
+        .map(|label| {
+            runs.iter()
+                .find(|run| run.text.trim() == *label)
+                .unwrap_or_else(|| panic!("missing {label}: {runs:?}\n{}", output.source))
+                .baseline_pt
+        })
+        .collect();
+    (baselines, output.source)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_nested_list_spacing_survives_every_level_transition() {
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    let (original, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let positions = |gap: f64| {
+        let mut document = original.clone();
+        let Page::Flow(page) = &mut document.pages[0] else {
+            panic!("flow section")
+        };
+        for block in &mut page.content {
+            if let Block::List(list) = block {
+                for item in &mut list.items {
+                    for paragraph in &mut item.content {
+                        paragraph.style.space_before = Some(0.0);
+                        paragraph.style.space_after = Some(gap);
+                    }
+                }
+            }
+        }
+        compiled_legal_list_baselines(&document)
+    };
+    let (unspaced, _) = positions(0.0);
+    for gap in [7.5, 10.0, 20.0] {
+        let (spaced, source) = positions(gap);
+        for index in 1..spaced.len() {
+            let added = (spaced[index] - spaced[0]) - (unspaced[index] - unspaced[0]);
+            let expected = index as f64 * gap;
+            assert!(
+                (added - expected).abs() < 0.15,
+                "paragraph {index}: expected {expected}pt accumulated gap, got {added}pt; {source}"
+            );
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_nested_list_spacing_collapses_actual_adjacent_paragraph_gaps() {
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    let (original, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let before: [f64; 5] = [0.0, 2.0, 12.0, 1.0, 9.0];
+    let after: [f64; 5] = [3.0, 8.0, 0.0, 5.0, 17.0];
+    for levels in [[0, 1, 1, 0, 1], [0, 1, 2, 1, 0], [0, 0, 1, 0, 1]] {
+        let positions = |spaced: bool| {
+            let mut document = original.clone();
+            let Page::Flow(page) = &mut document.pages[0] else {
+                panic!("flow section")
+            };
+            let list = page
+                .content
+                .iter_mut()
+                .find_map(|block| match block {
+                    Block::List(list) => Some(list),
+                    _ => None,
+                })
+                .unwrap();
+            list.level_styles.insert(2, list.level_styles[&1].clone());
+            for (index, item) in list.items.iter_mut().enumerate() {
+                item.level = levels[index];
+                for paragraph in &mut item.content {
+                    paragraph.style.space_before = Some(if spaced { before[index] } else { 0.0 });
+                    paragraph.style.space_after = Some(if spaced { after[index] } else { 0.0 });
+                }
+            }
+            compiled_legal_list_baselines(&document)
+        };
+        let (unspaced, _) = positions(false);
+        let (spaced, source) = positions(true);
+        let mut expected: f64 = 0.0;
+        for index in 1..spaced.len() {
+            expected += after[index - 1].max(before[index]);
+            let added = (spaced[index] - spaced[0]) - (unspaced[index] - unspaced[0]);
+            assert!(
+                (added - expected).abs() < 0.15,
+                "levels {levels:?}, paragraph {index}: expected {expected}pt, got {added}pt; {source}"
+            );
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn docx_legal_numbering_uses_decimal_references_only_when_enabled() {
     let original = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
