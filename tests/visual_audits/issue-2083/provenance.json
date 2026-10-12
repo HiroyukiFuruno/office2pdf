@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case71/input.docx",
+    "sha256": "c9c8e8936935bfa1822f873a2689605a67cf9be8fd4694772f293be9073e5ebc",
+    "change": "Unmodified synthetic package; Apache-2.0."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "61aca1aab12c9d7c80db8d7fa0af36a8b1fd4adad3c09b3c85821c5c5be219df"
+  },
+  "before": {
+    "office2pdf_revision": "3fe800e3e4e62ea52ba83cacfbe793f4b09371fb",
+    "pdf_sha256": "2eba5cf8ca38f51eb315e2a1e79259208cd554f660342b59566ff7dbc9148d71"
+  },
+  "after": {
+    "pdf_sha256": "d9594a959b0422059e1c1ec5e00734211f9b2c85817e488b10fae40d202dda22",
+    "converter_sha256": "0bb17e0d359e882daf3d46326ce58361b3bd2e04c0313709e7a96e449e28cddb"
+  },
+  "filing_comparison": {
+    "office2pdf_revision": "b810fc9ddc3948f0592aecbfcad4d5a43eec402e",
+    "note": "compare.jpg is frozen filing-time evidence and still includes the separate legal-label defect fixed in #2082."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, 5% pixel diffs, all matched shifted before crops, complete heading/list pairs at 150 DPI, and publication JPEGs. Before places II. Second section 10.18pt too high and 2.1. Sub one again 20.07pt too high. Current restores both paragraph gaps, with all five legal-numbered paragraphs and their indents matching Word. One Letter page retains black Cambria 14pt bold heading and 11pt regular list text. No rotation, shape, fill, border/stroke, hairline <=1pt, italic, underline, clipping or overflow occurs. Default searchable text now matches Word in both content/order and codepoint census. Native probes with zero/20pt after-gap and 20pt before-gap retain the same elements and correct spacing at every level transition. No new material deviation appears; base worst baseline drift 0.182pt and probe worst 0.273pt are below 0.5pt, tracked in #1874 without classifying geometry as antialiasing. Current strict reports contain zero material raster clusters.",
+  "remaining": {
+    "submaterial_native_drift": "#1874"
+  },
+  "text_layer": {
+    "codepoint_census": "matching",
+    "default_normalized_order": "matching"
+  },
+  "native_probes": {
+    "control": "Original and no-patch re-ZIP exports have matching layout; the converter PDFs are byte-identical.",
+    "part": "word/styles.xml",
+    "factor": "docDefaults w:spacing before/after",
+    "variants": [
+      {
+        "name": "base",
+        "source_sha256": "c9c8e8936935bfa1822f873a2689605a67cf9be8fd4694772f293be9073e5ebc",
+        "native_pdf_sha256": "61aca1aab12c9d7c80db8d7fa0af36a8b1fd4adad3c09b3c85821c5c5be219df",
+        "after_pdf_sha256": "d9594a959b0422059e1c1ec5e00734211f9b2c85817e488b10fae40d202dda22",
+        "layout_audit": "pass at 0.5pt",
+        "text_layer": "matching content/order and codepoint census",
+        "strict_raster": "zero material clusters"
+      },
+      {
+        "name": "gap0",
+        "source_sha256": "e370d83a44d11b59175378db1a78008c89d82fdae1edbaa8e4af73f629c19f7e",
+        "native_pdf_sha256": "5b37dd17af186fba01eafd20529d230749414bb9b7a176434f46e3380fbb2cbc",
+        "after_pdf_sha256": "db50af7c8b4a6797aa698be4dc6c9bcfd65db8e21b2e6f8fbdfdbf7ef6dd68a4",
+        "layout_audit": "pass at 0.5pt",
+        "text_layer": "matching content/order and codepoint census",
+        "strict_raster": "zero material clusters"
+      },
+      {
+        "name": "gap400",
+        "source_sha256": "c4877826546cb629359526eacdbf016a360d2fc49e31e2f58a74c47cb7ef7bac",
+        "native_pdf_sha256": "0ee36ebed3cd872ac06141a4bbf75efb96c66f670e4e85829afba73fe63e3d8a",
+        "after_pdf_sha256": "2e70196b3ec19d2a15299811ef0d13ffeab934f6c30edffac4aae4bb6c3b3df8",
+        "layout_audit": "pass at 0.5pt",
+        "text_layer": "matching content/order and codepoint census",
+        "strict_raster": "zero material clusters"
+      },
+      {
+        "name": "before400",
+        "source_sha256": "44067987370a82c943024ec4a3326e729481d42c5cfd99b923de0cf1e75e0ac3",
+        "native_pdf_sha256": "56c5ebc5a590ca845e1aa711adf563b22b0661a855bc4ed2fac9db2642e68bf9",
+        "after_pdf_sha256": "8dbafe40e459abe54606d7f608bafef04fc01b37ab9e7fd4bfb614b4560002e6",
+        "layout_audit": "pass at 0.5pt",
+        "text_layer": "matching content/order and codepoint census",
+        "strict_raster": "zero material clusters"
+      }
+    ]
+  }
+}

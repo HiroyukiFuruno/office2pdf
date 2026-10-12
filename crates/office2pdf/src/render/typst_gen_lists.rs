@@ -476,12 +476,38 @@ pub(super) fn generate_list_with_spacing_model(
     // a:spcAft is the real boundary gap. Even one adjacent root pair is not
     // enough evidence to hoist a value across those different boundaries.
     let has_nested_items = list.items.iter().any(|item| item.level > root_level);
-    let spacing_pt = if per_item_gaps && has_nested_items {
+    // A Word level transition is a paragraph boundary, even when Typst wraps
+    // the child level in a separate list. Carry each collapsed gap across
+    // those containers instead of inferring it from same-level neighbours.
+    let word_boundary_gaps: bool = !per_item_gaps
+        && has_nested_items
+        && list
+            .items
+            .iter()
+            .flat_map(|item| &item.content)
+            .any(|paragraph| {
+                paragraph.style.space_before.is_some() || paragraph.style.space_after.is_some()
+            })
+        && list
+            .items
+            .iter()
+            .flat_map(|item| &item.content)
+            .all(|paragraph| {
+                paragraph_uses_full_line_box(paragraph) || paragraph.style.line_box.is_some()
+            });
+    let spacing_pt = if word_boundary_gaps {
+        Some(0.0)
+    } else if per_item_gaps && has_nested_items {
         None
     } else {
         common_list_level_spacing(&list.items, root_level, wrapper_spans_full_line)
     };
-    let (space_before, space_after) = list_edge_spacing(list, root_level, wrapper_spans_full_line);
+    let (space_before, mut space_after) =
+        list_edge_spacing(list, root_level, wrapper_spans_full_line);
+    if word_boundary_gaps {
+        // The final physical paragraph owns the gap, even when it is a child.
+        space_after = list.items.last().map(paragraph_space_after);
+    }
     let line_box = common_list_line_box(list);
     let start_at = list.items.first().and_then(|item| item.start_at);
     let needs_wrapper: bool =
@@ -542,6 +568,8 @@ pub(super) fn generate_list_with_spacing_model(
         wrapper_spans_full_line,
         spacing_pt.is_some() || !per_item_gaps,
         per_item_gaps,
+        word_boundary_gaps,
+        None,
         &eojeol_wrap,
         ctx,
     )?;
@@ -1585,8 +1613,7 @@ fn roman_marker(mut number: u32, uppercase: bool) -> String {
     }
 }
 
-/// The gap an item carries after itself, when the list could not hoist one
-/// shared value onto `list(spacing:)`.
+/// Carry a Word boundary's collapsed gap or a PowerPoint item's own gap.
 ///
 /// `common_list_level_spacing` only returns a value when *every* boundary at
 /// the level agrees, so a list whose items declare different gaps got none at
@@ -1599,17 +1626,17 @@ fn write_list_item_trailing_gap(
     item: &crate::ir::ListItem,
     has_uniform_spacing: bool,
     wrapper_spans_full_line: bool,
+    word_boundary_gap: Option<f64>,
 ) {
-    if has_uniform_spacing {
+    if has_uniform_spacing && word_boundary_gap.is_none() {
         return;
     }
-    // Without a full-line box the item's own line height is not inside the
-    // box, and the existing boundary rule adds it to the gap; that path still
-    // belongs to `common_list_level_spacing`, so leave it alone.
-    if !wrapper_spans_full_line {
+    // PowerPoint's boxless path carries line height through shared spacing.
+    // Word's explicit boundary gap also survives unavailable font metrics.
+    if !wrapper_spans_full_line && word_boundary_gap.is_none() {
         return;
     }
-    let gap: f64 = paragraph_space_after(item);
+    let gap: f64 = word_boundary_gap.unwrap_or_else(|| paragraph_space_after(item));
     if gap <= 0.0001 {
         return;
     }
@@ -1669,6 +1696,8 @@ fn generate_list_items(
     wrapper_spans_full_line: bool,
     has_uniform_spacing: bool,
     per_item_gaps: bool,
+    word_boundary_gaps: bool,
+    following_item: Option<&crate::ir::ListItem>,
     eojeol_wrap: &ListEojeolWrap,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
@@ -1677,6 +1706,10 @@ fn generate_list_items(
     let mut i = 0;
     while i < items.len() {
         let item = &items[i];
+        let word_boundary_gap: Option<f64> = word_boundary_gaps
+            .then(|| items.get(i + 1).or(following_item))
+            .flatten()
+            .map(|next| paragraph_space_after(item).max(paragraph_space_before(next)));
         let _ = write!(out, "  {item_func}");
         if style.kind == ListKind::Ordered
             && i > 0
@@ -1701,15 +1734,20 @@ fn generate_list_items(
             }
 
             if nested_end > nested_start {
-                let nested_gap = (per_item_gaps && wrapper_spans_full_line)
-                    .then(|| paragraph_space_after(item))
-                    .filter(|gap| *gap > 0.0001);
+                let nested_gap = if word_boundary_gaps {
+                    word_boundary_gap
+                } else {
+                    (per_item_gaps && wrapper_spans_full_line)
+                        .then(|| paragraph_space_after(item))
+                        .filter(|gap| *gap > 0.0001)
+                };
                 if nested_gap.is_none() {
                     write_list_item_trailing_gap(
                         out,
                         item,
                         has_uniform_spacing,
                         wrapper_spans_full_line,
+                        word_boundary_gap,
                     );
                 }
                 let nested_style = list_style_for_level(list, base_level + 1);
@@ -1735,7 +1773,9 @@ fn generate_list_items(
                 // A shared nested `spacing:` cannot carry the last child's
                 // gap across the return to its parent level, so retain every
                 // child gap on that path (issue #659).
-                let spacing_pt = if per_item_gaps {
+                let spacing_pt = if word_boundary_gaps {
+                    Some(0.0)
+                } else if per_item_gaps {
                     None
                 } else {
                     common_list_level_spacing(
@@ -1748,7 +1788,7 @@ fn generate_list_items(
                 if let Some(gap) = nested_gap {
                     // `#v` immediately after inline parent text creates a new
                     // line of its own before the nested list. Block spacing
-                    // adds only the declared PowerPoint gap to the normal
+                    // adds only the resolved paragraph gap to the normal
                     // parent-to-child line advance (issue #659).
                     let _ = writeln!(out, " #block(width: 100%, above: {}pt)[", format_f64(gap));
                 }
@@ -1772,6 +1812,8 @@ fn generate_list_items(
                     wrapper_spans_full_line,
                     spacing_pt.is_some() || !per_item_gaps,
                     per_item_gaps,
+                    word_boundary_gaps,
+                    items.get(nested_end).or(following_item),
                     eojeol_wrap,
                     ctx,
                 )?;
@@ -1786,11 +1828,18 @@ fn generate_list_items(
                     item,
                     has_uniform_spacing,
                     wrapper_spans_full_line,
+                    word_boundary_gap,
                 );
                 i += 1;
             }
         } else {
-            write_list_item_trailing_gap(out, item, has_uniform_spacing, wrapper_spans_full_line);
+            write_list_item_trailing_gap(
+                out,
+                item,
+                has_uniform_spacing,
+                wrapper_spans_full_line,
+                word_boundary_gap,
+            );
             i += 1;
         }
 

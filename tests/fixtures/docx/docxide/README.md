@@ -24,5 +24,5 @@ upstream Apache-2.0 attribution above; native calibration variants stay external
 
 `legal_numbering.docx` is the unmodified synthetic case71 from the same revision
 and Apache-2.0 license. Native Word retains Roman parent labels while legal
-child labels use decimal references. The independent nested spacing defect is
-tracked in #2083.
+child labels use decimal references. Native spacing probes and compiled
+geometry tests cover the independent nested-list transition defect #2083.
