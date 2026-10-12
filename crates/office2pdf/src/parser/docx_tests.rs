@@ -3481,68 +3481,95 @@ fn docx_restart_threshold_suppression_follows_the_current_level() {
 fn docx_suppressed_restart_preserves_paragraph_and_descendant_origins() {
     let base =
         include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
-    let positions = |data: &[u8]| {
-        let (document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let positions = |data: &[u8], use_fallback: bool, omit_line_multiple: bool| {
+        let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+        if use_fallback {
+            for page in &mut document.pages {
+                let Page::Flow(page) = page else { continue };
+                for block in &mut page.content {
+                    let paragraphs: Vec<&mut Paragraph> = match block {
+                        Block::Paragraph(paragraph) => vec![paragraph],
+                        Block::List(list) => list
+                            .items
+                            .iter_mut()
+                            .flat_map(|item| &mut item.content)
+                            .collect(),
+                        _ => continue,
+                    };
+                    for paragraph in paragraphs {
+                        if omit_line_multiple {
+                            paragraph.style.line_spacing = None;
+                        }
+                        paragraph.style.paragraph_mark_font_family =
+                            Some("Office2Pdf Missing Numbering Face".into());
+                        for run in &mut paragraph.runs {
+                            run.style.font_family =
+                                Some("Office2Pdf Missing Numbering Face".into());
+                        }
+                    }
+                }
+            }
+        }
         let source = crate::render::typst_gen::generate_typst(&document).unwrap();
         crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap()
     };
-    let control = positions(base);
-    for bullet in [false, true] {
-        for indent in [0, 1080] {
-            let data = rewrite_numbering_part(base, |xml| {
-                let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
-                let (level, rest) = child.split_once("</w:lvl>").unwrap();
-                let level = if bullet {
-                    level
-                        .replace("w:val=\"decimal\"", "w:val=\"bullet\"")
-                        .replace("(%2)", "•")
-                } else {
-                    level.to_string()
-                };
-                format!(
-                    "{prefix}<w:lvl w:ilvl=\"1\">{level}<w:lvlRestart w:val=\"1\"/></w:lvl>{rest}"
-                )
-            });
-            let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
-                let paragraph = xml
-                    .split("</w:p>")
-                    .find(|part| part.contains("<w:t>Item D</w:t>"))
-                    .unwrap();
-                let (_, content) = paragraph.rsplit_once("<w:p>").unwrap();
-                let original = format!("<w:p>{content}</w:p>");
-                let replacement = original.replace(
-                    "</w:pPr>",
-                    &format!("<w:ind w:left=\"{indent}\" w:hanging=\"0\"/></w:pPr>"),
-                );
-                xml.replace(&original, &replacement)
-            });
-            let runs = positions(&data);
-            for letter in 'A'..='G' {
-                let label = format!("Item {letter}");
-                let before = control.iter().find(|run| run.text == label).unwrap();
-                let after = runs.iter().find(|run| run.text == label).unwrap();
-                let expected_x = if letter == 'D' {
-                    90.0 + f64::from(indent) / 20.0
-                } else {
-                    before.left_pt
-                };
+    for (use_fallback, omit_line_multiple) in [(false, false), (true, false), (true, true)] {
+        let control = positions(base, use_fallback, omit_line_multiple);
+        for bullet in [false, true] {
+            for indent in [0, 1080] {
+                let data = rewrite_numbering_part(base, |xml| {
+                    let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                    let (level, rest) = child.split_once("</w:lvl>").unwrap();
+                    let level = if bullet {
+                        level
+                            .replace("w:val=\"decimal\"", "w:val=\"bullet\"")
+                            .replace("(%2)", "•")
+                    } else {
+                        level.to_string()
+                    };
+                    format!(
+                        "{prefix}<w:lvl w:ilvl=\"1\">{level}<w:lvlRestart w:val=\"1\"/></w:lvl>{rest}"
+                    )
+                });
+                let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+                    let paragraph = xml
+                        .split("</w:p>")
+                        .find(|part| part.contains("<w:t>Item D</w:t>"))
+                        .unwrap();
+                    let (_, content) = paragraph.rsplit_once("<w:p>").unwrap();
+                    let original = format!("<w:p>{content}</w:p>");
+                    let replacement = original.replace(
+                        "</w:pPr>",
+                        &format!("<w:ind w:left=\"{indent}\" w:hanging=\"0\"/></w:pPr>"),
+                    );
+                    xml.replace(&original, &replacement)
+                });
+                let runs = positions(&data, use_fallback, omit_line_multiple);
+                for letter in 'A'..='G' {
+                    let label = format!("Item {letter}");
+                    let before = control.iter().find(|run| run.text == label).unwrap();
+                    let after = runs.iter().find(|run| run.text == label).unwrap();
+                    let expected_x = if letter == 'D' {
+                        90.0 + f64::from(indent) / 20.0
+                    } else {
+                        before.left_pt
+                    };
+                    assert!(
+                        (after.left_pt - expected_x).abs() < 0.01,
+                        "{label}, bullet {bullet}, indent {indent}: {after:?}"
+                    );
+                    assert!(
+                        (after.baseline_pt - before.baseline_pt).abs() < 0.15,
+                        "physical baseline {label}, bullet {bullet}, indent {indent}: {before:?} / {after:?}"
+                    );
+                }
+                let body = runs.iter().find(|run| run.text == "Item D").unwrap();
                 assert!(
-                    (after.left_pt - expected_x).abs() < 0.01,
-                    "{label}, bullet {bullet}, indent {indent}: {after:?}"
-                );
-                assert!(
-                    (after.baseline_pt - before.baseline_pt).abs() < 0.15,
-                    "physical baseline {label}, bullet {bullet}, indent {indent}: {before:?} / {after:?}"
+                    !runs.iter().any(|run| run.text != "Item D"
+                        && (run.baseline_pt - body.baseline_pt).abs() < 0.01),
+                    "suppressed marker: {runs:?}"
                 );
             }
-            let body = runs.iter().find(|run| run.text == "Item D").unwrap();
-            assert!(
-                !runs
-                    .iter()
-                    .any(|run| run.text != "Item D"
-                        && (run.baseline_pt - body.baseline_pt).abs() < 0.01),
-                "suppressed marker: {runs:?}"
-            );
         }
     }
 }

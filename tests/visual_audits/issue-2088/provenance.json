@@ -17,7 +17,8 @@
   },
   "after": {
     "pdf_sha256": "a6e1ff76a3d6387b8eba4b6a961755967f193e60624f7e8b322fbaf946dc6c2a",
-    "converter_sha256": "7d9f42618c342a92689e8570ed5257c520450d429da2bfbaa7fd21a00ffea6b1"
+    "converter_sha256": "44b5187e621c8eefee71778d0f41c672287fcec47408cde2c3a9477f73be5d0a",
+    "readback": "All fifteen outputs regenerated after the font-fallback repair are byte-identical to the inspected PDFs."
   },
   "filing_comparison": {
     "office2pdf_revision": "d5f866b64ee3f9e188c7cba658732980bfee16b0",
@@ -432,5 +433,15 @@
     "office2pdf_revision": "36db34e19f57d2c9e90838f7dd6056d924f34afd",
     "comparison_path": "assets/bugfixes/issue-2094/compare.jpg",
     "comparison_sha256": "5773109517b52e463cebe0da28808d44545b6fcc1c305c7ecbe861c8d7f5b5c3"
+  },
+  "font_fallback_regression": {
+    "requested_font": "Office2Pdf Missing Numbering Face",
+    "coverage": "Declared proportional and omitted line rules; ordered and bullet suppression; default and explicit paragraph indents.",
+    "before_extra_baseline_pt": {
+      "proportional": 12.65,
+      "omitted": 11.0
+    },
+    "after_max_control_baseline_delta_pt": 0.15,
+    "generic_unspecified_font_spacing": "Existing regression passes unchanged."
   }
 }

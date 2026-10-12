@@ -1421,7 +1421,10 @@ fn east_asian_aware_metric_family(runs: &[Run]) -> Option<&str> {
     }
 }
 
-fn word_paragraph_metric_family<'a>(runs: &'a [Run], style: &'a ParagraphStyle) -> Option<&'a str> {
+pub(super) fn word_paragraph_metric_family<'a>(
+    runs: &'a [Run],
+    style: &'a ParagraphStyle,
+) -> Option<&'a str> {
     east_asian_aware_metric_family(runs).or_else(|| {
         (runs.is_empty() && matches!(style.line_spacing, Some(LineSpacing::Proportional(_)))).then(
             || {
