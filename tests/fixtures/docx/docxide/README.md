@@ -32,3 +32,7 @@ revision and Apache-2.0 license. Its children continue across parent items.
 `numbering_restart_policy.docx` derives a three-level sequence from case72;
 compiled PDF-text tests vary the restart trigger and complete level overrides.
 Native calibration packages and PDFs remain outside git.
+
+`numbering_skipped_levels.docx` removes the restart flag from the three-level
+policy fixture. Compiled geometry tests compare its skipped child's marker/body
+origins and face, then vary nesting and marker format to cover shallower returns.
