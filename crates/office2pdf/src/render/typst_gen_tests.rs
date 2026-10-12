@@ -31,6 +31,7 @@ fn make_flow_page(content: Vec<Block>) -> Page {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })
 }
 

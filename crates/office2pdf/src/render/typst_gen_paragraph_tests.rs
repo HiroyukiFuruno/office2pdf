@@ -327,6 +327,7 @@ fn test_generate_page_setup() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let result = generate_typst(&doc).unwrap().source;
     assert!(result.contains("612pt"));

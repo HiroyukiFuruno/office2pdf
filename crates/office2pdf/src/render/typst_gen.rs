@@ -142,6 +142,13 @@ struct GenCtx {
     /// Layers containing the previous section's borders must be reset explicitly.
     flow_border_layers: [bool; 2],
     has_flow_line_numbering: bool,
+    in_flow_body: bool,
+    flow_page_alignments: Vec<crate::ir::PageVerticalAlignment>,
+    flow_alignment_index: usize,
+    flow_current_alignment: crate::ir::PageVerticalAlignment,
+    preserve_page_after_spacing: bool,
+    flow_previous_after_spacing: f64,
+    block_depth: usize,
     images: Vec<ImageAsset>,
     next_image_id: usize,
     next_text_box_id: usize,
@@ -281,6 +288,13 @@ impl GenCtx {
             flow_section_index: 0,
             flow_border_layers: [false; 2],
             has_flow_line_numbering: false,
+            in_flow_body: false,
+            flow_page_alignments: Vec::new(),
+            flow_alignment_index: 0,
+            flow_current_alignment: crate::ir::PageVerticalAlignment::Top,
+            preserve_page_after_spacing: false,
+            flow_previous_after_spacing: 0.0,
+            block_depth: 0,
             images: Vec::new(),
             next_image_id: 0,
             next_text_box_id: 0,
@@ -667,6 +681,7 @@ fn generate_pages(doc: &Document, options: &ConvertOptions) -> Result<TypstOutpu
     let mut ctx = GenCtx::new();
     ctx.document_default_tab_stop_pt = doc.styles.default_tab_stop_pt;
     ctx.document_default_text = doc.styles.default_text.clone();
+    let alignment_plan = section_alignment::alignment_plan(&doc.pages);
     for (index, page) in doc.pages.iter().enumerate() {
         let begins_continuously: bool = matches!(page, Page::FlowContinuous(_));
         let ends_continuously: bool = doc
@@ -683,6 +698,7 @@ fn generate_pages(doc: &Document, options: &ConvertOptions) -> Result<TypstOutpu
                     flow,
                     begins_continuously && index > 0,
                     ends_continuously,
+                    &alignment_plan[index],
                     &mut ctx,
                     options,
                 )?;
@@ -706,10 +722,18 @@ fn generate_flow_page(
     page: &FlowPage,
     begins_continuously: bool,
     ends_continuously: bool,
+    vertical_alignments: &[crate::ir::PageVerticalAlignment],
     ctx: &mut GenCtx,
     options: &ConvertOptions,
 ) -> Result<(), ConvertError> {
     let size = resolve_page_size(&page.size, options);
+    ctx.in_flow_body = false;
+    ctx.flow_page_alignments = vertical_alignments.to_vec();
+    ctx.flow_alignment_index = 0;
+    ctx.preserve_page_after_spacing = false;
+    if !begins_continuously {
+        ctx.flow_previous_after_spacing = 0.0;
+    }
     write_line_numbering(out, page, ctx);
     // The format has to be in place before the header is written, because the
     // header is part of the page setup and carries the `PAGE` field.
@@ -780,6 +804,11 @@ fn generate_flow_page(
     // default below, which is a different question.
     ctx.line_grid_pitch = page.line_grid_pitch.filter(|_| page.line_grid_snaps_lines);
 
+    // Apply body alignment after page decorations have captured their styles.
+    // Typst distributes each page's flow, preserving page breaks and horizontal alignment.
+    ctx.in_flow_body = true;
+    write_flow_body_alignment(out, ctx);
+
     // Word keeps `w:spacing w:before` on the document's first body paragraph,
     // but Typst collapses leading block spacing at a page boundary, pulling the
     // first heading up to the top margin. Emit that gap as explicit vertical
@@ -836,6 +865,57 @@ fn generate_flow_page(
             write_continuous_flow_frame_close(out);
         }
     }
+    ctx.in_flow_body = false;
+    ctx.preserve_page_after_spacing = false;
+    reset_flow_body_alignment(out, ctx);
+    Ok(())
+}
+
+fn reset_flow_body_alignment(out: &mut String, ctx: &mut GenCtx) {
+    if ctx.flow_current_alignment != crate::ir::PageVerticalAlignment::Top {
+        out.push_str("#set align(top)\n");
+        ctx.flow_current_alignment = crate::ir::PageVerticalAlignment::Top;
+    }
+}
+
+fn write_flow_body_alignment(out: &mut String, ctx: &mut GenCtx) {
+    let vertical_alignment = ctx
+        .flow_page_alignments
+        .get(ctx.flow_alignment_index)
+        .copied()
+        .unwrap_or(crate::ir::PageVerticalAlignment::Top);
+    let alignment = match vertical_alignment {
+        crate::ir::PageVerticalAlignment::Center => "horizon",
+        crate::ir::PageVerticalAlignment::Bottom => "bottom",
+        _ => "top",
+    };
+    if ctx.flow_current_alignment != vertical_alignment {
+        let _ = writeln!(out, "#set align({alignment})");
+        ctx.flow_current_alignment = vertical_alignment;
+    }
+    ctx.preserve_page_after_spacing = matches!(
+        vertical_alignment,
+        crate::ir::PageVerticalAlignment::Center | crate::ir::PageVerticalAlignment::Bottom
+    );
+}
+
+fn advance_flow_body_alignment(out: &mut String, ctx: &mut GenCtx) {
+    ctx.flow_alignment_index += 1;
+    ctx.flow_previous_after_spacing = 0.0;
+    write_flow_body_alignment(out, ctx);
+}
+
+fn write_continuation_flow_setup(
+    out: &mut String,
+    page: &FlowPage,
+    size: &PageSize,
+    ctx: &mut GenCtx,
+) -> Result<(), ConvertError> {
+    ctx.in_flow_body = false;
+    ctx.preserve_page_after_spacing = false;
+    reset_flow_body_alignment(out, ctx);
+    write_flow_page_setup(out, page, size, true, ctx)?;
+    ctx.in_flow_body = true;
     Ok(())
 }
 
@@ -918,7 +998,8 @@ fn generate_continuous_flow_blocks(
         let is_trailing_empty_segment: bool = index == last_segment_index && segment.is_empty();
         if index > 0 && !is_trailing_empty_segment {
             out.push_str("#pagebreak()\n");
-            write_flow_page_setup(out, page, size, true, ctx)?;
+            write_continuation_flow_setup(out, page, size, ctx)?;
+            advance_flow_body_alignment(out, ctx);
         }
         if segment.is_empty() {
             continue;
@@ -980,8 +1061,9 @@ fn generate_flow_page_columns(
         if index > 0 && !is_trailing_empty_segment {
             out.push_str("#pagebreak()\n");
             if options.begins_continuously {
-                write_flow_page_setup(out, page, size, true, ctx)?;
+                write_continuation_flow_setup(out, page, size, ctx)?;
             }
+            advance_flow_body_alignment(out, ctx);
         }
         if segment.is_empty() {
             continue;
@@ -5491,6 +5573,38 @@ fn caption_label(identifier: &str) -> String {
 }
 
 fn generate_block(out: &mut String, block: &Block, ctx: &mut GenCtx) -> Result<(), ConvertError> {
+    let is_root_flow_block = ctx.in_flow_body && ctx.block_depth == 0;
+    let at_page_root: bool = ctx.preserve_page_after_spacing && is_root_flow_block;
+    let gaps: Option<(f64, f64)> = at_page_root
+        .then(|| section_alignment::paragraph_edge_spacing(block))
+        .flatten();
+    if let Some((before, _)) = gaps {
+        let residual_before: f64 = (before - ctx.flow_previous_after_spacing).max(0.0);
+        let _ = writeln!(out, "#v({}pt, weak: true)", format_f64(residual_before));
+    }
+    ctx.block_depth += 1;
+    let result = generate_block_inner(out, block, ctx);
+    ctx.block_depth -= 1;
+    if is_root_flow_block && matches!(block, Block::PageBreak) {
+        advance_flow_body_alignment(out, ctx);
+    }
+    if at_page_root {
+        if let Some((_, after)) = gaps {
+            out.push_str("#v(0pt, weak: true)\n");
+            let _ = writeln!(out, "#v({}pt, weak: false)", format_f64(after));
+            ctx.flow_previous_after_spacing = after;
+        } else if !section_alignment::leaves_flow_gap_unchanged(block) {
+            ctx.flow_previous_after_spacing = 0.0;
+        }
+    }
+    result
+}
+
+fn generate_block_inner(
+    out: &mut String,
+    block: &Block,
+    ctx: &mut GenCtx,
+) -> Result<(), ConvertError> {
     match block {
         Block::Paragraph(para) => generate_paragraph(out, para, ctx),
         Block::TableOfContents(contents) => {
@@ -6693,3 +6807,6 @@ fn powerpoint_paragraph_line_advance_pt(
 #[cfg(test)]
 #[path = "typst_gen_tests.rs"]
 mod tests;
+
+#[path = "typst_gen_section_alignment.rs"]
+mod section_alignment;

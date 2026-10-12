@@ -119,6 +119,8 @@ pub struct FlowPage {
     pub page_borders: Option<PageBorders>,
     /// Section margin labels from `w:sectPr/w:lnNumType`.
     pub line_numbering: Option<LineNumbering>,
+    /// Body alignment within each section page’s text area; None means top.
+    pub vertical_alignment: Option<PageVerticalAlignment>,
 }
 
 /// Word's section line-numbering policy; distances are in points.
@@ -389,3 +391,13 @@ pub struct SheetImage {
 #[cfg(test)]
 #[path = "document_tests.rs"]
 mod tests;
+
+/// Word's section body alignment (`w:sectPr/w:vAlign`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PageVerticalAlignment {
+    Top,
+    Center,
+    Bottom,
+    /// Vertical justification is retained but currently renders at the top.
+    Justified,
+}

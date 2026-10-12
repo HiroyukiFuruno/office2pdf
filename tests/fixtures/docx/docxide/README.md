@@ -14,3 +14,10 @@ restart to `newPage`; native Word still displays 2–13 for `start=1`.
 
 `line_numbering_disabled.docx` removes case70’s line-number attributes.
 Fresh native Word renders its twelve body lines without margin numbers.
+
+`section_vertical_center.docx` is the unmodified synthetic case69.
+`section_alignment_continuous.docx` duplicates its two paragraphs, adding a
+continuous section boundary with the same centered alignment.
+`section_alignment_multipage.docx` adds an explicit second centered page, then
+a top-aligned continuous section sharing only that second page. All retain the
+upstream Apache-2.0 attribution above; native calibration variants stay external.

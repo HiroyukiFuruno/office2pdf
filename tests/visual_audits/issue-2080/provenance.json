@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case69/input.docx",
+    "sha256": "3370958c0968b87387d61dc4db57c2375b98636d1ce853d77bdaa108615bd5b8",
+    "change": "Unmodified synthetic source; Apache-2.0."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "318551eaf60f33766f21c02436dae92fe3304edb1eb4e3c17ee41858980084cb"
+  },
+  "before": {
+    "office2pdf_revision": "6caa474c72ddc6f66e52bfa0794b2e4521ecde50",
+    "pdf_sha256": "da83b87591ace2e0f9dbf21b77356912981b7b71a86af1b407dfb1e2c74a4741"
+  },
+  "after": {
+    "pdf_sha256": "ab136660aaaaa48d462fe7dab50daae543264fb6035a541cf74fc5b87c42f73a",
+    "converter_sha256": "b148063cf619bdcc291a3f30a4d6dd6030eab68633e28a0f949111bdff64d0ef"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected native/before/current full pages, the 5% pixel diff, matched complete title/body crop pairs at 150 DPI, and all publication JPEGs. The before title/body are near the top; the current bold Cambria 24pt title and regular 11pt two-line body occupy the native centered position. Horizontal centering, black color, wrapping and all text are retained. No rotation, shapes, fills, borders, hairlines <=1pt, italic, underline, clipping or overflow occurs. The current report has zero material raster clusters. Sub-material baseline displacement (worst 0.200pt) and line-pitch drift (0.235pt) are below 0.5pt and tracked in #1874, without classifying geometry as antialiasing. Both pages and complete matched text crops of the mixed continuous-section probe were also inspected: its first page stays centered and only its shared second page uses top alignment.",
+  "native_calibration": {
+    "control_decoded_pixel_delta": 0,
+    "title_baselines_pt": {
+      "top": 94.80002,
+      "center": 377.76002,
+      "bottom": 660.72002,
+      "before20_after30": 362.88002
+    },
+    "multipage_mixed_continuous": {
+      "source_sha256": "e055a9c4f089e61382cbcbb80c96154abe351c2d5c0fa07b477bba174e2cac73",
+      "native_pdf_sha256": "ad0b971424afaf95612422dd5bbe1d1e826b777a09c34b283c17ed868d4cc40c",
+      "current_pdf_sha256": "2493eecfa1e4a9634218eb3d0f394ba434ffecaf33292e5d84e72e4a7a870b41",
+      "native_title_baselines_pt": [
+        [
+          377.76002
+        ],
+        [
+          94.80002,
+          176.88002
+        ]
+      ],
+      "layout_pass_at_fine_shift_pt": 0.5,
+      "text_layer": "Matching codepoint census and normalized content; both pages visually inspected."
+    }
+  }
+}

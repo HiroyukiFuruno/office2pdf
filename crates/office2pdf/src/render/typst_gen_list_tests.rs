@@ -53,6 +53,7 @@ fn test_generate_bulleted_list() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let output = generate_typst(&doc).unwrap();
     assert!(output.source.contains("#list("));
@@ -107,6 +108,7 @@ fn a_list_marker_sits_on_the_baseline_of_a_taller_first_line() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let output = generate_typst(&doc).unwrap();
     let runs = crate::render::pdf::compiled_text_runs(&output.source, 0).unwrap();
@@ -199,6 +201,7 @@ fn test_generate_numbered_list() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let output = generate_typst(&doc).unwrap();
     assert!(output.source.contains("#enum("));
@@ -632,6 +635,7 @@ fn test_generate_nested_list() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let output = generate_typst(&doc).unwrap();
     assert!(output.source.contains("Parent"));
@@ -693,6 +697,7 @@ fn test_nested_list_single_content_block() {
         page_numbering: None,
         page_borders: None,
         line_numbering: None,
+        vertical_alignment: None,
     })]);
     let output = generate_typst(&doc).unwrap();
     assert!(!output.source.contains("][#list"));

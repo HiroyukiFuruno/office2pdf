@@ -136,3 +136,7 @@ impl DocxConversionContext {
 #[path = "docx_context_line_numbering.rs"]
 mod line_numbering;
 pub(super) use line_numbering::scan_line_numbering;
+
+#[path = "docx_context_section_alignment.rs"]
+mod section_alignment;
+pub(super) use section_alignment::scan_section_alignment;
