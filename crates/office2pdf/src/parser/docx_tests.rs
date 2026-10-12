@@ -4195,3 +4195,200 @@ fn docx_numbering_marker_sizes_apply_without_changing_body_size() {
         }
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn inline_numbering_formats_fixture(
+    parent_format: &str,
+    child_format: &str,
+    parent_start: u32,
+    child_start: u32,
+    parent_is_legal: bool,
+    child_is_legal: bool,
+) -> Vec<u8> {
+    let base = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
+    rewrite_numbering_part(base, |xml| {
+        let start = xml.find("<w:abstractNum w:abstractNumId=\"100\">").unwrap();
+        let end = start + xml[start..].find("</w:abstractNum>").unwrap();
+        let mut definition = xml[start..end].to_string();
+        for (level, format, counter_start, is_legal) in [
+            (0, parent_format, parent_start, parent_is_legal),
+            (1, child_format, child_start, child_is_legal),
+        ] {
+            let level_start = definition
+                .find(&format!("<w:lvl w:ilvl=\"{level}\">"))
+                .unwrap();
+            let level_end = level_start + definition[level_start..].find("</w:lvl>").unwrap();
+            let mut content = definition[level_start..level_end].to_string();
+            content = content.replace(
+                "<w:start w:val=\"1\"/>",
+                &format!("<w:start w:val=\"{counter_start}\"/>"),
+            );
+            content = content.replace(
+                if level == 0 {
+                    "<w:numFmt w:val=\"upperRoman\"/>"
+                } else {
+                    "<w:numFmt w:val=\"decimal\"/>"
+                },
+                &format!("<w:numFmt w:val=\"{format}\"/>"),
+            );
+            content = content.replace("<w:isLgl/>", "");
+            if is_legal {
+                content = content.replace("<w:lvlText", "<w:isLgl/><w:lvlText");
+            }
+            content = content
+                .replace(
+                    "w:left=\"720\" w:hanging=\"432\"",
+                    "w:left=\"0\" w:hanging=\"0\"",
+                )
+                .replace(
+                    "w:left=\"1440\" w:hanging=\"432\"",
+                    "w:left=\"0\" w:hanging=\"0\"",
+                );
+            definition.replace_range(level_start..level_end, &content);
+        }
+        format!("{}{definition}{}", &xml[..start], &xml[end..])
+    })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_inline_numbering_honors_ancestor_formats_counters_and_legal_flags() {
+    for (parent, child, parent_start, child_start, parent_legal, child_legal, labels) in [
+        (
+            "upperRoman",
+            "decimal",
+            1,
+            1,
+            false,
+            true,
+            ["I.", "1.1.", "1.2.", "II.", "2.1."],
+        ),
+        (
+            "upperRoman",
+            "decimal",
+            1,
+            1,
+            false,
+            false,
+            ["I.", "I.1.", "I.2.", "II.", "II.1."],
+        ),
+        (
+            "upperLetter",
+            "lowerRoman",
+            27,
+            7,
+            false,
+            false,
+            ["AA.", "AA.vii.", "AA.viii.", "BB.", "BB.vii."],
+        ),
+        (
+            "upperLetter",
+            "lowerRoman",
+            27,
+            7,
+            false,
+            true,
+            ["AA.", "27.7.", "27.8.", "BB.", "28.7."],
+        ),
+        (
+            "lowerLetter",
+            "upperRoman",
+            26,
+            4,
+            false,
+            false,
+            ["z.", "z.IV.", "z.V.", "aa.", "aa.IV."],
+        ),
+        (
+            "decimalZero",
+            "lowerLetter",
+            9,
+            26,
+            false,
+            false,
+            ["09.", "09.z.", "09.aa.", "10.", "10.z."],
+        ),
+        (
+            "upperRoman",
+            "decimal",
+            1,
+            1,
+            true,
+            false,
+            ["1.", "I.1.", "I.2.", "2.", "II.1."],
+        ),
+    ] {
+        let data = inline_numbering_formats_fixture(
+            parent,
+            child,
+            parent_start,
+            child_start,
+            parent_legal,
+            child_legal,
+        );
+        let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let prefixes: Vec<&str> = all_blocks(&document)
+            .iter()
+            .filter_map(|block| match block {
+                Block::Paragraph(paragraph) if paragraph.style.has_inline_list_number => {
+                    Some(paragraph.runs[0].text.trim_end_matches('\t'))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            prefixes, labels,
+            "parent {parent}/{parent_start}/{parent_legal}, child {child}/{child_start}/{child_legal}"
+        );
+        let text = converted_numbering_text(&data);
+        for label in labels {
+            assert!(text.contains(label), "missing {label}: {text}");
+        }
+        for body in [
+            "First section",
+            "Sub one",
+            "Sub two",
+            "Second section",
+            "Sub one again",
+        ] {
+            assert!(text.contains(body), "missing {body}: {text}");
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_inline_numbering_preserves_literal_letters_and_percent_signs() {
+    let base = inline_numbering_formats_fixture("upperRoman", "decimal", 1, 1, false, false);
+    let data = rewrite_numbering_part(&base, |xml| {
+        xml.replace("w:val=\"%1.\"", "w:val=\"Part A %1: 100%\"")
+            .replace("w:val=\"%1.%2.\"", "w:val=\"Clause %1-%2\"")
+    });
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let prefixes: Vec<&str> = all_blocks(&document)
+        .iter()
+        .filter_map(|block| match block {
+            Block::Paragraph(paragraph) if paragraph.style.has_inline_list_number => {
+                Some(paragraph.runs[0].text.trim_end_matches('\t'))
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        prefixes,
+        [
+            "Part A I: 100%",
+            "Clause I-1",
+            "Clause I-2",
+            "Part A II: 100%",
+            "Clause II-1"
+        ]
+    );
+    let text = converted_numbering_text(&data);
+    for prefix in prefixes {
+        assert!(
+            text.contains(prefix),
+            "missing literal label {prefix}: {text}"
+        );
+    }
+}

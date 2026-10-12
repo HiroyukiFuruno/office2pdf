@@ -1,0 +1,323 @@
+{
+  "schema_version": 1,
+  "source": {
+    "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+    "sha256": "c9c8e8936935bfa1822f873a2689605a67cf9be8fd4694772f293be9073e5ebc",
+    "upstream": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case71/input.docx",
+    "license": "Apache-2.0 derivative; no font binaries submitted"
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "integrity": "All six fresh native PDFs passed check_gt_integrity.py.",
+    "exports": [
+      {
+        "probe": "legal-flush",
+        "source_sha256": "0feb48396db11c15d31a2fff63e961389ad5331be83bcbe3723958fb80260e92",
+        "native_pdf_sha256": "25d353ecb1ed4e09b0fee44d744db433568233ed85d35db653f5f12d1ab3fd2f",
+        "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+        "no_patch_rezip_is_byte_identical": true,
+        "native_export": "Word 16.113.4; existing document count before=114, after=114"
+      },
+      {
+        "probe": "ordinary-flush",
+        "source_sha256": "75310e0df5f7472b726c7e8dfbe48d915e68d31e9c22557e61a793109de52d5f",
+        "native_pdf_sha256": "2eb055484c32e00a1084dc050435218ba2c5af88dd4ad4b25e85893e2d6639e0",
+        "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+        "no_patch_rezip_is_byte_identical": true,
+        "native_export": "Word 16.113.4; existing document count before=114, after=114"
+      },
+      {
+        "probe": "alphabetic-roman",
+        "base_probe": "ordinary-flush",
+        "parent_format": "upperLetter",
+        "child_format": "lowerRoman",
+        "parent_start": 27,
+        "child_start": 7,
+        "parent_legal": false,
+        "child_legal": false,
+        "literal_patterns": false,
+        "source_sha256": "12cf96de91557e814bf587a619696b7a94b51d0bcc8a04e60ff1b685b2e07573",
+        "native_pdf_sha256": "c2050a2a3713543b02c9cc20a0cbe37242b54fd4c241349b165138e8c5c2b00e",
+        "before_pdf_sha256": "a5163b1c7490c2a3b65b3e25b19995aae70036a106d444113052a9f6956eea78",
+        "native_export": "Word 16.113.4; existing document count before=114, after=115"
+      },
+      {
+        "probe": "zero-padded-alphabetic",
+        "base_probe": "ordinary-flush",
+        "parent_format": "decimalZero",
+        "child_format": "lowerLetter",
+        "parent_start": 9,
+        "child_start": 26,
+        "parent_legal": false,
+        "child_legal": false,
+        "literal_patterns": false,
+        "source_sha256": "a2630e2f36016bce7332d15ed0d66c277573b76ea74db4380249da805b710466",
+        "native_pdf_sha256": "d8e2efb062760cae0cbe4c5fd4832344fe4bbe2e7962b8b5728616b380d22f8c",
+        "before_pdf_sha256": "664df478bac69bb3d287fa69debfa011abcaf0899781d68457e4add2bc28816f",
+        "native_export": "Word 16.113.4; existing document count before=115, after=116"
+      },
+      {
+        "probe": "parent-legal-only",
+        "base_probe": "ordinary-flush",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": true,
+        "child_legal": false,
+        "literal_patterns": false,
+        "source_sha256": "bb9924b1c4def6fd3853e83d07d45c8145ad4b08b6fed9b4a37a22b8771111a2",
+        "native_pdf_sha256": "28e3399e52b52cd62d77da14c012d980d4fa72898dc0e28873f5c1c41d7f3c64",
+        "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+        "native_export": "Word 16.113.4; existing document count before=116, after=117"
+      },
+      {
+        "probe": "literal-patterns",
+        "base_probe": "ordinary-flush",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": false,
+        "child_legal": false,
+        "literal_patterns": true,
+        "source_sha256": "67988cc634311c6d3a15ef2cdb5efc7d2da8b8724dd6be376040bead2e72f894",
+        "native_pdf_sha256": "82f0b4850e12be9215da8a7eb006e2e0b0e2d8d9dccefd5512af2fd95ee161ee",
+        "before_pdf_sha256": "3fff2d412f10b8a626fabbff48050ab811e868fa9380bf41a109477b2a31fda0",
+        "native_export": "Word 16.113.4; retry; existing document count before=10, after=10",
+        "failed_export_preserved_separately": true
+      }
+    ],
+    "retry": "Literal-pattern export failed once; a read-only retry succeeded. No document close, application quit or restart was requested."
+  },
+  "before": {
+    "revision": "d5c7686253686f4d5e8a724bcdfbd5f6714ce275",
+    "converter_sha256": "b54720386fae3914de73061fd855d9dfa8ccdb42508e2d10dcfdcca0d23d5b5c"
+  },
+  "after": {
+    "converter_sha256": "a72c2ff305d21ac6493473f65da90e59fbff11b9be41604771a4783491db7667"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected every native/before/current full page, 5% pixel diff and full-resolution heading/list crop at 150 DPI for six one-page probes. Native and current labels now agree: I./II. parents with 1.1./1.2./2.1. legal children; I.1./I.2./II.1. ordinary children; AA./BB. with vii/viii references; 09./10. with z/aa child references; decimalized parent labels whose ordinary children retain original Roman references; and literal Part A / Clause text including 100%. All five body paragraphs and the Cambria 14pt bold black heading are retained, with Cambria 11pt regular black body/markers. Body tab positions and spacing match; no wrap, clipping, overflow, missing element, page-order, rotation/flip, fill, stroke/border/hairline <=1pt, shape outline, italic or underline deviation appears. All current material cluster sets are empty; smaller glyph-edge diff fragments were directly inspected. Baseline drift <=0.182pt and pitch drift <=0.136pt remain sub-material under #1874 and are geometry, not antialiasing. No other material deviation was found.",
+  "remaining": {
+    "#1874": "Baseline drift <=0.182pt and pitch drift <=0.136pt."
+  },
+  "no_patch_rezip_controls": [
+    {
+      "probe": "legal-flush",
+      "source_sha256": "0feb48396db11c15d31a2fff63e961389ad5331be83bcbe3723958fb80260e92",
+      "native_pdf_sha256": "25d353ecb1ed4e09b0fee44d744db433568233ed85d35db653f5f12d1ab3fd2f",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "no_patch_rezip_is_byte_identical": true,
+      "native_export": "Word 16.113.4; existing document count before=114, after=114"
+    },
+    {
+      "probe": "ordinary-flush",
+      "source_sha256": "75310e0df5f7472b726c7e8dfbe48d915e68d31e9c22557e61a793109de52d5f",
+      "native_pdf_sha256": "2eb055484c32e00a1084dc050435218ba2c5af88dd4ad4b25e85893e2d6639e0",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "no_patch_rezip_is_byte_identical": true,
+      "native_export": "Word 16.113.4; existing document count before=114, after=114"
+    }
+  ],
+  "marker_style_regression": [
+    {
+      "name": "space",
+      "byte_identical": true,
+      "sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8"
+    },
+    {
+      "name": "space-explicit-times",
+      "byte_identical": true,
+      "sha256": "a50a9263cf310375ec0eb30be6f25b108a56341e2fa17bd910dd5df72f609202"
+    },
+    {
+      "name": "space-marker-size16",
+      "byte_identical": true,
+      "sha256": "f524d930d0ed29c193c507faada1fd0d51bb9f9189e13de2edd88526dfa7c3a7"
+    },
+    {
+      "name": "space-size16",
+      "byte_identical": true,
+      "sha256": "e91a1d5baa41d8a9f14f022104fc6cde65b0b0e44a7e7434deeef178d1a196a7"
+    },
+    {
+      "name": "inline-times",
+      "byte_identical": true,
+      "sha256": "4e5c382c9d16626e566dda0bccdd7f48b5336f0f81e7d556a2be7a4df269f6ca"
+    },
+    {
+      "name": "inline-size16",
+      "byte_identical": true,
+      "sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028"
+    },
+    {
+      "name": "bullet-styled",
+      "byte_identical": true,
+      "sha256": "7bc096631e8a0edff220e649a8604beac818cc978aff956bfa01829d7b9d6c8b"
+    },
+    {
+      "name": "override-styled",
+      "byte_identical": true,
+      "sha256": "952c258429f0f851c3495ef22cd9a4440e36aa3d6e762cef3815dd2880d9fbe7"
+    }
+  ],
+  "probes": [
+    {
+      "name": "legal-flush",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": false,
+        "child_legal": true
+      },
+      "source_sha256": "0feb48396db11c15d31a2fff63e961389ad5331be83bcbe3723958fb80260e92",
+      "native_pdf_sha256": "25d353ecb1ed4e09b0fee44d744db433568233ed85d35db653f5f12d1ab3fd2f",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "after_pdf_sha256": "71ab03e57b7bbfe07a4d00855810f59af1526136de5809e180a9ed211a09cd92",
+      "reports": {
+        "layout": "assets/bugfixes/issue-2099/layout-audit.json",
+        "render": "assets/bugfixes/issue-2099/render-clusters-page-1.json",
+        "text": "tests/visual_audits/issue-2099/text-layer.json",
+        "dispositions": "tests/visual_audits/issue-2099/cluster-dispositions-page-1.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "ordinary-flush",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": false,
+        "child_legal": false
+      },
+      "source_sha256": "75310e0df5f7472b726c7e8dfbe48d915e68d31e9c22557e61a793109de52d5f",
+      "native_pdf_sha256": "2eb055484c32e00a1084dc050435218ba2c5af88dd4ad4b25e85893e2d6639e0",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "after_pdf_sha256": "abe2feaee24cd3cada80c7826ae600bf750a35bae3915aa7521f00ff07910bdd",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2099/probes/ordinary-flush-layout.json",
+        "text": "tests/visual_audits/issue-2099/probes/ordinary-flush-text.json",
+        "render": "tests/visual_audits/issue-2099/probes/ordinary-flush-render.json",
+        "dispositions": "tests/visual_audits/issue-2099/probes/ordinary-flush-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "alphabetic-roman",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "upperLetter",
+        "child_format": "lowerRoman",
+        "parent_start": 27,
+        "child_start": 7,
+        "parent_legal": false,
+        "child_legal": false
+      },
+      "source_sha256": "12cf96de91557e814bf587a619696b7a94b51d0bcc8a04e60ff1b685b2e07573",
+      "native_pdf_sha256": "c2050a2a3713543b02c9cc20a0cbe37242b54fd4c241349b165138e8c5c2b00e",
+      "before_pdf_sha256": "a5163b1c7490c2a3b65b3e25b19995aae70036a106d444113052a9f6956eea78",
+      "after_pdf_sha256": "ded5f11e834b4316d1afa20f607fbb002a113612292ef6700fecf6a911915a2c",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2099/probes/alphabetic-roman-layout.json",
+        "text": "tests/visual_audits/issue-2099/probes/alphabetic-roman-text.json",
+        "render": "tests/visual_audits/issue-2099/probes/alphabetic-roman-render.json",
+        "dispositions": "tests/visual_audits/issue-2099/probes/alphabetic-roman-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "zero-padded-alphabetic",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "decimalZero",
+        "child_format": "lowerLetter",
+        "parent_start": 9,
+        "child_start": 26,
+        "parent_legal": false,
+        "child_legal": false
+      },
+      "source_sha256": "a2630e2f36016bce7332d15ed0d66c277573b76ea74db4380249da805b710466",
+      "native_pdf_sha256": "d8e2efb062760cae0cbe4c5fd4832344fe4bbe2e7962b8b5728616b380d22f8c",
+      "before_pdf_sha256": "664df478bac69bb3d287fa69debfa011abcaf0899781d68457e4add2bc28816f",
+      "after_pdf_sha256": "f2e25bad48fbddf51351815b39fc54401ee272fa15be387ca3e41be332ab0829",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2099/probes/zero-padded-alphabetic-layout.json",
+        "text": "tests/visual_audits/issue-2099/probes/zero-padded-alphabetic-text.json",
+        "render": "tests/visual_audits/issue-2099/probes/zero-padded-alphabetic-render.json",
+        "dispositions": "tests/visual_audits/issue-2099/probes/zero-padded-alphabetic-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "parent-legal-only",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": true,
+        "child_legal": false
+      },
+      "source_sha256": "bb9924b1c4def6fd3853e83d07d45c8145ad4b08b6fed9b4a37a22b8771111a2",
+      "native_pdf_sha256": "28e3399e52b52cd62d77da14c012d980d4fa72898dc0e28873f5c1c41d7f3c64",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "after_pdf_sha256": "eb784f95bcd23119f60610b459f19a6ee87d936761dbfdbed401b44dffe7b0b8",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2099/probes/parent-legal-only-layout.json",
+        "text": "tests/visual_audits/issue-2099/probes/parent-legal-only-text.json",
+        "render": "tests/visual_audits/issue-2099/probes/parent-legal-only-render.json",
+        "dispositions": "tests/visual_audits/issue-2099/probes/parent-legal-only-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "literal-patterns",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstract_num_id": 100,
+        "levels_0_and_1": "w:ind left=0 hanging=0",
+        "parent_format": "upperRoman",
+        "child_format": "decimal",
+        "parent_start": 1,
+        "child_start": 1,
+        "parent_legal": false,
+        "child_legal": false,
+        "parent_level_text": "Part A %1: 100%",
+        "child_level_text": "Clause %1-%2"
+      },
+      "source_sha256": "67988cc634311c6d3a15ef2cdb5efc7d2da8b8724dd6be376040bead2e72f894",
+      "native_pdf_sha256": "82f0b4850e12be9215da8a7eb006e2e0b0e2d8d9dccefd5512af2fd95ee161ee",
+      "before_pdf_sha256": "3fff2d412f10b8a626fabbff48050ab811e868fa9380bf41a109477b2a31fda0",
+      "after_pdf_sha256": "0bb200760e21f59217ad45419593e52379438dc112de1c45c712e2a3971c858d",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2099/probes/literal-patterns-layout.json",
+        "text": "tests/visual_audits/issue-2099/probes/literal-patterns-text.json",
+        "render": "tests/visual_audits/issue-2099/probes/literal-patterns-render.json",
+        "dispositions": "tests/visual_audits/issue-2099/probes/literal-patterns-dispositions.json"
+      },
+      "remaining": "#1874"
+    }
+  ]
+}
