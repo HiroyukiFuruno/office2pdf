@@ -407,6 +407,8 @@ impl Parser for DocxParser {
         data: &[u8],
         _options: &ConvertOptions,
     ) -> Result<(Document, Vec<ConvertWarning>), ConvertError> {
+        let (expanded, mut warnings) = super::docx_alt_chunk::expand(data)?;
+        let data = expanded.as_ref();
         let default_tab_stop_pt: Option<f64> = extract_default_tab_stop_pt(data);
         let word_compatibility_mode: WordCompatibilityMode = extract_compatibility_mode(data);
         let hyphenates_automatically: bool = extract_auto_hyphenation(data);
@@ -461,8 +463,6 @@ impl Parser for DocxParser {
         let header_footer_assets: HeaderFooterAssets = crate::parser::open_zip(data)
             .map(|mut archive| build_header_footer_assets(&mut archive, header_footer_styles))
             .unwrap_or_default();
-        let mut warnings: Vec<ConvertWarning> = Vec::new();
-
         let mut elements: Vec<TaggedElement> = Vec::new();
         let mut pages: Vec<Page> = Vec::new();
         let mut section_layout_index: usize = 0;
@@ -2122,3 +2122,7 @@ fn caption_entry_text(runs: &[Run]) -> String {
 #[cfg(test)]
 #[path = "docx_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "docx_alt_chunk_tests.rs"]
+mod alt_chunk_tests;

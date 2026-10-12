@@ -37,3 +37,8 @@ This is triage, not a visual pass: missing searchable text can still be painted
 as an image/path, and extraction order or font availability can change scores.
 Every selected fix still needs fresh native GT, all comparison axes, direct image
 inspection, and explicit issue dispositions under our visual contract.
+
+HTML import expansion follows its CSS-to-paragraph mapping, with
+[Servo html5ever](https://github.com/servo/html5ever) for malformed HTML and
+[mailparse](https://github.com/staktrace/mailparse) for MIME decoding. Both are
+Rust libraries; expansion feeds the same XML to docx-rs and contextual scans.
