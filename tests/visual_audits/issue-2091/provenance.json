@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+    "change": "Authored Apache-2.0 four-level derivative: levels 0/2/3/1/2/0/2; level 3 [%4], left 1440/hanging 360 twips; restart flags omitted."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "b6643feda28407928c4909349cb0a866840f385a6a6787bed3c1e7ac29e19e9e"
+  },
+  "before": {
+    "office2pdf_revision": "92f1417f03eecee25922289880873c48a01b91b0",
+    "pdf_sha256": "807761313fa529d778b462da72fb32213aa0b37dd418ac5f4a4a20f5269b86fc"
+  },
+  "after": {
+    "pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+    "converter_sha256": "698f2e3f020f570bd160ff4610325654e73e37df4eb8907e38e96a08fe85e48c"
+  },
+  "filing_comparison": {
+    "office2pdf_revision": "d5f866b64ee3f9e188c7cba658732980bfee16b0",
+    "note": "compare.jpg preserves the original filing image. before.jpg uses the merged skipped-level style/indent fix."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all ten native/before/current full pages, 5% pixel diffs, complete matched heading/list crops at full 150 DPI and publication JPEGs. Before gives Item D (1) instead of (2) on return/siblings, and Item C/Item E (1) instead of (2) on leading; start 7 gives (7) instead of (8). Current labels match Word, including resuming after a root and the level-specific never/earlier-trigger probes. The never-restart control retains its first physical (1) and later (2). All pages retain a Cambria 14pt bold heading, 11pt regular black list text, parenthesis/bracket styles, absolute indents and physical paragraph gaps. There are no shapes, fills, strokes/borders or hairlines <=1pt, rotation, italic, underline, clipping, overflow or missing body text. All ten current pages pass layout at 0.5pt and searchable content/order/census; all ten strict raster reports contain zero material clusters. Differences visible in the diff are bounded glyph edges and sub-material vertical drift, at most 0.201pt on the primary page and 0.221pt across probes, tracked in #1874. No additional material finding remains untracked.",
+  "remaining": {
+    "submaterial_baseline": "#1874"
+  },
+  "control": "No-patch re-ZIP native export is layout-identical to the primary native export. Start probes change only level 1 start; resume probes append level 1 Item H and vary only its restart flag; level 2 policy probes use the leading sequence and vary only level 2 restart.",
+  "native_probes": [
+    {
+      "name": "leading",
+      "changes": {
+        "levels": [
+          0,
+          3,
+          2,
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "source_sha256": "9c4abae85aa4d34650861395e1945e145e3416653a8096c3df87d16a0da5f04e",
+      "native_pdf_sha256": "514d4339c50f70a4d0f8ad47f8767e7cfafd1839d31b6ab38254c46ca02bdeda",
+      "before_pdf_sha256": "579015bcafc3cba2ef69ba73a7d859b38955eea74f737fc7572e265d15613e2d",
+      "after_pdf_sha256": "f55dc58e5b41c44cc9123fd44ad1fc1d76c655f8c0e2587668937e093d4510ed",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/leading-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/leading-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/leading-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/leading-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "siblings",
+      "changes": {
+        "levels": [
+          0,
+          2,
+          2,
+          1,
+          3,
+          0,
+          1
+        ]
+      },
+      "source_sha256": "b2c56dbd440520aebff536a10b932bb6111408e470b24c0571ae6d5e75ca0319",
+      "native_pdf_sha256": "21b1feb5571385817852a839e39529b0785d8b236ed2330f07ca8832e5d183e8",
+      "before_pdf_sha256": "97cc91a0718ea23727eb8d731839175da9a6b4ba2138f453f0d4471177b81c88",
+      "after_pdf_sha256": "3a4078aa35f4afb7ae26e58238942f291441ef33d7368674b25268d670c6e042",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/siblings-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/siblings-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/siblings-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/siblings-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "control",
+      "changes": {},
+      "source_sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+      "native_pdf_sha256": "5b59eb0d2831a3f9f9707eec6b2944ee281d7f34d600570b9081b4d415380b07",
+      "before_pdf_sha256": "807761313fa529d778b462da72fb32213aa0b37dd418ac5f4a4a20f5269b86fc",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/control-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/control-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/control-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/control-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "start7-return",
+      "changes": {
+        "level1_start": 7
+      },
+      "source_sha256": "b1371b9fc76d504aec6392220eb8deb1f727975932d4f376a9a3e52f15ddbe92",
+      "native_pdf_sha256": "0621b715161fa7d9f83a6635870d9b60f28b6ee8a947e5ab09e9e2897096a86e",
+      "before_pdf_sha256": "54ab165d28fc2e69e78e0a8189c1f4077af0a425b1a6e8f7bf0566d3cf2e4ff7",
+      "after_pdf_sha256": "29a441aedbbfb88bd0601f7d79742cf27ad2d3cb8be2b4187d5e52d695bd9ffd",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/start7-return-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/start7-return-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/start7-return-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/start7-return-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "start7-leading",
+      "changes": {
+        "level1_start": 7,
+        "levels": [
+          0,
+          3,
+          2,
+          3,
+          1,
+          2,
+          0
+        ]
+      },
+      "source_sha256": "99bd103db1d8f97f13fcf8be6d184f068004311ba06f28c2e2e03b65a3fac100",
+      "native_pdf_sha256": "a2f492bca46f10fb8dc20d40606f80ed7d6fea96aab10d36f118d115e43ea0ae",
+      "before_pdf_sha256": "f1ed75d544f3b94874b3397d63c4c9b1854edecf65ccdf9fdb88971a9a93dcca",
+      "after_pdf_sha256": "4e7e4c48e831f52d5a626e66b4cefff1517e0b0955c35109937a695349958032",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/start7-leading-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/start7-leading-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/start7-leading-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/start7-leading-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "resume-omitted",
+      "changes": {
+        "append_item_h_level": 1
+      },
+      "source_sha256": "d75ad26d108765f30a60d46c62e40a6d427febd07299f23b4dbbe2ada7a69245",
+      "native_pdf_sha256": "437d482b9ba861d6dd9dcb15e798e975ad15f07722bece619c5170ce2c431e5f",
+      "before_pdf_sha256": "7d0d66c13783ff364a19f46c3bf2d7e597684fe1397fe295c22cdbaa61c82957",
+      "after_pdf_sha256": "ee8a812e8d9b2efba179014acc64c8c8d25570ade548db2e0f3bcf235cadcb4a",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/resume-omitted-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/resume-omitted-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/resume-omitted-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/resume-omitted-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "resume-never",
+      "changes": {
+        "append_item_h_level": 1,
+        "level1_restart": 0
+      },
+      "source_sha256": "eeb351b8bd5864469ff9c07b847de80433e328230b21780a04f88b815d81ebb3",
+      "native_pdf_sha256": "272896e56a2816a1cc90046f07e86606e660090cfb3d65e03a073d12c9e832e0",
+      "before_pdf_sha256": "cc4bddc5f35da6a04499d18469daf1f9c99f7229c4780d39844ed03a575f23df",
+      "after_pdf_sha256": "cc4bddc5f35da6a04499d18469daf1f9c99f7229c4780d39844ed03a575f23df",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/resume-never-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/resume-never-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/resume-never-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/resume-never-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level2-never",
+      "changes": {
+        "levels": [
+          0,
+          3,
+          2,
+          3,
+          1,
+          2,
+          0
+        ],
+        "level2_restart": 0
+      },
+      "source_sha256": "f975ddcb6973faf065787815c69a1beeefb622f4c9ffb49daa6afab10b73fe4c",
+      "native_pdf_sha256": "0c18860a306acc4b1e3b8915008a1b79fb9edef8b0864011d0299062a5076664",
+      "before_pdf_sha256": "9850fb7bc45f1a7b40d3c36d63a802484d2444c53afde58a9aa31a4825eb2fac",
+      "after_pdf_sha256": "8da5dbf51232ffb3123fa6dbdb1c43ce89d74a8cc07200f0f7d9a92bd2b4c587",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/level2-never-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/level2-never-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/level2-never-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/level2-never-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level2-trigger1",
+      "changes": {
+        "levels": [
+          0,
+          3,
+          2,
+          3,
+          1,
+          2,
+          0
+        ],
+        "level2_restart": 1
+      },
+      "source_sha256": "cfd49a0d3ddf9d16c00d8ecd0864945f253be88fcaf75d9c42ea548c2bac10ad",
+      "native_pdf_sha256": "f3045423aea860a36e49a479d9a3e15f16dc89212a6a992c74c9d05b1a4712d8",
+      "before_pdf_sha256": "9850fb7bc45f1a7b40d3c36d63a802484d2444c53afde58a9aa31a4825eb2fac",
+      "after_pdf_sha256": "84569f91bf5b58dbd3e72e5f9884645082832ed9d1ab4434341694099304e2a9",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2091/probes/level2-trigger1-layout.json",
+        "text": "tests/visual_audits/issue-2091/probes/level2-trigger1-text.json",
+        "render": "tests/visual_audits/issue-2091/probes/level2-trigger1-render.json",
+        "dispositions": "tests/visual_audits/issue-2091/probes/level2-trigger1-dispositions.json"
+      },
+      "remaining": "#1874"
+    }
+  ]
+}

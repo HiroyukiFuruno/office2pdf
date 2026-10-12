@@ -36,3 +36,7 @@ Native calibration packages and PDFs remain outside git.
 `numbering_skipped_levels.docx` removes the restart flag from the three-level
 policy fixture. Compiled geometry tests compare its skipped child's marker/body
 origins and face, then vary nesting and marker format to cover shallower returns.
+
+`numbering_implicit_ancestors.docx` derives a four-level 0/2/3/1/2/0/2 sequence
+from case72. PDF-text tests vary starts, level order and restart rules against
+native Word probes for missing ancestors and later visible counters.

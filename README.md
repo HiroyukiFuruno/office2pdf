@@ -270,7 +270,8 @@ Inline multilevel and nondecimal prefixes are not yet supported.
 DOCX child numbering supports never-restart and earlier-level restart rules;
 omitted rules restart after any higher-level item. Word ignores restart rules
 inside complete level overrides. Skipped child levels retain their actual style
-and indentation. Implicit ancestor counters (#2091), same/later restart
+and indentation. Skipped resettable ancestors advance later visible counters;
+never-restarting ancestors count physical items only. Same/later restart
 thresholds (#2088) and wide-marker tab clearance (#2089) remain unsupported.
 
 DOCX section body text supports top, centered and bottom page alignment,
