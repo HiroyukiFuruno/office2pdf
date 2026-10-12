@@ -1,0 +1,39 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 27.1872,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 5.28,
+        "x": 477.6,
+        "y": 113.76
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full pages, diff, and matched text crops at 150 DPI. This cluster is the Cambria glyph edge in the final body line; both sides have the same face, text, wrap, color, and baseline within 0.104pt. It does not include the page-border geometry."
+      },
+      "id": "p1-75430fe7c318",
+      "region": "top-right"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 1,
+    "duplicate": 0,
+    "total": 1,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}

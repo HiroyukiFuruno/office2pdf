@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "kind": "accepted-rendering",
+      "class": "glyph-edge-rasterization",
+      "cluster_ids": [
+        "p1-75430fe7c318"
+      ],
+      "note": "Inspected the full pages, diff, and matched text crops at 150 DPI. This cluster is the Cambria glyph edge in the final body line; both sides have the same face, text, wrap, color, and baseline within 0.104pt. It does not include the page-border geometry."
+    }
+  ]
+}

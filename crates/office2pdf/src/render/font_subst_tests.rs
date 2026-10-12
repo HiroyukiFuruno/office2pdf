@@ -360,6 +360,7 @@ fn only_office_poster_requests_select_the_bundled_noto_serif() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -829,6 +830,7 @@ fn test_detect_missing_font_fallbacks_with_context_prefers_office_font() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     };
@@ -955,6 +957,7 @@ fn korean_document_requesting(font_family: &str, text: &str) -> Document {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     }
@@ -985,6 +988,7 @@ fn test_document_requests_font_families_false_when_all_runs_use_defaults() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     };
@@ -1029,6 +1033,7 @@ fn test_document_requests_font_families_false_for_context_free_families() {
                 line_grid_pitch: None,
                 line_grid_snaps_lines: false,
                 page_numbering: None,
+                page_borders: None,
             })],
             styles: crate::ir::StyleSheet::default(),
         };
@@ -1068,6 +1073,7 @@ fn test_document_requests_font_families_true_when_any_run_sets_family() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     };
@@ -1613,6 +1619,7 @@ fn test_document_requests_font_families_true_for_a_chart_only_document() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     };
@@ -1697,6 +1704,7 @@ fn test_document_requests_font_families_true_for_a_chart_only_document() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: crate::ir::StyleSheet::default(),
     };

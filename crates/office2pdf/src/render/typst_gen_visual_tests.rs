@@ -55,6 +55,7 @@ fn page_anchored_text_box_position_does_not_follow_flow_position() {
                 line_grid_pitch: None,
                 line_grid_snaps_lines: false,
                 page_numbering: None,
+                page_borders: None,
                 size: PageSize {
                     width: 612.0,
                     height: 792.0,
@@ -289,6 +290,7 @@ fn floating_text_box_margin_alignment_tracks_a_different_page_geometry() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -398,6 +400,7 @@ fn test_floating_image_square_wrap_codegen() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -456,6 +459,7 @@ fn test_floating_image_top_and_bottom_codegen() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     };
@@ -509,6 +513,7 @@ fn test_floating_image_behind_codegen() {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     };

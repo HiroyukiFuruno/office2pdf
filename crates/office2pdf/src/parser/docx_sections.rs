@@ -401,6 +401,7 @@ fn resolve_part_target(directory: &str, target: &str) -> String {
 pub(super) struct SectionOverrides {
     pub(super) column_layout: Option<ColumnLayout>,
     pub(super) page_numbering: Option<PageNumbering>,
+    pub(super) page_borders: Option<crate::ir::PageBorders>,
 }
 
 pub(super) fn build_flow_page_from_section(
@@ -500,6 +501,7 @@ pub(super) fn build_flow_page_from_section(
         first_header,
         first_footer,
         page_numbering: overrides.page_numbering,
+        page_borders: overrides.page_borders,
         columns: overrides
             .column_layout
             .or_else(|| extract_column_layout_from_section_property(section_prop)),

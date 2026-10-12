@@ -24,6 +24,7 @@ pub(super) fn make_simple_document(text: &str) -> Document {
             line_grid_pitch: None,
             line_grid_snaps_lines: false,
             page_numbering: None,
+            page_borders: None,
         })],
         styles: StyleSheet::default(),
     }
