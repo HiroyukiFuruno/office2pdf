@@ -123,7 +123,7 @@ pub struct ParagraphStyle {
     /// This paragraph fragment follows a hard break in its source paragraph.
     /// Typst uses the marker for continuation-specific layout behavior.
     pub starts_after_layout_break: bool,
-    /// The leading run carries a list number and tab, emitted inside its paragraph frame.
+    /// Leading runs carry a list number and source separator inside the paragraph frame.
     pub has_inline_list_number: bool,
     /// Resolved numbering suffix; absent for generic list paragraphs.
     pub numbering_suffix: Option<ListMarkerSuffix>,

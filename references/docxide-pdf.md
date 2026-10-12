@@ -46,4 +46,4 @@ Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 Numbering follows its legal decimalization. Native case72 probes calibrate
 restart ranges, suppression, implicit counters and skipped-level origins; MS-OI29500
 2.1.282 confirms Word ignores restart rules inside complete level overrides.
-Wide-marker clearance follows `pdf/list_label.rs`, calibrated with native tabs/wraps.
+Marker clearance/suffixes follow `pdf/list_label.rs`; native font/size/tab/wrap probes calibrate differences.

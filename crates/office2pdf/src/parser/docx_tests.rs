@@ -3803,83 +3803,281 @@ fn docx_wide_numbering_tab_keeps_continuation_lines_at_declared_indent() {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn compiled_numbering_separator_width(size: f64) -> f64 {
+    // Shape an isolated space between non-ligating glyphs: character offsets
+    // in a body word need not match its glyph indices.
+    let font = crate::render::font_subst::font_with_fallbacks_for_text("Arial", " ");
+    let source = format!("#set text(font: {font}, size: {size}pt)\nx x");
+    let runs = crate::render::pdf::compiled_glyph_runs(&source, 0, true).unwrap();
+    let probe = runs.iter().find(|run| run.text == "x x").unwrap();
+    assert_eq!(probe.advances_pt.len(), 3);
+    probe.advances_pt[1]
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
-fn docx_non_tab_numbering_suffix_does_not_acquire_tab_clearance() {
+fn docx_non_tab_numbering_suffix_follows_actual_marker_advance() {
     let base =
         include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
-    for family in ["Cambria", "Libertinus Serif"] {
-        for start in [7, 998] {
-            for suffix in ["space", "nothing"] {
-                let data = rewrite_numbering_part(base, |xml| {
-                    let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
-                    format!(
-                        "{prefix}<w:lvl w:ilvl=\"1\">{}",
-                        child.replacen(
-                            "<w:lvlText",
-                            &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
-                            1
+    for marker_size in [11.0, 16.0] {
+        for family in ["Cambria", "Libertinus Serif"] {
+            for start in [7, 998] {
+                for suffix in ["space", "nothing"] {
+                    let data = rewrite_numbering_part(base, |xml| {
+                        let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                        format!(
+                            "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                            child.replacen(
+                                "<w:lvlText",
+                                &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
+                                1
+                            )
                         )
-                    )
-                    .replace(
-                        "<w:start w:val=\"7\"/>",
-                        &format!("<w:start w:val=\"{start}\"/>"),
-                    )
-                });
-                let (mut document, _) =
-                    DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
-                // Exercise both the requested Word face and the CI fallback;
-                // a fitting fallback marker has no tab overflow to suppress.
-                for page in &mut document.pages {
-                    if let crate::ir::Page::Flow(flow) = page {
-                        for block in &mut flow.content {
-                            if let Block::List(list) = block {
-                                for level in list.level_styles.values_mut() {
-                                    level
-                                        .marker_style
-                                        .get_or_insert_with(Default::default)
-                                        .font_family = Some(family.to_string());
-                                }
-                                for item in &mut list.items {
-                                    for paragraph in &mut item.content {
-                                        for run in &mut paragraph.runs {
-                                            run.style.font_family = Some(family.to_string());
+                        .replace(
+                            "<w:start w:val=\"7\"/>",
+                            &format!("<w:start w:val=\"{start}\"/>"),
+                        )
+                    });
+                    let (mut document, _) =
+                        DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+                    // Exercise both the requested Word face and the CI fallback;
+                    // a fitting fallback marker has no tab overflow to suppress.
+                    for page in &mut document.pages {
+                        if let crate::ir::Page::Flow(flow) = page {
+                            for block in &mut flow.content {
+                                if let Block::List(list) = block {
+                                    for level in list.level_styles.values_mut() {
+                                        let marker_style =
+                                            level.marker_style.get_or_insert_with(Default::default);
+                                        marker_style.font_family = Some(family.to_string());
+                                        marker_style.font_size = Some(marker_size);
+                                    }
+                                    for item in &mut list.items {
+                                        for paragraph in &mut item.content {
+                                            for run in &mut paragraph.runs {
+                                                run.style.font_family = Some(family.to_string());
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+                    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+                    let label = format!("({})", start + 3);
+                    let marker = runs.iter().find(|run| run.text == label).unwrap();
+                    let body = runs
+                        .iter()
+                        .find(|run| {
+                            run.text == "Continuous item"
+                                && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+                        })
+                        .unwrap();
+                    let glyphs =
+                        crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+                    let shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
+                    let end = marker.left_pt + shape.width_pt();
+                    let space_advance = compiled_numbering_separator_width(marker.font_size_pt);
+                    let expected = end
+                        + if suffix == "space" {
+                            space_advance
+                        } else {
+                            0.0
+                        };
+                    assert!(
+                        (body.left_pt - expected).abs() < 0.01,
+                        "suffix {suffix}, {family}, start {start} follows its marker at {end} and separator, expected {expected}: {body:?}"
+                    );
+                    if start == 998 {
+                        assert!(
+                            end > 126.0,
+                            "the wide-marker case must exercise overflow: {marker:?}"
+                        );
+                        let next_tab = 90.0 + (((end - 90.0) / 36.0).floor() + 1.0) * 36.0;
+                        assert!(
+                            body.left_pt < next_tab - 0.01,
+                            "suffix {suffix} must not gain a tab jump: body {body:?}, next tab {next_tab}"
+                        );
+                    }
                 }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_non_tab_numbering_suffix_keeps_wrapped_continuation_indent() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    for suffix in ["space", "nothing"] {
+        let data = rewrite_numbering_part(base, |xml| {
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            format!(
+                "{prefix}<w:lvl w:ilvl=\"1\">{}",
+                child.replacen(
+                    "<w:lvlText",
+                    &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
+                    1
+                )
+            )
+        });
+        let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+            let (prefix, tail) = xml.rsplit_once("Continuous item").unwrap();
+            format!(
+                "{prefix}Continuous item with a long explanation about the final wide numbering marker and the paragraph continuation origin. This sentence continues across several physical lines to test wrapping at the declared left margin.{tail}"
+            )
+        });
+        let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+        let marker = runs.iter().find(|run| run.text == "(10)").unwrap();
+        let first = runs
+            .iter()
+            .find(|run| run.text.starts_with("Continuous item with"))
+            .unwrap();
+        let glyphs = crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+        let marker_shape = glyphs.iter().find(|run| run.text == "(10)").unwrap();
+        let expected = marker.left_pt
+            + marker_shape.width_pt()
+            + if suffix == "space" {
+                compiled_numbering_separator_width(marker.font_size_pt)
+            } else {
+                0.0
+            };
+        assert!(
+            (first.left_pt - expected).abs() < 0.01,
+            "{suffix}: {first:?}, expected {expected}"
+        );
+        let continuations: Vec<_> = runs
+            .iter()
+            .filter(|run| run.baseline_pt > first.baseline_pt + 1.0)
+            .collect();
+        assert!(continuations.len() >= 2, "{continuations:?}");
+        for run in continuations {
+            assert!((run.left_pt - 126.0).abs() < 0.01, "{suffix}: {run:?}");
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_bullet_suffix_follows_actual_marker_advance() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    for suffix in ["space", "nothing"] {
+        let data = rewrite_numbering_part(base, |xml| {
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            let (level, tail) = child.split_once("</w:lvl>").unwrap();
+            let level = level
+                .replace(
+                    "<w:numFmt w:val=\"decimal\"/>",
+                    "<w:numFmt w:val=\"bullet\"/>",
+                )
+                .replace(
+                    "<w:lvlText w:val=\"(%2)\"/>",
+                    &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText w:val=\"•\"/>"),
+                );
+            format!("{prefix}<w:lvl w:ilvl=\"1\">{level}</w:lvl>{tail}")
+        });
+        let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+        let glyphs = crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+        let mut checked = 0;
+        for marker in runs.iter().filter(|run| run.text == "•") {
+            let body = runs
+                .iter()
+                .find(|run| {
+                    run.text == "Continuous item"
+                        && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+                })
+                .unwrap();
+            let marker_shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
+            let expected = marker.left_pt
+                + marker_shape.width_pt()
+                + if suffix == "space" {
+                    compiled_numbering_separator_width(marker.font_size_pt)
+                } else {
+                    0.0
+                };
+            assert!(
+                (body.left_pt - expected).abs() < 0.01,
+                "bullet {suffix}: {body:?}, expected {expected}"
+            );
+            checked += 1;
+        }
+        assert_eq!(checked, 4);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_inline_numbering_honors_space_and_nothing_suffixes() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    for size in [11, 16] {
+        for start in [7, 998] {
+            for suffix in ["space", "nothing"] {
+                let data = rewrite_numbering_part(base, |xml| {
+                    let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                    let (level, tail) = child.split_once("</w:lvl>").unwrap();
+                    let level = level
+                        .replace(
+                            "<w:ind w:left=\"720\" w:hanging=\"360\"/>",
+                            "<w:ind w:left=\"0\" w:hanging=\"0\"/>",
+                        )
+                        .replace(
+                            "<w:lvlText",
+                            &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
+                        );
+                    format!("{prefix}<w:lvl w:ilvl=\"1\">{level}</w:lvl>{tail}").replace(
+                        "<w:start w:val=\"7\"/>",
+                        &format!("<w:start w:val=\"{start}\"/>"),
+                    )
+                });
+                let data = rewrite_docx_part(&data, "word/styles.xml", |xml| {
+                    let (prefix, properties) = xml.split_once("<w:rPrDefault>").unwrap();
+                    let (properties, tail) = properties.split_once("</w:rPrDefault>").unwrap();
+                    format!(
+                        "{prefix}<w:rPrDefault>{}</w:rPrDefault>{tail}",
+                        properties.replace(
+                            "<w:sz w:val=\"22\"/>",
+                            &format!("<w:sz w:val=\"{}\"/>", size * 2)
+                        )
+                    )
+                });
+                let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
                 let source = crate::render::typst_gen::generate_typst(&document).unwrap();
                 let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
-                let label = format!("({})", start + 3);
-                let marker = runs.iter().find(|run| run.text == label).unwrap();
-                let body = runs
-                    .iter()
-                    .find(|run| {
-                        run.text == "Continuous item"
-                            && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
-                    })
-                    .unwrap();
                 let glyphs =
                     crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
-                let shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
-                let end = marker.left_pt + shape.width_pt();
-                assert!(
-                    (body.left_pt - 126.0).abs() < 0.01,
-                    "suffix {suffix}, {family}, start {start} must retain its nominal origin without a tab jump: {body:?}"
-                );
-                if start == 998 {
+                let mut checked = 0;
+                for marker in runs.iter().filter(|run| run.text.starts_with('(')) {
+                    let body = runs
+                        .iter()
+                        .find(|run| {
+                            run.text == "Continuous item"
+                                && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+                        })
+                        .unwrap();
+                    let shape = glyphs.iter().find(|run| run.text == marker.text).unwrap();
+                    let expected = marker.left_pt
+                        + shape.width_pt()
+                        + if suffix == "space" {
+                            compiled_numbering_separator_width(marker.font_size_pt)
+                        } else {
+                            0.0
+                        };
                     assert!(
-                        end > 126.0,
-                        "the wide-marker case must exercise overflow: {marker:?}"
+                        (body.left_pt - expected).abs() < 0.01,
+                        "inline {suffix}, size {size}, start {start}: {marker:?}, {body:?}, expected {expected}"
                     );
-                    let next_tab = 90.0 + (((end - 90.0) / 36.0).floor() + 1.0) * 36.0;
-                    assert!(
-                        body.left_pt < next_tab - 0.01,
-                        "suffix {suffix} must not gain a tab jump: body {body:?}, next tab {next_tab}"
-                    );
+                    assert!((marker.left_pt - 90.0).abs() < 0.01);
+                    checked += 1;
                 }
+                assert_eq!(checked, 4);
             }
         }
     }

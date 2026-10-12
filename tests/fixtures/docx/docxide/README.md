@@ -51,4 +51,4 @@ against native Word probes for continuing physical counters.
 
 `numbering_wide_markers.docx` derives from the same Apache-2.0 case72: child
 start 7 exposes a marker wider than its hanging span. Native probes vary tab
-intervals, custom left/numbering stops, starts and wrapped body text.
+intervals, custom left/numbering stops, starts, wrapping and marker separators.

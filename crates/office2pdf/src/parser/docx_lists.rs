@@ -608,7 +608,7 @@ pub(super) fn group_into_lists(
                 }
 
                 // Word puts numbers with `w:ind left=0 hanging=0` inline:
-                // number, suffix tab, first-line text, and continuation
+                // number, source separator, first-line text, and continuation
                 // lines wrap back to the margin. A hanging-indent list would
                 // indent every continuation line instead (issue #357).
                 let is_flush_numbered = is_ordered
@@ -677,15 +677,47 @@ pub(super) fn group_into_lists(
                         .first()
                         .map(|run| run.style.clone())
                         .unwrap_or_default();
+                    let suffix = level
+                        .paragraph_style
+                        .numbering_suffix
+                        .unwrap_or(ListMarkerSuffix::Tab);
+                    if suffix == ListMarkerSuffix::Space {
+                        // Word's generated separator uses Arial at the
+                        // marker's size, independently of its label family.
+                        paragraph.runs.insert(
+                            0,
+                            Run {
+                                text: " ".to_string(),
+                                style: crate::ir::TextStyle {
+                                    font_family: Some("Arial".to_string()),
+                                    font_size: prefix_style.font_size,
+                                    ..crate::ir::TextStyle::default()
+                                },
+                                href: None,
+                                footnote: None,
+                                inline_box: None,
+                            },
+                        );
+                    }
                     paragraph.runs.insert(
                         0,
                         Run {
-                            text: format!("{label}\t"),
+                            text: if suffix == ListMarkerSuffix::Tab {
+                                format!("{label}\t")
+                            } else {
+                                label
+                            },
                             style: prefix_style,
                             href: None,
                             footnote: None,
                             inline_box: None,
                         },
+                    );
+                    tracing::trace!(
+                        num_id = info.num_id,
+                        level = info.level,
+                        ?suffix,
+                        "Rendered DOCX inline numbering separator"
                     );
                     result.push(Block::Paragraph(*paragraph));
                     continue;
