@@ -1706,10 +1706,10 @@ pub(super) struct ListEojeolWrap {
     pub(super) baseline_snap: Option<PowerPointBaselineSnap>,
 }
 
-/// Word advances an overflowing marker's suffix tab without moving the
-/// paragraph's continuation lines. Like docxide-pdf's `list_label::text_hanging`,
-/// measure the actual styled label and choose source stops before default tabs.
-fn write_word_numbering_tab_advance(
+/// Word's suffix positions only the first body line; continuation lines keep
+/// the declared indent. Follow docxide-pdf's `list_label::text_hanging`: measure
+/// the styled marker, then use a space, no gap, or the source/default tab.
+fn write_word_numbering_suffix_advance(
     out: &mut String,
     style: &EffectiveListStyle<'_>,
     fallback_marker_style: Option<&TextStyle>,
@@ -1717,40 +1717,77 @@ fn write_word_numbering_tab_advance(
     numbers: &[u32],
     default_tab_width_pt: f64,
 ) {
-    if paragraph_style.numbering_suffix != Some(ListMarkerSuffix::Tab) {
+    let Some(suffix) = paragraph_style.numbering_suffix else {
+        return;
+    };
+    if suffix == ListMarkerSuffix::Tab && style.kind != ListKind::Ordered {
         return;
     }
     let Some(indent) = paragraph_list_indent(paragraph_style) else {
         return;
     };
-    let marker_style = merge_marker_style(fallback_marker_style, style.marker_style);
+    let (bullet_text, explicit_marker_style) = if style.kind == ListKind::Unordered {
+        renderable_unordered_marker(style.marker_text.unwrap_or("•"), style.marker_style)
+    } else {
+        (String::new(), style.marker_style.cloned())
+    };
+    let marker_style = merge_marker_style(fallback_marker_style, explicit_marker_style.as_ref());
     let marker_style = marker_style
         .as_ref()
         .filter(|style| has_text_properties(style));
     let body_origin_pt = indent.marker_origin_pt + indent.marker_width_pt;
     let interval = paragraph_default_tab_width_pt(paragraph_style, default_tab_width_pt);
     out.push_str("#context { let word_list_marker = [");
-    if let Some(marker_style) = marker_style {
-        out.push_str("#text(");
-        write_text_params(out, marker_style);
-        out.push_str(")[");
-    }
-    let _ = write!(
-        out,
-        "#numbering(\"{}\"",
-        escape_typst_string(style.numbering_pattern.unwrap_or("1."))
-    );
-    let values = if style.full_numbering {
-        numbers
+    if style.kind == ListKind::Unordered {
+        write_unordered_list_marker_content(out, &bullet_text, marker_style);
     } else {
-        &numbers[numbers.len() - 1..]
-    };
-    for number in values {
-        let _ = write!(out, ", {number}");
+        if let Some(marker_style) = marker_style {
+            out.push_str("#text(");
+            write_text_params(out, marker_style);
+            out.push_str(")[");
+        }
+        let _ = write!(
+            out,
+            "#numbering(\"{}\"",
+            escape_typst_string(style.numbering_pattern.unwrap_or("1."))
+        );
+        let values = if style.full_numbering {
+            numbers
+        } else {
+            &numbers[numbers.len() - 1..]
+        };
+        for number in values {
+            let _ = write!(out, ", {number}");
+        }
+        out.push(')');
+        if marker_style.is_some() {
+            out.push(']');
+        }
     }
-    out.push(')');
-    if marker_style.is_some() {
-        out.push(']');
+    if suffix != ListMarkerSuffix::Tab {
+        let _ = write!(
+            out,
+            "]; let word_marker_end = {}pt + measure(word_list_marker).width; ",
+            format_f64(indent.marker_origin_pt)
+        );
+        if suffix == ListMarkerSuffix::Space {
+            // Native Word uses Arial for this generated separator at the
+            // marker's size, even when the marker declares another family.
+            let separator_style = TextStyle {
+                font_family: Some("Arial".to_string()),
+                font_size: marker_style.and_then(|style| style.font_size),
+                ..TextStyle::default()
+            };
+            out.push_str("let word_list_space = [#text(");
+            write_text_params(out, &separator_style);
+            out.push_str(")[");
+            out.push_str(r#"#" ""#);
+            out.push_str("]]; h(word_marker_end + measure(word_list_space).width - ");
+        } else {
+            out.push_str("h(word_marker_end - ");
+        }
+        let _ = write!(out, "{}pt) }}", format_f64(body_origin_pt));
+        return;
     }
     let _ = write!(
         out,
@@ -1812,22 +1849,25 @@ fn generate_list_items(
     let style = list_style_for_level(list, base_level);
     let (_, item_func) = list_funcs(style.kind);
     let marker_fallback = common_list_level_text_style(items, base_level);
-    let uses_word_tabs = eojeol_wrap.breaks_hangul_at_eojeol
-        && style.kind == ListKind::Ordered
+    let uses_word_suffixes = eojeol_wrap.breaks_hangul_at_eojeol
         && common_list_level_indent(items, base_level).is_some()
         && items
             .iter()
             .filter(|item| item.level == base_level)
             .any(|item| {
                 item.content.first().is_some_and(|paragraph| {
-                    paragraph.style.numbering_suffix == Some(ListMarkerSuffix::Tab)
+                    match paragraph.style.numbering_suffix {
+                        Some(ListMarkerSuffix::Tab) => style.kind == ListKind::Ordered,
+                        Some(ListMarkerSuffix::Space | ListMarkerSuffix::Nothing) => true,
+                        None => false,
+                    }
                 })
             });
-    if uses_word_tabs {
+    if uses_word_suffixes {
         tracing::debug!(
             base_level,
             default_tab_width_pt = ctx.default_tab_width_pt,
-            "Enabled Word numbering tab clearance"
+            "Enabled Word numbering suffix placement"
         );
     }
     let mut number = items.first().and_then(|item| item.start_at).unwrap_or(1);
@@ -1854,8 +1894,8 @@ fn generate_list_items(
         if let Some(snap) = eojeol_wrap.baseline_snap {
             snap.write_open(out);
         }
-        if uses_word_tabs && let Some(paragraph) = item.content.first() {
-            write_word_numbering_tab_advance(
+        if uses_word_suffixes && let Some(paragraph) = item.content.first() {
+            write_word_numbering_suffix_advance(
                 out,
                 &style,
                 marker_fallback.as_ref(),

@@ -1,0 +1,369 @@
+{
+  "schema_version": 1,
+  "source": {
+    "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+    "sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+    "upstream": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "license": "Apache-2.0 derivative; no font binaries submitted",
+    "control": "Native no-patch re-ZIP layout matched the original start-7 control in issue-2089."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "integrity": "All native PDFs passed check_gt_integrity.py."
+  },
+  "before": {
+    "revision": "a514f28290739a76d4ffc6c4215a04564ba5601e",
+    "converter_sha256": "df0bc708cc200b357137823fe5a359c6fb91e913f88c7c80100904f5c2825088"
+  },
+  "after": {
+    "converter_sha256": "49d551a8541fa0e39107eb35176ab6ff7eec5fb242461069369cc88a4a19283a"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all fourteen native/before/current full pages, 5% pixel diffs and complete heading/list crops at 150 DPI, including all ten before/current shifted-region crops and all thirty-two current cluster pairs. Ten suffix pages now match Word: numbered space/nothing bodies follow their actual markers, including (10) at x=131.638pt/128.582pt; Unicode bullet bodies start at x=115.933pt/112.877pt; zero-indent inline markers start at x=90pt and their bodies follow with a space or no gap. Wrapped first lines and all three physical lines match; hanging-list continuations retain x=126pt. Default 16pt body text matches native marker and body size/placement. All pages remain one Letter page with the heading, six case72 paragraphs or five case71 paragraphs, black text and punctuation. Cambria 14pt bold headings and 11pt/16pt regular body retain their native appearance. No fills, strokes/borders, hairlines <=1pt, rotation, italics, underline, clipping, overflow or page-order change appears. Two level-rPr probes still paint Cambria 11pt markers instead of declared Times New Roman/16pt; their wrong marker geometry, resulting body positions and vertical drift up to 18.921pt are tracked in #2100, including twenty font-case and eight size-case clusters. Two additional inline-format probes retain wrong Roman and ancestor labels under #2099, with four exact current raster IDs. All those fragments were re-inspected; none is approved as a renderer difference. Sub-material baseline drift <=0.276pt and pitch drift <=0.191pt on passing suffix pages remain under #1874. No other material deviation was found.",
+  "remaining": {
+    "numbering_level_run_properties": "#2100",
+    "inline_counter_formats": "#2099",
+    "submaterial_baseline_and_pitch": "#1874"
+  },
+  "probes": [
+    {
+      "name": "space",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "level": 1,
+        "w:suff": "space"
+      },
+      "source_sha256": "6201335403c4e6860a0b25e3f27cefb2a68f4502581c7a5e59d6959aad2e05dd",
+      "native_pdf_sha256": "17d93852bbf6a1322d04db53afbc53d0b8543b34fe22537bccfaa9fd884c60a4",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "reports": {
+        "layout": "assets/bugfixes/issue-2097/layout-audit.json",
+        "text": "tests/visual_audits/issue-2097/text-layer.json",
+        "render": "assets/bugfixes/issue-2097/render-clusters-page-1.json",
+        "dispositions": "tests/visual_audits/issue-2097/cluster-dispositions-page-1.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "nothing",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "level": 1,
+        "w:suff": "nothing"
+      },
+      "source_sha256": "50d7ca8e860b28cfd20dd8706994ff6722873e802560212748499fdd3e21870f",
+      "native_pdf_sha256": "b2b15f66aac67ef16410e3eac9468b42756aae41aec11cf0ff34474d08e78ba0",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "a8ecccbd4641fa54ea5b6df23700a1455a063faae74a4a833e89ee9fae50ee09",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/nothing-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/nothing-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/nothing-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/nothing-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-wrapped",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "word/document.xml": "replace final Continuous item with the wrapped paragraph in docx_tests.rs"
+      },
+      "source_sha256": "64ff88b5bb2e08f8f6ff9198c272058e27b4bf3d4ed7fb8e3da04d4cd19949c9",
+      "native_pdf_sha256": "79357ed769409c1472d713034ef966d3b6af0b7696d6ce341bdd7aa81f64b069",
+      "before_pdf_sha256": "80a49d1500ca278dd3e0e0039578a4b2f192ca9f7de74c294293765cbe59e54f",
+      "after_pdf_sha256": "27a2518b1fa887dc6ff62e6882aa3781eeadfb4c8c40f2f07c77488879106571",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/space-wrapped-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/space-wrapped-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/space-wrapped-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/space-wrapped-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "nothing-wrapped",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "nothing",
+        "word/document.xml": "same wrapped paragraph"
+      },
+      "source_sha256": "65aa12db7f2fc173a663b452c16a5288eef8cc01665d397ef48079e8af675278",
+      "native_pdf_sha256": "cfe0c11b5dca31586bc62c2933be73c49f2c4735bd0279eed0e6b1f684955013",
+      "before_pdf_sha256": "80a49d1500ca278dd3e0e0039578a4b2f192ca9f7de74c294293765cbe59e54f",
+      "after_pdf_sha256": "876dbbff107bf61d55d8eaf81b13d4e18afc4b2f156509b0a8dba88f104bbb8a",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/nothing-wrapped-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/nothing-wrapped-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/nothing-wrapped-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/nothing-wrapped-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "bullet-space",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:numFmt": "bullet",
+        "w:lvlText": "\u2022"
+      },
+      "source_sha256": "db5e80a5a9a980b4de53176b57367c7762c55a6dae12b996b202491802d9b320",
+      "native_pdf_sha256": "fb50ffb3d8a139385900001a3d61a9d76bdd7555def3edbf18c3afc293f76792",
+      "before_pdf_sha256": "2aeb6ce5bfb4d611556bd2049a8b404a3e999a0bec3a9250afe172266cbd0137",
+      "after_pdf_sha256": "1808a75e6ea79d748b37975edbbad5fb5ec1127ff9cbd852f3ce9288fd8274c3",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/bullet-space-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/bullet-space-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/bullet-space-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/bullet-space-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "bullet-nothing",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "nothing",
+        "level": 1,
+        "w:numFmt": "bullet",
+        "w:lvlText": "\u2022"
+      },
+      "source_sha256": "f30e6fca4d161ff63bb6a4d50b8d02c226906b8940e9e4ed4acd81c3b6e60806",
+      "native_pdf_sha256": "29ed7a52e3c8f1274316eeae6ca3cc966bf15cb2cc570d35bb9fae91bc0aaf36",
+      "before_pdf_sha256": "2aeb6ce5bfb4d611556bd2049a8b404a3e999a0bec3a9250afe172266cbd0137",
+      "after_pdf_sha256": "dbc870a71fd97b522c75ac0c00efa293950ab06fa4de5f45c53ced48dec0695a",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/bullet-nothing-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/bullet-nothing-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/bullet-nothing-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/bullet-nothing-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-explicit-cambria",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:rPr/w:rFonts": {
+          "w:ascii": "Cambria",
+          "w:hAnsi": "Cambria"
+        }
+      },
+      "source_sha256": "2209ea8cc21e17ca3c5f09a9a722440664c6033fa27bc4ea639cd07f568f3b9f",
+      "native_pdf_sha256": "ddef9c062af3cf6c1d7080a2e2257475180eb161f5cba4f41654c997a8a095ad",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/space-explicit-cambria-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/space-explicit-cambria-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/space-explicit-cambria-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/space-explicit-cambria-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-explicit-times",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:rPr/w:rFonts": {
+          "w:ascii": "Times New Roman",
+          "w:hAnsi": "Times New Roman"
+        }
+      },
+      "source_sha256": "13777a0bd7edb22ceea58b4b8e08ca5a0840811f979c01f0917a077508228476",
+      "native_pdf_sha256": "cd5f4f2600dc0791f0a361a9fedfc2d23a781d33cf6debda62b661c6b10377ae",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/space-explicit-times-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/space-explicit-times-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/space-explicit-times-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/space-explicit-times-dispositions.json"
+      },
+      "remaining": "#2100 and #1874"
+    },
+    {
+      "name": "space-size16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "word/styles.xml/w:rPrDefault": {
+          "w:sz": 32,
+          "w:szCs": 32
+        }
+      },
+      "source_sha256": "2d4701148ab0d27b8f71c519694ca945832644012d15438894f08e742dcc3340",
+      "native_pdf_sha256": "4fed40b93da5a0927b57055b6e8a83b93afab425a1b78be4be8925e53f267826",
+      "before_pdf_sha256": "646ea2a7fbc268d80f282dbdf3f9e59e853c58ecc37a013ba31970f8a0b26ca3",
+      "after_pdf_sha256": "e91a1d5baa41d8a9f14f022104fc6cde65b0b0e44a7e7434deeef178d1a196a7",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/space-size16-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/space-size16-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/space-size16-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/space-size16-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "space-marker-size16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:rPr/w:sz": 32
+      },
+      "source_sha256": "24e2cfcc58e568586a9de86b325150d14c01047bacd7e6e87c8550db96e9f6cc",
+      "native_pdf_sha256": "7eb8005642394afdd3c9029b2f244609d45fbe9b19b86e29d76ebfbe8674ca19",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "7fc2e650139109162c036c6e0c54ac80ed4d8788a43b5d9dbffb3f2e3e8a09d8",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/space-marker-size16-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/space-marker-size16-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/space-marker-size16-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/space-marker-size16-dispositions.json"
+      },
+      "remaining": "#2100 and #1874"
+    },
+    {
+      "name": "inline-space",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "space",
+        "level": 1,
+        "w:pPr/w:ind": {
+          "w:left": 0,
+          "w:hanging": 0
+        }
+      },
+      "source_sha256": "792ef81fe6eaa9d6392ae7b5ccf4d584028bc8995ff8982f785df4d5ca730c0b",
+      "native_pdf_sha256": "3adedae259a63cc14845ea0ba939287f4211dbd96b4cce5f13184ed41122c395",
+      "before_pdf_sha256": "d654b306c14d74485b673401c4df6ad3484f5c4ac5d79398460e0ca20ea9f56f",
+      "after_pdf_sha256": "37b31093a322013d94e7ede884f797eb3b53e628141cb09fc1760bc2b731b343",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/inline-space-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/inline-space-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/inline-space-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/inline-space-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "inline-nothing",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "changes": {
+        "base": "nothing",
+        "level": 1,
+        "w:pPr/w:ind": {
+          "w:left": 0,
+          "w:hanging": 0
+        }
+      },
+      "source_sha256": "a8d82e383a3132dc17eeab93809a8cf468552af889095bca41438a9a29e53873",
+      "native_pdf_sha256": "45ea759c3b9f9fac6623a6515659b7360a252208f2e5735a6a98c8decde31b72",
+      "before_pdf_sha256": "d654b306c14d74485b673401c4df6ad3484f5c4ac5d79398460e0ca20ea9f56f",
+      "after_pdf_sha256": "9811ff8969859ad3fbd4e1fd97816abe917b0dc1695a7029ef43cb6e216818b0",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/inline-nothing-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/inline-nothing-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/inline-nothing-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/inline-nothing-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "format-legal-flush",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstractNumId": 100,
+        "levels": [
+          0,
+          1
+        ],
+        "w:ind": {
+          "w:left": 0,
+          "w:hanging": 0
+        },
+        "remove_w:isLgl": false
+      },
+      "source_sha256": "0feb48396db11c15d31a2fff63e961389ad5331be83bcbe3723958fb80260e92",
+      "native_pdf_sha256": "6a07969c8e9e3a34f8f5af1848b937d2502369f95fc31ff029e664e8808e841d",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "after_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "byte_identical_to_inspected_before": true,
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/format-legal-flush-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/format-legal-flush-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/format-legal-flush-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/format-legal-flush-dispositions.json"
+      },
+      "remaining": "#2099 and #1874"
+    },
+    {
+      "name": "format-ordinary-flush",
+      "fixture": "tests/fixtures/docx/docxide/legal_numbering.docx",
+      "changes": {
+        "abstractNumId": 100,
+        "levels": [
+          0,
+          1
+        ],
+        "w:ind": {
+          "w:left": 0,
+          "w:hanging": 0
+        },
+        "remove_w:isLgl": true
+      },
+      "source_sha256": "75310e0df5f7472b726c7e8dfbe48d915e68d31e9c22557e61a793109de52d5f",
+      "native_pdf_sha256": "1f6ed94a72b99390600b7ac2c46b98f7f011a0a55c4ee752991bdd993d2fb361",
+      "before_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "after_pdf_sha256": "1a79e17fc0b91ab7f8620564f0d9990cc5fefa21524eb0d6be044830c313b35b",
+      "byte_identical_to_inspected_before": true,
+      "reports": {
+        "layout": "tests/visual_audits/issue-2097/probes/format-ordinary-flush-layout.json",
+        "text": "tests/visual_audits/issue-2097/probes/format-ordinary-flush-text.json",
+        "render": "tests/visual_audits/issue-2097/probes/format-ordinary-flush-render.json",
+        "dispositions": "tests/visual_audits/issue-2097/probes/format-ordinary-flush-dispositions.json"
+      },
+      "remaining": "#2099 and #1874"
+    }
+  ],
+  "tab_regression_readback": [
+    {
+      "name": "control",
+      "sha256": "23eb0b4abda27588cb90b687619e7a72a2516f865527fd04c118597403c50c64",
+      "byte_identical_to_reviewed_merged_tab_output": true
+    },
+    {
+      "name": "wrapped",
+      "sha256": "338c924a4d92ac071da5d67edde62ff4271c94a084f8ed2bce65111179283451",
+      "byte_identical_to_reviewed_merged_tab_output": true
+    },
+    {
+      "name": "default24",
+      "sha256": "f4766796d7861865722a73773c5221ad44c3466e47f2f656dc78912064ee5520",
+      "byte_identical_to_reviewed_merged_tab_output": true
+    },
+    {
+      "name": "custom63",
+      "sha256": "06370d8c58f827e3521e9ec0aa300ec49f13edb0868c4b8c64e781e68d15a02c",
+      "byte_identical_to_reviewed_merged_tab_output": true
+    },
+    {
+      "name": "start98",
+      "sha256": "29c749ae8892faf475e0b83a6e8faf94ed40373db0ff744f8b0e21e96b9d1bcd",
+      "byte_identical_to_reviewed_merged_tab_output": true
+    }
+  ]
+}

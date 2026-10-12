@@ -265,7 +265,8 @@ first-page selection, and front/back placement. Custom `FlowPage` values use
 
 DOCX legal numbering renders a list level's placeholders as decimal, preserving
 the parent's own format. On/off flags and complete level overrides are honored.
-Inline multilevel and nondecimal prefixes are not yet supported.
+Inline multilevel/nondecimal prefixes (#2099) and numbering-level marker
+formatting (#2100) are not yet supported.
 
 DOCX child numbering supports never-restart and earlier-level restart rules;
 omitted rules restart after any higher-level item. Word ignores restart rules
@@ -274,9 +275,10 @@ and indentation. Skipped resettable ancestors advance later visible counters;
 child levels with restart values of 0 or above 7 count physical items only.
 Child restart values 1–7
 suppress markers and numbering indents when they name the same/later level;
-root flags are ignored. With a tab suffix, wide numbered markers advance the first body line to default
-or custom left tab stops; continuations keep the hanging indent. Placement for
-space/nothing suffixes remains unsupported (#2097).
+root flags are ignored. Wide numbered markers with tab suffixes advance the
+first body line to default or custom left tab stops. Space/nothing suffixes
+place list text after the marker, including inline numbers; continuations keep
+their indent.
 
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their
