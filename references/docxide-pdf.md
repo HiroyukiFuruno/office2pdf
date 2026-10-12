@@ -39,11 +39,11 @@ HTML expansion follows its CSS mapping, using Rust [html5ever](https://github.co
 [mailparse](https://github.com/staktrace/mailparse); docx-rs and contextual scans read the expanded XML.
 Section line numbering maps starts, intervals and restarts to Typst margin labels.
 Case70 native exports check fonts/clearance; compiled tests cover section suppression.
-
 Section alignment maps `sections.rs` properties into Typst page flow. Fresh
 Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 `both` and mixed automatic pagination warn; mixed explicit shared pages use top.
-Numbering follows its legal decimalization. Native case72 probes calibrate
-marker formatting, restart ranges, suppression, implicit counters and skipped-level origins; MS-OI29500
-2.1.282 confirms Word ignores restart rules inside complete level overrides.
+Numbering follows placeholder formatting and legal decimalization. Native case71
+inline probes check ancestor counters and literals; case72 probes calibrate
+restarts, suppression, implicit counters and skipped-level origins. MS-OI29500 2.1.282
+confirms Word ignores restart rules inside complete level overrides.
 Marker clearance/suffixes follow `pdf/list_label.rs`; native font/size/tab/wrap probes calibrate differences.

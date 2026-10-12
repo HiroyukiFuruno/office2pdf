@@ -42,6 +42,7 @@ pub mod config;
 pub(crate) mod defaults;
 pub mod error;
 pub mod ir;
+mod numbering;
 pub(crate) mod parser;
 #[cfg(feature = "pdf-ops")]
 pub mod pdf_ops;

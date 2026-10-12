@@ -1,5 +1,6 @@
 use super::*;
 use crate::ir::ListMarkerSuffix;
+use crate::numbering::format_roman_counter as roman_marker;
 
 const PPTX_BLANK_LIST_ITEM_SENTINEL: &str = "\u{E000}\u{E001}";
 
@@ -1525,6 +1526,17 @@ fn ordered_marker(pattern: &str, number: u32) -> String {
     format!("{number}.")
 }
 
+fn alpha_marker(mut number: u32, uppercase: bool) -> String {
+    let mut chars: Vec<char> = Vec::new();
+    while number > 0 {
+        let remainder: u8 = ((number - 1) % 26) as u8;
+        let base: u8 = if uppercase { b'A' } else { b'a' };
+        chars.push((base + remainder) as char);
+        number = (number - 1) / 26;
+    }
+    chars.iter().rev().collect()
+}
+
 fn renderable_unordered_marker(
     marker_text: &str,
     marker_style: Option<&TextStyle>,
@@ -1588,48 +1600,6 @@ fn map_symbol_font_marker(font_family: &str, marker_text: &str) -> Option<&'stat
         ("wingdings", '\u{00FD}') => Some("☒"),
         ("wingdings", '\u{00FE}') => Some("☑"),
         _ => None,
-    }
-}
-
-fn alpha_marker(mut number: u32, uppercase: bool) -> String {
-    let mut chars: Vec<char> = Vec::new();
-    while number > 0 {
-        let remainder: u8 = ((number - 1) % 26) as u8;
-        let base: u8 = if uppercase { b'A' } else { b'a' };
-        chars.push((base + remainder) as char);
-        number = (number - 1) / 26;
-    }
-    chars.iter().rev().collect()
-}
-
-fn roman_marker(mut number: u32, uppercase: bool) -> String {
-    const ROMAN_VALUES: &[(u32, &str)] = &[
-        (1000, "M"),
-        (900, "CM"),
-        (500, "D"),
-        (400, "CD"),
-        (100, "C"),
-        (90, "XC"),
-        (50, "L"),
-        (40, "XL"),
-        (10, "X"),
-        (9, "IX"),
-        (5, "V"),
-        (4, "IV"),
-        (1, "I"),
-    ];
-
-    let mut result: String = String::new();
-    for (value, symbol) in ROMAN_VALUES {
-        while number >= *value {
-            number -= *value;
-            result.push_str(symbol);
-        }
-    }
-    if uppercase {
-        result
-    } else {
-        result.to_lowercase()
     }
 }
 

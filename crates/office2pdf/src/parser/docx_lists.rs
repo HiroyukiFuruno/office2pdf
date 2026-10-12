@@ -22,6 +22,7 @@ struct ResolvedListLevel {
     /// Raw Word `lvlText` (e.g. "제%1조") for inline-numbered paragraphs.
     level_text: String,
     number_format: String,
+    uses_legal_numbering: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -271,11 +272,8 @@ fn resolve_numbering(
                 *level_index,
                 ResolvedListLevel {
                     level_text: level.level_text.clone(),
-                    number_format: if level.uses_legal_numbering {
-                        "decimal".to_string()
-                    } else {
-                        level.number_format.clone()
-                    },
+                    number_format: level.number_format.clone(),
+                    uses_legal_numbering: level.uses_legal_numbering,
                     style: ListLevelStyle {
                         kind,
                         numbering_pattern,
@@ -386,18 +384,59 @@ struct NumberedItem {
     item: ListItem,
 }
 
-/// Format an inline prefix from the current counter.
-/// TODO(referenced-level numbering): this path lacks ancestor counters and formats.
-fn format_inline_number(level_text: &str, number_format: &str, number: u32) -> String {
-    let formatted: String = match number_format {
-        "decimalZero" => format!("{number:02}"),
-        _ => number.to_string(),
-    };
-    let mut label = level_text.to_string();
-    for placeholder_level in 1..=9 {
-        label = label.replace(&format!("%{placeholder_level}"), &formatted);
+/// Format each Word placeholder from its referenced counter and declared format.
+/// A legal label decimalizes all its references, independently of their own flags.
+fn format_inline_number(
+    current_level: u32,
+    numbering: &ResolvedNumbering,
+    counters: &BTreeMap<u32, NumberingCounter>,
+) -> String {
+    let level = &numbering.levels[&current_level];
+    let mut label: String = String::new();
+    let mut characters = level.level_text.chars().peekable();
+    while let Some(character) = characters.next() {
+        if character != '%' {
+            label.push(character);
+            continue;
+        }
+        let mut digits: String = String::new();
+        while let Some(digit) = characters.peek().copied().filter(char::is_ascii_digit) {
+            digits.push(digit);
+            characters.next();
+        }
+        let referenced_level = digits
+            .parse::<u32>()
+            .ok()
+            .and_then(|index| index.checked_sub(1));
+        let referenced = referenced_level
+            .and_then(|index| numbering.levels.get(&index).map(|level| (index, level)));
+        if let Some((index, referenced)) = referenced {
+            let value: u32 = counters.get(&index).map_or(0, |counter| counter.value);
+            let number_format: &str = if level.uses_legal_numbering {
+                "decimal"
+            } else {
+                &referenced.number_format
+            };
+            label.push_str(&format_inline_counter(value, number_format));
+        } else {
+            // An invalid or undefined reference does not authorize replacing
+            // another level's counter or swallowing literal source text.
+            label.push('%');
+            label.push_str(&digits);
+        }
     }
     label
+}
+
+fn format_inline_counter(value: u32, number_format: &str) -> String {
+    match number_format {
+        "decimalZero" => format!("{value:02}"),
+        "lowerLetter" => crate::numbering::format_word_alphabetic_counter(value, false),
+        "upperLetter" => crate::numbering::format_word_alphabetic_counter(value, true),
+        "lowerRoman" => crate::numbering::format_roman_counter(value, false),
+        "upperRoman" => crate::numbering::format_roman_counter(value, true),
+        _ => value.to_string(),
+    }
 }
 
 fn numbering_series(num_id: usize, numberings: &NumberingMap) -> NumberingSeries {
@@ -698,8 +737,11 @@ pub(super) fn group_into_lists(
                             numberings,
                         )));
                     }
-                    let label =
-                        format_inline_number(&level.level_text, &level.number_format, number);
+                    let label = format_inline_number(
+                        info.level,
+                        resolved_numbering.expect("ordered numbering must be resolved"),
+                        series_counters,
+                    );
                     let mut prefix_style = paragraph
                         .runs
                         .first()
