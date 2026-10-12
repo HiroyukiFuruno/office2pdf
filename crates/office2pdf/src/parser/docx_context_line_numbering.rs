@@ -45,8 +45,7 @@ pub(in crate::parser) fn scan_line_numbering(xml: &str) -> Vec<Option<LineNumber
                         count_by: values
                             .get("countBy")
                             .and_then(|v| v.parse::<u32>().ok())
-                            .unwrap_or(1)
-                            .max(1),
+                            .unwrap_or(0),
                         start: values
                             .get("start")
                             .and_then(|v| v.parse::<i32>().ok())
