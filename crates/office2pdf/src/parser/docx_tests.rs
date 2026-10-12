@@ -2345,7 +2345,7 @@ fn docx_line_numbering_only_reads_current_word_sections() {
         <w:sectPrChange><w:sectPr><w:lnNumType w:start="99"/></w:sectPr></w:sectPrChange></w:sectPr></w:pPr></w:p>
       <w:tbl><w:tr><w:tc><w:p><w:pPr><w:sectPr><w:lnNumType/></w:sectPr></w:pPr></w:p></w:tc></w:tr></w:tbl>
       <w:sectPr><x:lnNumType x:start="99"/></w:sectPr><x:sectPr><w:lnNumType/></x:sectPr>
-      <w:sectPr><w:lnNumType w:countBy="0" w:distance="NaN"/></w:sectPr>
+      <w:sectPr><w:lnNumType w:countBy="1" w:distance="NaN"/></w:sectPr>
     </w:body></w:document>"#;
     for xml in [
         xml.to_string(),
@@ -2367,7 +2367,7 @@ fn docx_line_numbering_only_reads_current_word_sections() {
                 None,
                 Some(LineNumbering {
                     count_by: 1,
-                    start: 1,
+                    start: 0,
                     distance: None,
                     restart: LineNumberRestart::NewPage
                 })
@@ -2406,8 +2406,8 @@ fn compiled_margin_numbers(
 #[test]
 fn docx_line_numbers_obey_page_restarts_intervals_and_distance() {
     for (restart, start, count_by, expected) in [
-        (LineNumberRestart::NewPage, 1, 1, vec!["1", "2", "3"]),
-        (LineNumberRestart::NewSection, 1, 1, vec!["4", "5", "6"]),
+        (LineNumberRestart::NewPage, 1, 1, vec!["2", "3", "4"]),
+        (LineNumberRestart::NewSection, 1, 1, vec!["5", "6", "7"]),
         (LineNumberRestart::Continuous, 1, 1, vec!["5", "6", "7"]),
         (LineNumberRestart::NewPage, 0, 2, vec!["2"]),
     ] {
@@ -2467,6 +2467,40 @@ fn docx_line_numbers_change_at_continuous_section_boundaries() {
             .iter()
             .map(|run| run.text.as_str())
             .collect::<Vec<_>>(),
-        ["1", "2", "8", "9"]
+        ["2", "3", "9", "10"]
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_line_number_page_start_matches_native_word() {
+    let data =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/line_numbering_page_restart.docx");
+    let (document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let numbers = compiled_margin_numbers(&document, 0);
+    assert_eq!(
+        numbers
+            .iter()
+            .map(|run| run.text.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"
+        ]
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_line_number_default_start_displays_one() {
+    let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>First numbered line of a filing.</w:t></w:r></w:p><w:sectPr><w:pgMar w:left="1800" w:right="1800" w:top="1440" w:bottom="1440"/><w:lnNumType w:countBy="1"/></w:sectPr></w:body></w:document>"#;
+    let data = build_docx_with_math(xml);
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let numbers = compiled_margin_numbers(&document, 0);
+    assert_eq!(
+        numbers
+            .iter()
+            .map(|run| run.text.as_str())
+            .collect::<Vec<_>>(),
+        ["1"]
     );
 }

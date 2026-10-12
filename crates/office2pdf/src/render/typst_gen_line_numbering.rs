@@ -14,7 +14,6 @@ pub(super) fn write_line_numbering(out: &mut String, page: &FlowPage, ctx: &mut 
     let mut body = String::new();
     match numbering.restart {
         LineNumberRestart::Continuous => {
-            // Word increments before displaying a continuously numbered line.
             let _ = write!(body, "let value = n + {};", numbering.start);
         }
         LineNumberRestart::NewPage | LineNumberRestart::NewSection => {
@@ -28,7 +27,7 @@ pub(super) fn write_line_numbering(out: &mut String, page: &FlowPage, ctx: &mut 
             };
             let _ = write!(
                 body,
-                "let store = state(\"o2p-line-base-{}\", (:)); let bases = store.get(); let key = {key}; let base = bases.at(key, default: n); if not bases.keys().contains(key) {{ bases.insert(key, n); store.update(bases) }}; let value = n - base + {};",
+                "let store = state(\"o2p-line-base-{}\", (:)); let bases = store.get(); let key = {key}; let base = bases.at(key, default: n); if not bases.keys().contains(key) {{ bases.insert(key, n); store.update(bases) }}; let value = n - base + {} + 1;",
                 ctx.flow_section_index, numbering.start
             );
         }

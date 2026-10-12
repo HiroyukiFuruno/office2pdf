@@ -8,3 +8,6 @@ page edge. The default parser/render regression reads this tracked package.
 revision and license. Its twelve Cambria body lines use continuous line numbering;
 native Word displays labels 2–13. A default conversion regression reads it.
 No fonts or reference PDFs are copied from the upstream corpus.
+
+`line_numbering_page_restart.docx` changes only case70’s section line-number
+restart to `newPage`; native Word still displays 2–13 for `start=1`.
