@@ -42,3 +42,7 @@ HTML import expansion follows its CSS-to-paragraph mapping, with
 [Servo html5ever](https://github.com/servo/html5ever) for malformed HTML and
 [mailparse](https://github.com/staktrace/mailparse) for MIME decoding. Both are
 Rust libraries; expansion feeds the same XML to docx-rs and contextual scans.
+
+Section line numbering maps Word starts, intervals and restarts onto Typst margin
+labels. The synthetic case70 native export checks font, clearance and baselines;
+page/section restart and suppression at section boundaries have compiled regressions.

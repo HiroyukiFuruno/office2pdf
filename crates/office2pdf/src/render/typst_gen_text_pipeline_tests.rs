@@ -96,6 +96,7 @@ fn test_generate_flow_page_with_equal_columns() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let result = generate_typst(&doc).unwrap().source;
     assert!(
@@ -128,6 +129,7 @@ fn test_generate_flow_page_with_three_columns() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let result = generate_typst(&doc).unwrap().source;
     assert!(
@@ -156,6 +158,7 @@ fn test_generate_flow_page_with_unequal_columns() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let result = generate_typst(&doc).unwrap().source;
     assert!(
@@ -188,6 +191,7 @@ fn test_generate_column_break() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let result = generate_typst(&doc).unwrap().source;
     assert!(
@@ -2652,6 +2656,7 @@ fn test_header_field_never_states_kerning_false() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
 
     let source = generate_typst(&doc).unwrap().source;
@@ -2709,6 +2714,7 @@ fn test_unembedded_aptos_footer_uses_noto_sans_on_an_aptos_host() {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let context = FontSearchContext::for_test(Vec::new(), &["Aptos", "Noto Sans"], &["Aptos"], &[]);
 
@@ -4012,6 +4018,7 @@ fn column_section_layout(content: Vec<Block>, columns: Option<ColumnLayout>) -> 
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })]);
     let output = generate_typst(&doc).expect("codegen must succeed");
     let pages =

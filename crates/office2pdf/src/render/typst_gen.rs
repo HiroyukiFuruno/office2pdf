@@ -141,6 +141,7 @@ struct GenCtx {
     flow_section_index: usize,
     /// Layers containing the previous section's borders must be reset explicitly.
     flow_border_layers: [bool; 2],
+    has_flow_line_numbering: bool,
     images: Vec<ImageAsset>,
     next_image_id: usize,
     next_text_box_id: usize,
@@ -279,6 +280,7 @@ impl GenCtx {
         Self {
             flow_section_index: 0,
             flow_border_layers: [false; 2],
+            has_flow_line_numbering: false,
             images: Vec::new(),
             next_image_id: 0,
             next_text_box_id: 0,
@@ -708,6 +710,7 @@ fn generate_flow_page(
     options: &ConvertOptions,
 ) -> Result<(), ConvertError> {
     let size = resolve_page_size(&page.size, options);
+    write_line_numbering(out, page, ctx);
     // The format has to be in place before the header is written, because the
     // header is part of the page setup and carries the `PAGE` field.
     if let Some(numbering) = page.page_numbering {
@@ -3184,6 +3187,10 @@ fn hf_paragraph_height_pt(
 #[path = "typst_gen_page_borders.rs"]
 mod page_borders;
 use page_borders::page_border_layer_markup;
+
+#[path = "typst_gen_line_numbering.rs"]
+mod line_numbering;
+use line_numbering::write_line_numbering;
 
 fn write_flow_page_setup(
     out: &mut String,

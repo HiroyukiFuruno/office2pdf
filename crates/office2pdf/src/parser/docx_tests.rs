@@ -2312,3 +2312,161 @@ fn test_docx_page_borders_back_layer_stays_behind_header_artwork() {
         "back borders must not cover the page's header artwork"
     );
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_section_line_numbers_are_painted_in_the_margin() {
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/line_numbering.docx");
+    let pdf = crate::convert_bytes(
+        data,
+        crate::config::Format::Docx,
+        &ConvertOptions::default(),
+    )
+    .unwrap();
+    let text = pdf_extract::extract_text_from_mem(&pdf.pdf).unwrap();
+    let separate_numbers: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && line.chars().all(|c| c.is_ascii_digit()))
+        .collect();
+    assert_eq!(
+        separate_numbers,
+        [
+            "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"
+        ],
+        "line numbers must be separate searchable margin text: {text}"
+    );
+}
+
+#[test]
+fn docx_line_numbering_only_reads_current_word_sections() {
+    let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:foreign"><w:body>
+      <w:p><w:pPr><w:sectPr><w:lnNumType w:start="7" w:countBy="3" w:distance="240" w:restart="newSection"/>
+        <w:sectPrChange><w:sectPr><w:lnNumType w:start="99"/></w:sectPr></w:sectPrChange></w:sectPr></w:pPr></w:p>
+      <w:tbl><w:tr><w:tc><w:p><w:pPr><w:sectPr><w:lnNumType/></w:sectPr></w:pPr></w:p></w:tc></w:tr></w:tbl>
+      <w:sectPr><x:lnNumType x:start="99"/></w:sectPr><x:sectPr><w:lnNumType/></x:sectPr>
+      <w:sectPr><w:lnNumType w:countBy="0" w:distance="NaN"/></w:sectPr>
+    </w:body></w:document>"#;
+    for xml in [
+        xml.to_string(),
+        xml.replace(
+            "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+            "http://purl.oclc.org/ooxml/wordprocessingml/main",
+        ),
+    ] {
+        let sections = contexts::scan_line_numbering(&xml);
+        assert_eq!(
+            sections,
+            vec![
+                Some(LineNumbering {
+                    count_by: 3,
+                    start: 7,
+                    distance: Some(12.0),
+                    restart: LineNumberRestart::NewSection
+                }),
+                None,
+                Some(LineNumbering {
+                    count_by: 1,
+                    start: 1,
+                    distance: None,
+                    restart: LineNumberRestart::NewPage
+                })
+            ]
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn line_number_probe_document() -> Document {
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/line_numbering.docx");
+    DocxParser
+        .parse(data, &ConvertOptions::default())
+        .unwrap()
+        .0
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn compiled_margin_numbers(
+    document: &Document,
+    page: usize,
+) -> Vec<crate::render::pdf::PlacedTextRun> {
+    let output = crate::render::typst_gen::generate_typst(document).unwrap();
+    crate::render::pdf::compiled_text_runs(&output.source, page)
+        .unwrap()
+        .into_iter()
+        .filter(|run| {
+            run.left_pt < 80.0
+                && !run.text.is_empty()
+                && run.text.chars().all(|c| c.is_ascii_digit())
+        })
+        .collect()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_line_numbers_obey_page_restarts_intervals_and_distance() {
+    for (restart, start, count_by, expected) in [
+        (LineNumberRestart::NewPage, 1, 1, vec!["1", "2", "3"]),
+        (LineNumberRestart::NewSection, 1, 1, vec!["4", "5", "6"]),
+        (LineNumberRestart::Continuous, 1, 1, vec!["5", "6", "7"]),
+        (LineNumberRestart::NewPage, 0, 2, vec!["2"]),
+    ] {
+        let mut document = line_number_probe_document();
+        let Page::Flow(page) = &mut document.pages[0] else {
+            panic!("flow section")
+        };
+        page.content.truncate(3);
+        let next = page.content.clone();
+        page.content.push(Block::PageBreak);
+        page.content.extend(next);
+        page.line_numbering = Some(LineNumbering {
+            restart,
+            start,
+            count_by,
+            distance: Some(24.0),
+        });
+        let runs = compiled_margin_numbers(&document, 1);
+        assert_eq!(
+            runs.iter().map(|run| run.text.as_str()).collect::<Vec<_>>(),
+            expected,
+            "{restart:?}"
+        );
+        let output = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let body = crate::render::pdf::compiled_text_runs(&output.source, 1)
+            .unwrap()
+            .into_iter()
+            .find(|run| run.left_pt >= 90.0 && run.text.contains("Numbered"))
+            .unwrap();
+        assert!(
+            runs.iter().all(|run| run.left_pt < 66.0
+                && run.family == body.family
+                && run.font_size_pt == body.font_size_pt),
+            "{runs:?}; body {body:?}"
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_line_numbers_change_at_continuous_section_boundaries() {
+    let mut document = line_number_probe_document();
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("flow section")
+    };
+    page.content.truncate(2);
+    page.line_numbering.as_mut().unwrap().restart = LineNumberRestart::NewSection;
+    let mut next = page.clone();
+    next.line_numbering.as_mut().unwrap().start = 8;
+    let mut plain = page.clone();
+    plain.line_numbering = None;
+    document.pages.push(Page::FlowContinuous(next));
+    document.pages.push(Page::FlowContinuous(plain));
+    let numbers = compiled_margin_numbers(&document, 0);
+    assert_eq!(
+        numbers
+            .iter()
+            .map(|run| run.text.as_str())
+            .collect::<Vec<_>>(),
+        ["1", "2", "8", "9"]
+    );
+}

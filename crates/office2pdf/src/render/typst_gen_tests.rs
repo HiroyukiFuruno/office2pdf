@@ -30,6 +30,7 @@ fn make_flow_page(content: Vec<Block>) -> Page {
         line_grid_snaps_lines: false,
         page_numbering: None,
         page_borders: None,
+        line_numbering: None,
     })
 }
 

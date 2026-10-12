@@ -117,6 +117,25 @@ pub struct FlowPage {
     pub page_numbering: Option<PageNumbering>,
     /// Section page decorations from `w:sectPr/w:pgBorders`.
     pub page_borders: Option<PageBorders>,
+    /// Section margin labels from `w:sectPr/w:lnNumType`.
+    pub line_numbering: Option<LineNumbering>,
+}
+
+/// Word's section line-numbering policy; distances are in points.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LineNumbering {
+    pub count_by: u32,
+    pub start: i32,
+    pub distance: Option<f64>,
+    pub restart: LineNumberRestart,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LineNumberRestart {
+    #[default]
+    NewPage,
+    NewSection,
+    Continuous,
 }
 
 /// Line-based page borders. Art borders are not represented as line strokes.
