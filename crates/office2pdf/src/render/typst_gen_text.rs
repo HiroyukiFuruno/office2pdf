@@ -199,6 +199,54 @@ fn east_asian_auto_space(run: &Run) -> String {
     )
 }
 
+fn inline_numbering_prefix_len(style: &ParagraphStyle) -> Option<usize> {
+    style.has_inline_list_number.then_some(
+        if style.numbering_suffix == Some(crate::ir::ListMarkerSuffix::Space) {
+            2
+        } else {
+            1
+        },
+    )
+}
+
+fn word_inline_numbering_runs(para: &Paragraph, line_grid_pitch: Option<f64>) -> Option<Vec<Run>> {
+    if para.style.line_box.is_some()
+        || matches!(para.style.line_spacing, Some(LineSpacing::Exact(_)))
+    {
+        return None;
+    }
+    let prefix_len: usize = inline_numbering_prefix_len(&para.style)?;
+    let body: &[Run] = para.runs.get(prefix_len..)?;
+    if body.is_empty() {
+        return None;
+    }
+    let body_size_pt: f64 = paragraph_font_size_pt(body);
+    let (_, body_bottom_em) = word_line_box_em(body, &para.style, line_grid_pitch)?;
+    let body_bottom_pt: f64 = body_bottom_em * body_size_pt;
+    if !body_bottom_pt.is_finite() || body_bottom_pt < 0.0 {
+        return None;
+    }
+    let mut natural_style: ParagraphStyle = para.style.clone();
+    natural_style.line_spacing = Some(LineSpacing::Proportional(1.0));
+    let mut runs: Vec<Run> = para.runs.clone();
+    // Word seats the larger label by its own ascent, but its descent and the
+    // proportional surplus come from the body. Scaling both by marker size
+    // inflated every later item; fixed run edges survive tab splitting/wrapping.
+    for marker in &mut runs[..prefix_len] {
+        let marker_size_pt: f64 = paragraph_font_size_pt(std::slice::from_ref(marker));
+        if !marker_size_pt.is_finite() || marker_size_pt <= 0.0 {
+            return None;
+        }
+        let (marker_top_em, _) =
+            word_line_box_em(std::slice::from_ref(marker), &natural_style, None)?;
+        marker.style.line_box = Some(LineBox {
+            ascent_em: marker_top_em,
+            descent_em: body_bottom_pt / marker_size_pt,
+        });
+    }
+    Some(runs)
+}
+
 pub(super) fn generate_paragraph(
     out: &mut String,
     para: &Paragraph,
@@ -209,6 +257,12 @@ pub(super) fn generate_paragraph(
     let breaks_hangul_at_eojeol: bool = ctx.breaks_hangul_at_eojeol;
     let available_measure_pt: Option<f64> = ctx.available_measure_pt;
     let style = &para.style;
+    let inline_numbering_runs: Option<Vec<Run>> = word_inline_numbering_runs(para, line_grid_pitch);
+    let runs: &[Run] = inline_numbering_runs.as_deref().unwrap_or(&para.runs);
+    let body_metric_runs: &[Run] = inline_numbering_runs
+        .as_ref()
+        .and_then(|_| inline_numbering_prefix_len(style).and_then(|count| runs.get(count..)))
+        .unwrap_or(runs);
     let paragraph_tab_width_pt: f64 = paragraph_default_tab_width_pt(style, default_tab_width_pt);
 
     // A heading is a paragraph that also feeds the outline, and Word lays it
@@ -244,11 +298,11 @@ pub(super) fn generate_paragraph(
     let line_metric_runs: &[Run] = paragraph_mark_metric_run
         .as_ref()
         .map(std::slice::from_ref)
-        .unwrap_or(&para.runs);
+        .unwrap_or(body_metric_runs);
     let line_height_settings: Option<String> = if is_empty_paragraph {
         None
     } else {
-        word_line_height_settings(&para.runs, style, line_grid_pitch)
+        word_line_height_settings(line_metric_runs, style, line_grid_pitch)
     };
     let has_para_style = needs_block_wrapper(style) || line_height_settings.is_some();
     let empty_paragraph_line_height_pt: f64 = if is_empty_paragraph {
@@ -327,7 +381,7 @@ pub(super) fn generate_paragraph(
         }
         write_line_box_settings(out, style.line_box);
         if !is_empty_paragraph {
-            write_par_settings(out, style, &para.runs, false);
+            write_par_settings(out, style, line_metric_runs, false);
         }
         if let Some(ref settings) = line_height_settings {
             out.push_str(settings);
@@ -359,7 +413,7 @@ pub(super) fn generate_paragraph(
     }
 
     if let Some(level) = style.heading_level {
-        write_heading_contents_entry(out, level, &para.runs);
+        write_heading_contents_entry(out, level, runs);
     }
 
     let alignment = style.alignment;
@@ -392,7 +446,7 @@ pub(super) fn generate_paragraph(
     // `word_line_leading_pt` bails on a paragraph that declares a `LineBox`.
     let line_box_em: Option<(f64, f64)> = has_para_style
         .then(|| {
-            word_line_box_em(&para.runs, style, line_grid_pitch).or_else(|| {
+            word_line_box_em(line_metric_runs, style, line_grid_pitch).or_else(|| {
                 style
                     .line_box
                     .map(|line_box| (line_box.ascent_em, line_box.descent_em))
@@ -413,7 +467,7 @@ pub(super) fn generate_paragraph(
             write_paragraph_before_spacing_overlay(out, style, true, false);
             generate_runs_with_tabs_and_metrics_in_context(
                 out,
-                &para.runs,
+                runs,
                 style.tab_stops.as_deref(),
                 paragraph_tab_width_pt,
                 eojeol_wrap,
@@ -426,7 +480,7 @@ pub(super) fn generate_paragraph(
             write_paragraph_before_spacing_overlay(out, style, true, false);
             generate_word_runs_with_tabs_in_context(
                 out,
-                &para.runs,
+                runs,
                 style.tab_stops.as_deref(),
                 paragraph_tab_width_pt,
                 eojeol_wrap,
@@ -5375,8 +5429,14 @@ fn generate_run_seated_with_metrics(
         return;
     }
 
-    let run_line_box: Option<RunLineBox> =
-        run_line_metrics.and_then(|metrics| metrics.line_box(run));
+    let run_line_box: Option<RunLineBox> = run
+        .style
+        .line_box
+        .map(|edges| RunLineBox::Em {
+            top: edges.ascent_em,
+            bottom: edges.descent_em,
+        })
+        .or_else(|| run_line_metrics.and_then(|metrics| metrics.line_box(run)));
     match run_line_box {
         Some(RunLineBox::Em { top, bottom }) => {
             let _ = write!(

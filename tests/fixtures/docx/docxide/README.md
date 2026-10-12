@@ -54,4 +54,5 @@ against native Word probes for continuing physical counters.
 `numbering_wide_markers.docx` derives from the same Apache-2.0 case72: child
 start 7 exposes a marker wider than its hanging span. Native probes vary tab
 intervals, custom left/numbering stops, starts, wrapping, marker separators and
-level run properties.
+level run properties. Inline-marker geometry tests cover 16pt/22pt labels,
+body-controlled proportional advance and wrapping against native Word exports.

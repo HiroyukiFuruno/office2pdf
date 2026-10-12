@@ -25,7 +25,6 @@ conversion failures/timeouts, source/reference/output hashes, reference metadata
 page counts, and normalized text findings. It never executes fixture generators.
 Token identities are hashed; source-document text stays outside the report.
 The baseline is `tests/compatibility/docxide-pdf/baseline.json`.
-
 Baseline against main `39bcb289`: 390 comparisons, two missing references,
 one image-decoding failure, 64 page-count differences, and 27 empty text layers.
 Custom-XML text is retained. Historical feature targets were HTML/MHTML imports,
@@ -46,4 +45,5 @@ Numbering follows placeholder formatting and legal decimalization. Native case71
 inline probes check ancestor counters and literals; case72 probes calibrate
 restarts, suppression, implicit counters and skipped-level origins. MS-OI29500 2.1.282
 confirms Word ignores restart rules inside complete level overrides.
-Marker clearance/suffixes follow `pdf/list_label.rs`; native font/size/tab/wrap probes calibrate differences.
+Marker clearance/suffixes follow `pdf/list_label.rs`. Native probes calibrate
+font/size/tab/wrap differences and inline marker ascent versus body descent/leading.

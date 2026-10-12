@@ -361,6 +361,8 @@ pub struct TextStyle {
     /// because a run states both and needs both (issue #575).
     pub east_asian_font_family: Option<String>,
     pub font_size: Option<f64>,
+    /// Baseline-relative line edges for this run, independently of paragraph leading.
+    pub line_box: Option<LineBox>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underline: Option<bool>,
@@ -421,6 +423,9 @@ impl TextStyle {
         }
         if other.font_size.is_some() {
             self.font_size = other.font_size;
+        }
+        if other.line_box.is_some() {
+            self.line_box = other.line_box;
         }
         if other.bold.is_some() {
             self.bold = other.bold;

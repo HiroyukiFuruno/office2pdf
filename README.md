@@ -268,7 +268,8 @@ the parent's own format. On/off flags and complete level overrides are honored.
 Numbering-level run properties format marker fonts, sizes, weight and color
 without changing body text. Inline prefixes retain ancestor counters, decimal
 and zero-padded decimal, alphabetic and Roman formats, and literal label text.
-Large inline markers can inflate paragraph advance (#2102).
+Inline markers retain their size without stretching body line spacing.
+Custom `TextStyle` values use `line_box: None` for automatic run edges.
 
 DOCX child numbering supports never-restart and earlier-level restart rules;
 omitted rules restart after any higher-level item. Word ignores restart rules

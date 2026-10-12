@@ -1,0 +1,572 @@
+{
+  "schema_version": 1,
+  "source": {
+    "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+    "sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+    "upstream": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "license": "Apache-2.0 derivative; no font binaries submitted",
+    "base_recipe": {
+      "base_changes": {
+        "base": "space",
+        "level": 1,
+        "w:pPr/w:ind": {
+          "w:left": 0,
+          "w:hanging": 0
+        }
+      },
+      "level": 1,
+      "w:rPr": "<w:rPr><w:sz w:val=\"32\"/></w:rPr>",
+      "complete_level_override": false
+    },
+    "base_source_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+    "base_space_suffix": "Set abstractNumId 100 ilvl 1 w:suff to space, then apply the zero-indent and marker-size recipe."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "integrity": "All nine fresh native PDFs passed check_gt_integrity.py.",
+    "exports": [
+      {
+        "name": "control",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": null,
+        "find": null,
+        "replace": null,
+        "match_count": 0,
+        "source_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "native_pdf_sha256": "b7c4080a264b21a54083956d764d358a18932a646b3c30b21241efc68528c3b5",
+        "before_pdf_sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028",
+        "native_export": "Word 16.113.4; existing document count before=10, after=11"
+      },
+      {
+        "name": "line240",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/document.xml",
+        "find": "<w:pPr>(<w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr>)</w:pPr>",
+        "replace": "<w:pPr>\\1<w:spacing w:line=\"240\" w:lineRule=\"auto\"/></w:pPr>",
+        "match_count": 4,
+        "source_sha256": "314d802bea9e15d71b8b2519630aba7177f2a9ce3d5c894a9bfaa2d921e37839",
+        "native_pdf_sha256": "ec5f39571d71bff54821ad3a2a95ecb54c23842edeaa6eeda71d41a976c9f946",
+        "before_pdf_sha256": "2903f55dec47287a8aec20f1bfd10697096be9b1e69729857848a64cb6d34edf",
+        "native_export": "Word 16.113.4; existing document count before=11, after=12"
+      },
+      {
+        "name": "line480",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/document.xml",
+        "find": "<w:pPr>(<w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr>)</w:pPr>",
+        "replace": "<w:pPr>\\1<w:spacing w:line=\"480\" w:lineRule=\"auto\"/></w:pPr>",
+        "match_count": 4,
+        "source_sha256": "499c0fed6706c875487cc56b8d0bab5d43f4ac95fa8db4b4b14fb2bd8a676f3f",
+        "native_pdf_sha256": "cfc0e681d181ce65957a720b636542eb2583e31b0d3aa11977c9d23b70656cd3",
+        "before_pdf_sha256": "e068113426243c4915a0e46bc649c7f852450e0813c1220cfd4b1a9545f25b53",
+        "native_export": "Word 16.113.4; existing document count before=12, after=13"
+      },
+      {
+        "name": "suffix-nothing",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/numbering.xml",
+        "find": "<w:suff w:val=\"space\"/>",
+        "replace": "<w:suff w:val=\"nothing\"/>",
+        "match_count": 1,
+        "source_sha256": "5e793e7868357943761258d267e183fb7dfd83b206a3d1c3fb081c740e28b6d9",
+        "native_pdf_sha256": "0cf2de5778433389c19d798632ad2374bbc1a105689a07e806513942353fde4c",
+        "before_pdf_sha256": "099a1d29cabda9f039c6ca7c50b77b1f3ce352718ad6640d87daad01e7b77ca0",
+        "native_export": "Word 16.113.4; existing document count before=13, after=14"
+      },
+      {
+        "name": "suffix-tab",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/numbering.xml",
+        "find": "<w:suff w:val=\"space\"/>",
+        "replace": "<w:suff w:val=\"tab\"/>",
+        "match_count": 1,
+        "source_sha256": "98620767ca80dc4662c78b8ad18c52f77131178b854cfef7276e9ca6b474df57",
+        "native_pdf_sha256": "0bbfde4c5c3c3229a54813e0ab9ff505487cfa309d732f423b7821837112b181",
+        "before_pdf_sha256": "d3a6d4b3792a627651cc375ec085b8de3073a05d676d7ea113a7f30261c2e804",
+        "native_export": "Word 16.113.4; existing document count before=14, after=15"
+      },
+      {
+        "name": "marker22",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/numbering.xml",
+        "find": "<w:rPr><w:sz w:val=\"32\"/></w:rPr>",
+        "replace": "<w:rPr><w:sz w:val=\"44\"/></w:rPr>",
+        "match_count": 1,
+        "source_sha256": "e299826ff28238653cb9045778b16635f3ea65736f1edfceaf4fdcbac7aba7ca",
+        "native_pdf_sha256": "47ad40da7ed37554faa6aff6a3a361af63b54d0abd5963d51327536375dd3a49",
+        "before_pdf_sha256": "595f4baf401265dee92b0ea63ecaa82a0c67933679dcba42528011d3f6f17c56",
+        "native_export": "Word 16.113.4; existing document count before=15, after=16"
+      },
+      {
+        "name": "wrapped",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/document.xml",
+        "find": "Continuous item",
+        "replace": "Continuous item repeated body words describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. ",
+        "match_count": 4,
+        "source_sha256": "e4f1c4c78ca133f2ed615673ea5db865f34114c3c6f6c0f6115d153042e9f8b7",
+        "native_pdf_sha256": "1c74fc419cb67bc83475ecb709f5bff8daeab3024d38f5f63c0286470430b756",
+        "before_pdf_sha256": "e02fa4f87ffda2c6b656add7e4cc190234a9812a877131f26210230c2c753658",
+        "native_export": "Word 16.113.4; existing document count before=16, after=17"
+      },
+      {
+        "name": "body16",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/styles.xml",
+        "find": "<w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/>",
+        "replace": "<w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/>",
+        "match_count": 1,
+        "source_sha256": "36f6b5d550aebf21446c27368069223a44c5aaaede760367f8ce39ea6a98a7d7",
+        "native_pdf_sha256": "bff43322f137a489a6597ee35543788270d3ce7deb169676ea13dd3ee36f1347",
+        "before_pdf_sha256": "cda18f0d0f729d3d1d4a1970318473985c8a6a5f60f7507b2afd74ae4f594f59",
+        "native_export": "Word 16.113.4; existing document count before=17, after=18"
+      },
+      {
+        "name": "descender-letters",
+        "base_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+        "part": "word/numbering.xml",
+        "find": "<w:numFmt w:val=\"decimal\"/>",
+        "replace": "<w:numFmt w:val=\"lowerLetter\"/>",
+        "match_count": 1,
+        "source_sha256": "ec4fc47ca63b298ce4fc47e43d4d05184444008f241b10bf78e854152f9f68f8",
+        "native_pdf_sha256": "822854a823437d6d789906eec29781178cf31131b4c9301c23057c02db6f009a",
+        "before_pdf_sha256": "1c8caaa830e1c1c9e24b64f127f2ce2d51b8c0db1219fc373ab1fc8d3a9a3eda",
+        "native_export": "Word 16.113.4; existing document count before=18, after=19",
+        "scope": "abstractNumId=100, ilvl=1"
+      }
+    ]
+  },
+  "before": {
+    "revision": "05acb5b0c6ff640fa2f2c8897509aaa01d9055f4",
+    "converter_sha256": "dd93b346940efa31b55e71d3109cc2b7e3ebd75040fae71af34881bb66aa0d46",
+    "output_readback": [
+      {
+        "name": "control",
+        "byte_identical": true,
+        "sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028"
+      },
+      {
+        "name": "line240",
+        "byte_identical": true,
+        "sha256": "2903f55dec47287a8aec20f1bfd10697096be9b1e69729857848a64cb6d34edf"
+      },
+      {
+        "name": "line480",
+        "byte_identical": true,
+        "sha256": "e068113426243c4915a0e46bc649c7f852450e0813c1220cfd4b1a9545f25b53"
+      },
+      {
+        "name": "suffix-nothing",
+        "byte_identical": true,
+        "sha256": "099a1d29cabda9f039c6ca7c50b77b1f3ce352718ad6640d87daad01e7b77ca0"
+      },
+      {
+        "name": "suffix-tab",
+        "byte_identical": true,
+        "sha256": "d3a6d4b3792a627651cc375ec085b8de3073a05d676d7ea113a7f30261c2e804"
+      },
+      {
+        "name": "marker22",
+        "byte_identical": true,
+        "sha256": "595f4baf401265dee92b0ea63ecaa82a0c67933679dcba42528011d3f6f17c56"
+      },
+      {
+        "name": "wrapped",
+        "byte_identical": true,
+        "sha256": "e02fa4f87ffda2c6b656add7e4cc190234a9812a877131f26210230c2c753658"
+      },
+      {
+        "name": "body16",
+        "byte_identical": true,
+        "sha256": "cda18f0d0f729d3d1d4a1970318473985c8a6a5f60f7507b2afd74ae4f594f59"
+      },
+      {
+        "name": "descender-letters",
+        "byte_identical": true,
+        "sha256": "1c8caaa830e1c1c9e24b64f127f2ce2d51b8c0db1219fc373ab1fc8d3a9a3eda"
+      }
+    ]
+  },
+  "after": {
+    "converter_sha256": "37576cde4f5feddaacc0ec624cf4714129b977105d376658681df26e9c175008"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all nine native/before/current full pages, 5% pixel diffs and full-resolution heading/body crops at 150 DPI, plus all forty-four matched before-shift crops; current audits emit no shift crops above 0.5pt. Each remains one Letter page with the Cambria 14pt bold black heading, two parent paragraphs and four children. Large 16pt/22pt labels retain their declared size over the regular black 11pt body, including g/j descenders. Space, nothing and tab suffixes retain their native horizontal origins and gaps. Single/1.15/double line spacing now matches Word; the prior accumulated vertical drift is gone. Wrapped paragraphs retain all four physical lines, with continuation lines back at x=90pt and normal 11pt body advance. The uniform 16pt body control is byte-identical before/after. No missing elements, changed wraps/page order, clipping, overflow, rotation/flip, fill, stroke/border/hairline <=1pt, shape outline, italic or underline deviation appears. All current material cluster sets are empty; the smaller glyph-edge diff fragments were directly inspected. Baseline drift <=0.276pt and pitch drift <=0.243pt remain sub-material geometry under #1874, not antialiasing. No other material deviation was found.",
+  "remaining": {
+    "#1874": "Baseline drift <=0.276pt and pitch drift <=0.243pt."
+  },
+  "no_patch_control": {
+    "source_is_byte_identical_to_base": true,
+    "fresh_native_geometry_matches_previous_export": {
+      "pages": [
+        {
+          "lines": {
+            "gt": 7,
+            "out": 7,
+            "matched": 7,
+            "missing": 0,
+            "extra": 0,
+            "deviant": 0,
+            "missing_text": [],
+            "extra_text": []
+          },
+          "baseline": {
+            "mean_abs_dy": 0.0,
+            "worst_dy": 0.0,
+            "worst_dy_signed": 0.0,
+            "worst_line": "lvlRestart=0continuousnumbering"
+          },
+          "dx0": {
+            "mean_abs": 0.0,
+            "worst": 0.0
+          },
+          "width": {
+            "mean_abs_pct": 0.0,
+            "worst_pct": 0.0
+          },
+          "instances": {
+            "compared": 7,
+            "large_shift_threshold": 5.0,
+            "large_shift_count": 0,
+            "large_shifts": [],
+            "fine_shift_threshold": 0.5,
+            "fine_shift_count": 0,
+            "fine_shifts": []
+          },
+          "visibility": {
+            "mismatch_count": 0,
+            "mismatches": [],
+            "unmatched_hidden_gt": 0,
+            "unmatched_hidden_out": 0,
+            "unmatched_hidden_gt_text": [],
+            "unmatched_hidden_out_text": []
+          },
+          "visible_fills": {
+            "mismatch_count": 0,
+            "mismatches": []
+          },
+          "pitch": {
+            "pairs": 6,
+            "worst_delta": 0.0
+          },
+          "wraps": {
+            "count": 0,
+            "samples": []
+          },
+          "topology": {
+            "groups": 0,
+            "gt_lines": 0,
+            "out_lines": 0,
+            "samples": []
+          },
+          "reflow": {
+            "gt_lines": 0,
+            "out_lines": 0,
+            "samples": []
+          },
+          "rects": {
+            "gt_count": 0,
+            "out_count": 0,
+            "canonical_gt_count": 0,
+            "canonical_out_count": 0,
+            "matched": 0,
+            "unmatched_gt": 0,
+            "unmatched_out": 0,
+            "mean_center_delta": 0.0,
+            "geometry_threshold": 0.5,
+            "raw_geometry_mismatch_count": 0,
+            "raw_geometry_mismatch_samples": [],
+            "coverage_equivalent_count": 0,
+            "coverage_unmodeled_count": 0,
+            "geometry_mismatch_count": 0,
+            "geometry_mismatch_samples": [],
+            "samples": [],
+            "x": {
+              "mean_abs": 0.0,
+              "worst": 0.0
+            },
+            "y": {
+              "mean_abs": 0.0,
+              "worst": 0.0
+            },
+            "width": {
+              "mean_abs": 0.0,
+              "worst": 0.0
+            },
+            "height": {
+              "mean_abs": 0.0,
+              "worst": 0.0
+            },
+            "edges": {
+              "left": {
+                "mean_abs": 0.0,
+                "worst": 0.0
+              },
+              "top": {
+                "mean_abs": 0.0,
+                "worst": 0.0
+              },
+              "right": {
+                "mean_abs": 0.0,
+                "worst": 0.0
+              },
+              "bottom": {
+                "mean_abs": 0.0,
+                "worst": 0.0
+              }
+            }
+          },
+          "noise_floor": 0.12
+        }
+      ],
+      "gt_pages": 1,
+      "out_pages": 1
+    }
+  },
+  "uniform_body_control_is_byte_identical": true,
+  "inline_format_regression": [
+    {
+      "name": "legal-flush",
+      "byte_identical": true,
+      "sha256": "71ab03e57b7bbfe07a4d00855810f59af1526136de5809e180a9ed211a09cd92"
+    },
+    {
+      "name": "ordinary-flush",
+      "byte_identical": true,
+      "sha256": "abe2feaee24cd3cada80c7826ae600bf750a35bae3915aa7521f00ff07910bdd"
+    },
+    {
+      "name": "alphabetic-roman",
+      "byte_identical": true,
+      "sha256": "ded5f11e834b4316d1afa20f607fbb002a113612292ef6700fecf6a911915a2c"
+    },
+    {
+      "name": "zero-padded-alphabetic",
+      "byte_identical": true,
+      "sha256": "f2e25bad48fbddf51351815b39fc54401ee272fa15be387ca3e41be332ab0829"
+    },
+    {
+      "name": "parent-legal-only",
+      "byte_identical": true,
+      "sha256": "eb784f95bcd23119f60610b459f19a6ee87d936761dbfdbed401b44dffe7b0b8"
+    },
+    {
+      "name": "literal-patterns",
+      "byte_identical": true,
+      "sha256": "0bb200760e21f59217ad45419593e52379438dc112de1c45c712e2a3971c858d"
+    }
+  ],
+  "probes": [
+    {
+      "name": "control",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": null,
+        "find": null,
+        "replace": null,
+        "match_count": 0,
+        "scope": null
+      },
+      "source_sha256": "5fc7dcbf01cf616816072c2d5e71f23739111175f246b886930cc346c1355980",
+      "native_pdf_sha256": "b7c4080a264b21a54083956d764d358a18932a646b3c30b21241efc68528c3b5",
+      "before_pdf_sha256": "3fc5a140a907e3e0a2b07d1922d52a06eaff00744d6dd8685df127993e210028",
+      "after_pdf_sha256": "3a60ea481741ecb23c0d76e1dd35f937e3a2caa3c5867f57a42ad09bbebecebc",
+      "reports": {
+        "layout": "assets/bugfixes/issue-2102/layout-audit.json",
+        "render": "assets/bugfixes/issue-2102/render-clusters-page-1.json",
+        "text": "tests/visual_audits/issue-2102/text-layer.json",
+        "dispositions": "tests/visual_audits/issue-2102/cluster-dispositions-page-1.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "line240",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/document.xml",
+        "find": "<w:pPr>(<w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr>)</w:pPr>",
+        "replace": "<w:pPr>\\1<w:spacing w:line=\"240\" w:lineRule=\"auto\"/></w:pPr>",
+        "match_count": 4,
+        "scope": null
+      },
+      "source_sha256": "314d802bea9e15d71b8b2519630aba7177f2a9ce3d5c894a9bfaa2d921e37839",
+      "native_pdf_sha256": "ec5f39571d71bff54821ad3a2a95ecb54c23842edeaa6eeda71d41a976c9f946",
+      "before_pdf_sha256": "2903f55dec47287a8aec20f1bfd10697096be9b1e69729857848a64cb6d34edf",
+      "after_pdf_sha256": "837b69fbcf06c18698130757a1cb1034dc4becca0881c7c50ad26e928d7ea006",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/line240-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/line240-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/line240-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/line240-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "line480",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/document.xml",
+        "find": "<w:pPr>(<w:numPr><w:ilvl w:val=\"1\"/><w:numId w:val=\"100\"/></w:numPr>)</w:pPr>",
+        "replace": "<w:pPr>\\1<w:spacing w:line=\"480\" w:lineRule=\"auto\"/></w:pPr>",
+        "match_count": 4,
+        "scope": null
+      },
+      "source_sha256": "499c0fed6706c875487cc56b8d0bab5d43f4ac95fa8db4b4b14fb2bd8a676f3f",
+      "native_pdf_sha256": "cfc0e681d181ce65957a720b636542eb2583e31b0d3aa11977c9d23b70656cd3",
+      "before_pdf_sha256": "e068113426243c4915a0e46bc649c7f852450e0813c1220cfd4b1a9545f25b53",
+      "after_pdf_sha256": "9e24e2aadd92a755c298a71502bf093f9545256c49716022c62a0f08350eccc6",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/line480-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/line480-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/line480-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/line480-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "suffix-nothing",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/numbering.xml",
+        "find": "<w:suff w:val=\"space\"/>",
+        "replace": "<w:suff w:val=\"nothing\"/>",
+        "match_count": 1,
+        "scope": null
+      },
+      "source_sha256": "5e793e7868357943761258d267e183fb7dfd83b206a3d1c3fb081c740e28b6d9",
+      "native_pdf_sha256": "0cf2de5778433389c19d798632ad2374bbc1a105689a07e806513942353fde4c",
+      "before_pdf_sha256": "099a1d29cabda9f039c6ca7c50b77b1f3ce352718ad6640d87daad01e7b77ca0",
+      "after_pdf_sha256": "99438be8440a6c199729ab95bd9e345eeb6ee96a187428ecb4c9b2cb9926f460",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/suffix-nothing-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/suffix-nothing-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/suffix-nothing-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/suffix-nothing-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "suffix-tab",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/numbering.xml",
+        "find": "<w:suff w:val=\"space\"/>",
+        "replace": "<w:suff w:val=\"tab\"/>",
+        "match_count": 1,
+        "scope": null
+      },
+      "source_sha256": "98620767ca80dc4662c78b8ad18c52f77131178b854cfef7276e9ca6b474df57",
+      "native_pdf_sha256": "0bbfde4c5c3c3229a54813e0ab9ff505487cfa309d732f423b7821837112b181",
+      "before_pdf_sha256": "d3a6d4b3792a627651cc375ec085b8de3073a05d676d7ea113a7f30261c2e804",
+      "after_pdf_sha256": "1ce9dea3bc6e128de262a7da0520164de27851242e9594a0bf0ddab44bb93376",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/suffix-tab-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/suffix-tab-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/suffix-tab-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/suffix-tab-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "marker22",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/numbering.xml",
+        "find": "<w:rPr><w:sz w:val=\"32\"/></w:rPr>",
+        "replace": "<w:rPr><w:sz w:val=\"44\"/></w:rPr>",
+        "match_count": 1,
+        "scope": null
+      },
+      "source_sha256": "e299826ff28238653cb9045778b16635f3ea65736f1edfceaf4fdcbac7aba7ca",
+      "native_pdf_sha256": "47ad40da7ed37554faa6aff6a3a361af63b54d0abd5963d51327536375dd3a49",
+      "before_pdf_sha256": "595f4baf401265dee92b0ea63ecaa82a0c67933679dcba42528011d3f6f17c56",
+      "after_pdf_sha256": "d496c780e8632b51be0a1b8a41377cb3cc6747f3b6374a5ab87de83772845883",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/marker22-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/marker22-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/marker22-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/marker22-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "wrapped",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/document.xml",
+        "find": "Continuous item",
+        "replace": "Continuous item repeated body words describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. describing realistic content across the entire available text measure. ",
+        "match_count": 4,
+        "scope": null
+      },
+      "source_sha256": "e4f1c4c78ca133f2ed615673ea5db865f34114c3c6f6c0f6115d153042e9f8b7",
+      "native_pdf_sha256": "1c74fc419cb67bc83475ecb709f5bff8daeab3024d38f5f63c0286470430b756",
+      "before_pdf_sha256": "e02fa4f87ffda2c6b656add7e4cc190234a9812a877131f26210230c2c753658",
+      "after_pdf_sha256": "fbc685fe25fd95019882befd451b9fbae2f716209c351a62613ebbea02df6461",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/wrapped-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/wrapped-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/wrapped-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/wrapped-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "body16",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/styles.xml",
+        "find": "<w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/>",
+        "replace": "<w:sz w:val=\"32\"/><w:szCs w:val=\"32\"/>",
+        "match_count": 1,
+        "scope": null
+      },
+      "source_sha256": "36f6b5d550aebf21446c27368069223a44c5aaaede760367f8ce39ea6a98a7d7",
+      "native_pdf_sha256": "bff43322f137a489a6597ee35543788270d3ce7deb169676ea13dd3ee36f1347",
+      "before_pdf_sha256": "cda18f0d0f729d3d1d4a1970318473985c8a6a5f60f7507b2afd74ae4f594f59",
+      "after_pdf_sha256": "cda18f0d0f729d3d1d4a1970318473985c8a6a5f60f7507b2afd74ae4f594f59",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/body16-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/body16-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/body16-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/body16-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "descender-letters",
+      "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+      "base_probe": "inline-size16 from issue-2100",
+      "one_factor_patch": {
+        "part": "word/numbering.xml",
+        "find": "<w:numFmt w:val=\"decimal\"/>",
+        "replace": "<w:numFmt w:val=\"lowerLetter\"/>",
+        "match_count": 1,
+        "scope": "abstractNumId=100, ilvl=1"
+      },
+      "source_sha256": "ec4fc47ca63b298ce4fc47e43d4d05184444008f241b10bf78e854152f9f68f8",
+      "native_pdf_sha256": "822854a823437d6d789906eec29781178cf31131b4c9301c23057c02db6f009a",
+      "before_pdf_sha256": "1c8caaa830e1c1c9e24b64f127f2ce2d51b8c0db1219fc373ab1fc8d3a9a3eda",
+      "after_pdf_sha256": "62458bb7ecf605a6291c96ee0c28c7f4412814981d7dd6bd7a1f6029957267ec",
+      "reports": {
+        "layout": "tests/visual_audits/issue-2102/probes/descender-letters-layout.json",
+        "text": "tests/visual_audits/issue-2102/probes/descender-letters-text.json",
+        "render": "tests/visual_audits/issue-2102/probes/descender-letters-render.json",
+        "dispositions": "tests/visual_audits/issue-2102/probes/descender-letters-dispositions.json"
+      },
+      "remaining": "#1874"
+    }
+  ]
+}
