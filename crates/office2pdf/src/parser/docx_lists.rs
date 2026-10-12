@@ -148,6 +148,26 @@ fn build_typst_numbering_pattern(
 }
 
 fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
+    // Word allows restart thresholds 0..=7. Native probes above that range
+    // retain child markers and count physical items only, as a zero does.
+    let restart_trigger: Option<u32> =
+        level
+            .level_restart
+            .as_ref()
+            .and_then(serialize_u32)
+            .map(|trigger| {
+                if level.level > 0 && trigger > 7 {
+                    tracing::debug!(
+                        level = level.level,
+                        restart_trigger = trigger,
+                        normalized_restart_trigger = 0,
+                        "Normalized out-of-range DOCX child restart threshold"
+                    );
+                    0
+                } else {
+                    trigger
+                }
+            });
     RawListLevel {
         start: serialize_u32(&level.start).unwrap_or(1),
         number_format: level.format.val.clone(),
@@ -155,7 +175,7 @@ fn extract_raw_level(level: &docx_rs::Level) -> RawListLevel {
         paragraph_style: super::text::extract_paragraph_style(&level.paragraph_property),
         has_start_override: false,
         uses_legal_numbering: level.is_lgl.is_some(),
-        restart_trigger: level.level_restart.as_ref().and_then(serialize_u32),
+        restart_trigger,
     }
 }
 

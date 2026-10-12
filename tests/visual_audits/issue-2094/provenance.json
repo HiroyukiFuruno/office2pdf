@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "sha256": "db51e0662935a5706ddc1acc285559956ca7704f1f5fad68c49351443bf353e6",
+    "change": "Apache-2.0 four-level derivative: levels 0/2/3/1/2/0/2; level 2 restart 8."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "60d94c709e77a96f8afb0dd752c94578851c50460ec229446013a3e7f9725ddb"
+  },
+  "before": {
+    "office2pdf_revision": "323c33b33db7cddff4ac2883b0cf3a4506cca3a6",
+    "converter_sha256": "1d4305c6c515097a238ed404b891c6df40be5153e53a418a281b3bc427930f5b",
+    "pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+    "readback": "All twelve fresh before PDFs are byte-identical to previously inspected outputs."
+  },
+  "after": {
+    "converter_sha256": "226025368641d1be4606847cb6641d9e5a60355cfdd3b7e1915c9b3242b1301c",
+    "pdf_sha256": "f7c34810bf77f39f189d458a3ad733c7442568a1aaf35e2ca176fe769be5945f"
+  },
+  "filing_comparison": {
+    "office2pdf_revision": "36db34e19f57d2c9e90838f7dd6056d924f34afd",
+    "comparison_commit": "c605f2c6c40d3a5f7cfe9d367fdc6a98d4d8c993",
+    "note": "compare.jpg preserves the original filing image."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all twelve native/before/current full pages, their 5% pixel diffs and complete matched heading/list crops at full 150 DPI. Before resets Item E/G to (1)/(1) instead of (2)/(3), counts an implicit level-1 ancestor before the first physical Item D, and restarts the second level-3 Item D at [1] instead of [2]. Start 7 reproduces the same errors with (8) instead of (7), repeated (7) instead of (8)/(9), or [7] instead of [8]. Current labels match Word on every page, including resumed physical counters. The no-patch control is unchanged; valid threshold 7 still suppresses the whole level and its numbering indent. All pages retain one Letter page, Cambria 14pt bold headings, 11pt regular black body text, marker parentheses/brackets, absolute indents and physical paragraph gaps. No shapes, fills, strokes/borders or hairlines <=1pt, rotation, italic, underline, clipping, overflow or missing body text appear. All twelve pages pass layout at 0.5pt and searchable content/order/census; all twelve strict raster reports contain zero material clusters. Remaining diff fragments are glyph edges and sub-material baseline/pitch drift (primary 0.201pt; probe baselines at most 0.221pt; pitch at most 0.136pt), tracked in #1874. No other material finding remains untracked.",
+  "remaining": {
+    "submaterial_baseline_and_pitch": "#1874"
+  },
+  "control": "No-patch re-ZIP native export is layout-identical to the four-level base. Start probes change the selected level start; level-1 probes append level-1 Item H; level-3 probes use levels 0/3/2/3/1/2/0. Threshold 7 is the in-range boundary control.",
+  "native_probes": [
+    {
+      "name": "level2-trigger9",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 2,
+            "restart": 9,
+            "start": 1
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": false
+      },
+      "source_sha256": "44db9b9d70aedf7ef5cec5a2e785ce282e3ad339c476f51186fa992ec1f0b831",
+      "native_pdf_sha256": "295a1276b9e57acf956ef50d546f1f725dcf6efd61e9bfcf8b99ec3cb60a61af",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "f7c34810bf77f39f189d458a3ad733c7442568a1aaf35e2ca176fe769be5945f",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level2-trigger9-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level2-trigger9-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level2-trigger9-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level2-trigger9-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "control",
+      "changes": {
+        "restart_levels": [],
+        "append_item_h": false,
+        "leading_sequence": false
+      },
+      "source_sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+      "native_pdf_sha256": "32d99bdb0c5f19ec57c82729a544bcd1f44f4be251580643931a1eaab36de4f8",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/control-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/control-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/control-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/control-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level1-resume8",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 1,
+            "restart": 8,
+            "start": 1
+          }
+        ],
+        "append_item_h": true,
+        "leading_sequence": false
+      },
+      "source_sha256": "804c02cbdcda4999be6ee752c09e37d06c5d7bcee203e5371f8e28eacf4a1263",
+      "native_pdf_sha256": "5ba4b04c50459f2c44609ab81facf1260ab1f20d6820f1d25d51ad252bb1c67f",
+      "before_pdf_sha256": "ee8a812e8d9b2efba179014acc64c8c8d25570ade548db2e0f3bcf235cadcb4a",
+      "after_pdf_sha256": "cc4bddc5f35da6a04499d18469daf1f9c99f7229c4780d39844ed03a575f23df",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level1-resume8-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level1-resume8-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level1-resume8-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level1-resume8-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level1-resume9",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 1,
+            "restart": 9,
+            "start": 1
+          }
+        ],
+        "append_item_h": true,
+        "leading_sequence": false
+      },
+      "source_sha256": "2d46c3ed3018310d43707738876c52dc54ee23a003f238dc40a8138606a9dddc",
+      "native_pdf_sha256": "0a5bfc73517715d4cdab68e8a746feee98c8a59d3c24958614087c4997ca86e4",
+      "before_pdf_sha256": "ee8a812e8d9b2efba179014acc64c8c8d25570ade548db2e0f3bcf235cadcb4a",
+      "after_pdf_sha256": "cc4bddc5f35da6a04499d18469daf1f9c99f7229c4780d39844ed03a575f23df",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level1-resume9-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level1-resume9-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level1-resume9-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level1-resume9-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level1-start7-resume8",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 1,
+            "restart": 8,
+            "start": 7
+          }
+        ],
+        "append_item_h": true,
+        "leading_sequence": false
+      },
+      "source_sha256": "7ebb5b9896b8cce769e0c2d3aaf5a6e05067dafb62aa5133d4b8fd6c78d49816",
+      "native_pdf_sha256": "315572712ae027b1aa2d2ae9f83ad4ac8ab8f966bd7eb1bdd396d166257fe62b",
+      "before_pdf_sha256": "e83c7e281fbcf08491fab27f97bfe9ba0c9a5cb64c0423b76ea6661229d9bdd0",
+      "after_pdf_sha256": "cba6e276152d8d2ca66b60c28d3f875b10aadbd21c4ba6ba74783cc41fa68437",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level1-start7-resume8-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level1-start7-resume8-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level1-start7-resume8-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level1-start7-resume8-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level2-start7-return8",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 2,
+            "restart": 8,
+            "start": 7
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": false
+      },
+      "source_sha256": "4f27855a5db554e3e88a53b9b2c829ab5c544892bbd3f27ee9299e0641938058",
+      "native_pdf_sha256": "1cb0a6b7f88ce76d6c108356d728c77a9f57708ba3c169ba3372afb5cd8f7409",
+      "before_pdf_sha256": "7f44afd52bdb4b2ebb579e03b7d7596b12c06fe54b2247cade8ac2bd0fdfae8a",
+      "after_pdf_sha256": "894724bdb81eb8c9f7bf484abf6c52406fda22b2e46b6a7d4079e991a04afa3d",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level2-start7-return8-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level2-start7-return8-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level2-start7-return8-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level2-start7-return8-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level2-trigger65535",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 2,
+            "restart": 65535,
+            "start": 1
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": false
+      },
+      "source_sha256": "c8ff0980bb9d5680b98f68628c7343f8a005a9b3a436bbc6da9e6eb1edb94ad0",
+      "native_pdf_sha256": "db2aa2492d83441c86c9a3719e451b854ebc878523103aabb34cbc84c34ee1af",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "f7c34810bf77f39f189d458a3ad733c7442568a1aaf35e2ca176fe769be5945f",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level2-trigger65535-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level2-trigger65535-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level2-trigger65535-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level2-trigger65535-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level2-trigger7",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 2,
+            "restart": 7,
+            "start": 1
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": false
+      },
+      "source_sha256": "842d6cdfac4ae597a7c1ff268ca81730f6d16e4e938eea2d613721de47f426c7",
+      "native_pdf_sha256": "e2882fe5c7d82f16f8308ba94eec6d63508e04a575024f609e4dfb29644b1f12",
+      "before_pdf_sha256": "ff46c69e8c953014617f2b647ba1a9a48cbf5028ebbf517927b08839fc67b752",
+      "after_pdf_sha256": "ff46c69e8c953014617f2b647ba1a9a48cbf5028ebbf517927b08839fc67b752",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level2-trigger7-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level2-trigger7-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level2-trigger7-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level2-trigger7-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level3-leading8",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 3,
+            "restart": 8,
+            "start": 1
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": true
+      },
+      "source_sha256": "dad622ee415250cad132174cc63c0898652303721b0345c441e6de53bf3f0305",
+      "native_pdf_sha256": "ab24a2283ae609f0280b148d1c03ac48fa28c17be1001914abd908d11ad7e34d",
+      "before_pdf_sha256": "f55dc58e5b41c44cc9123fd44ad1fc1d76c655f8c0e2587668937e093d4510ed",
+      "after_pdf_sha256": "ebcba0c5ab1cb48fceea6b7b46cc943de24a3aaece6bc3018085c2befaa3d9f1",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level3-leading8-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level3-leading8-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level3-leading8-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level3-leading8-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level3-leading9",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 3,
+            "restart": 9,
+            "start": 1
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": true
+      },
+      "source_sha256": "fdfcd89dadada9527cd3f51c2f66cd6c646b6411826648864326d22fe88036fb",
+      "native_pdf_sha256": "c0af31a625ac52a115c3c8ec02768398f383de89b84f86a04a5a1cfbfb50f2b0",
+      "before_pdf_sha256": "f55dc58e5b41c44cc9123fd44ad1fc1d76c655f8c0e2587668937e093d4510ed",
+      "after_pdf_sha256": "ebcba0c5ab1cb48fceea6b7b46cc943de24a3aaece6bc3018085c2befaa3d9f1",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level3-leading9-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level3-leading9-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level3-leading9-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level3-leading9-dispositions.json"
+      },
+      "remaining": "#1874"
+    },
+    {
+      "name": "level3-start7-leading8",
+      "changes": {
+        "restart_levels": [
+          {
+            "level": 3,
+            "restart": 8,
+            "start": 7
+          }
+        ],
+        "append_item_h": false,
+        "leading_sequence": true
+      },
+      "source_sha256": "5d4867cfb659b5a336475f802c7203b8cca4b69c29d3498086e3b7a54b8b4a13",
+      "native_pdf_sha256": "55b06204e3bcb75af66299c3d9e3283ae4232a3b389a8c6dd3168f824f87a35e",
+      "before_pdf_sha256": "88b35c7fa9f4f138bf13919f54d3aaea9cc1a4f2af11f87237e3c6133eea6669",
+      "after_pdf_sha256": "8aee4b4df6d351c0a9cc0dc83a903815479488a8a26dde530f17ae51102f6b07",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2094/probes/level3-start7-leading8-layout.json",
+        "text": "tests/visual_audits/issue-2094/probes/level3-start7-leading8-text.json",
+        "render": "tests/visual_audits/issue-2094/probes/level3-start7-leading8-render.json",
+        "dispositions": "tests/visual_audits/issue-2094/probes/level3-start7-leading8-dispositions.json"
+      },
+      "remaining": "#1874"
+    }
+  ]
+}
