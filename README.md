@@ -287,6 +287,14 @@ XML they do not model — and saving rewrites only edited entries. The
 `office2pdf` rendering pipeline stays a derived projection for PDF
 preview/export; it is not the editable source of truth.
 
+## DOCX compatibility triage
+
+The [docxide-pdf reference](references/docxide-pdf.md) documents a pinned external
+Word-reference corpus and its current baseline. With that checkout and a current
+CLI build, run `scripts/audit_docxide_corpus.py --help` for repeatable conversion,
+page-count, and searchable-text triage. Geometry, pixels, fonts, and direct visual
+inspection remain required before calling a document correct.
+
 ## Contributing files
 
 Before attaching files to help improve office2pdf, complete a security review
