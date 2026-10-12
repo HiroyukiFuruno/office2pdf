@@ -301,10 +301,10 @@ fn list_boundary_spacing(
     if previous_paragraph.style.line_box.is_some() && next_paragraph.style.line_box.is_some() {
         return Some(paragraph_gap);
     }
-    // The enclosing wrapper's line box already spans Word's full advance —
-    // single-space, grid-snapped, or scaled by a stated line multiple — and
-    // Word adds w:spacing before/after on top of that advance, so the item
-    // gap is exactly the paragraph gap. Adding a whole line height instead
+    // The rendered line already carries its advance, through a fixed wrapper
+    // or a natural fallback box. Word adds w:spacing before/after on top of
+    // that advance, so the item gap is exactly the paragraph gap.
+    // Adding a whole line height instead
     // stretched every spaced list by roughly a line per item (issues #384,
     // #452, #1685).
     if wrapper_spans_full_line
@@ -379,7 +379,7 @@ fn list_edge_spacing(
             return Some(spacing.unwrap_or(0.0).max(0.0));
         }
         // Same Word semantics as the item boundaries: before/after extends
-        // the line advance, which the wrapper's line box already spans, so
+        // the line advance, which the rendered line already carries, so
         // the whitespace is the gap alone (issues #384, #452, #1685).
         if wrapper_spans_full_line && paragraph_uses_full_line_box(paragraph) {
             return spacing
@@ -467,6 +467,24 @@ pub(super) fn generate_list_with_spacing_model(
     }
 
     let wrapper_spans_full_line: bool = line_height_settings.is_some();
+    // A Word paragraph with unavailable font metrics keeps a natural line
+    // box. Its height carries the advance; paragraph gaps must not add it
+    // again when a continuation becomes a separate block. Unspecified font
+    // families retain the generic list spacing model.
+    let spacing_spans_full_line: bool = wrapper_spans_full_line
+        || (!per_item_gaps
+            && list
+                .items
+                .iter()
+                .flat_map(|item| &item.content)
+                .all(|paragraph| {
+                    paragraph_uses_full_line_box(paragraph)
+                        && super::text::word_paragraph_metric_family(
+                            &paragraph.runs,
+                            &paragraph.style,
+                        )
+                        .is_some()
+                }));
     let root_level: u32 = list_root_level(list);
     let style = list_style_for_level(list, root_level);
     let fallback_marker_style = common_list_level_text_style(&list.items, root_level);
@@ -500,10 +518,10 @@ pub(super) fn generate_list_with_spacing_model(
     } else if per_item_gaps && has_nested_items {
         None
     } else {
-        common_list_level_spacing(&list.items, root_level, wrapper_spans_full_line)
+        common_list_level_spacing(&list.items, root_level, spacing_spans_full_line)
     };
     let (space_before, mut space_after) =
-        list_edge_spacing(list, root_level, wrapper_spans_full_line);
+        list_edge_spacing(list, root_level, spacing_spans_full_line);
     if word_boundary_gaps {
         // The final physical paragraph owns the gap, even when it is a child.
         space_after = list.items.last().map(paragraph_space_after);

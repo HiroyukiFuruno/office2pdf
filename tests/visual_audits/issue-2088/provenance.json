@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "sha256": "49329da32fcd7fd1981d7d652bb46ce9ba57d89c4eb0c2c9369f657350e7a0da",
+    "change": "Apache-2.0 three-level derivative: levels 0/1/2/1/2/0/2; level 2 restart 2."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "f75cb95672b1b6ddb6b54978b7e4c2ec4ce0955551c052d5ebfef189b9d2db3c"
+  },
+  "before": {
+    "office2pdf_revision": "36db34e19f57d2c9e90838f7dd6056d924f34afd",
+    "pdf_sha256": "baa283c9eaf9efffc4b0762d7e0f88ea56fdc0e183b08fd95db878156176e5ff"
+  },
+  "after": {
+    "pdf_sha256": "a6e1ff76a3d6387b8eba4b6a961755967f193e60624f7e8b322fbaf946dc6c2a",
+    "converter_sha256": "44b5187e621c8eefee71778d0f41c672287fcec47408cde2c3a9477f73be5d0a",
+    "readback": "All fifteen outputs regenerated after the font-fallback repair are byte-identical to the inspected PDFs."
+  },
+  "filing_comparison": {
+    "office2pdf_revision": "d5f866b64ee3f9e188c7cba658732980bfee16b0",
+    "note": "compare.jpg preserves the original filing image; before.jpg uses the merged implicit-ancestor fix."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all fifteen native/before/current full pages, 5% pixel diffs and matched heading/list crops at full 150 DPI, including the before Item E shift crop. The primary child markers and their numbering indents are now absent as in Word; the four-level probes also suppress Item D, B/E/G or C according to the active level. Explicit paragraph indentation on suppressed Item D remains at 144pt while Item E returns to its own 144pt origin. Bullet suppression removes the dot without changing other labels. Earlier-trigger, root-level and no-patch controls retain their labels. Thirteen current pages pass layout at 0.5pt and searchable content/order/census. The two level-2 restart 8/9 pages still label Item E/G (1)/(1) instead of native (2)/(3), tracked in #2094; their markers and body positions otherwise match. Every page retains one Letter page, a Cambria 14pt bold heading, 11pt regular black body text, expected parenthesis/bracket styles and physical paragraph gaps. No shapes, fills, strokes/borders or hairlines <=1pt, rotation, italic, underline, clipping, overflow or missing body text appear. All fifteen strict raster reports have zero material clusters, which does not waive the two text mismatches. Diff fragments are glyph edges and sub-material baseline/pitch drift (at most 0.201pt/0.136pt), tracked in #1874. No other material finding remains untracked.",
+  "remaining": {
+    "submaterial_baseline_and_pitch": "#1874",
+    "out_of_range_restart_counters": "#2094"
+  },
+  "control": "The no-patch re-ZIP native export has identical layout to the existing four-level return fixture. Probes change only the stated restart flag, bullet format or Item D paragraph indent. Root flags are ignored; level 3 trigger 2 is an earlier-trigger control.",
+  "native_probes": [
+    {
+      "name": "bullet-control",
+      "changes": {
+        "restart_flags": {},
+        "level1_bullet": true,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "5b6dafdf71f1aa3e16488d0c85208528483c05ad98bffe32770e55491b6a35f2",
+      "native_pdf_sha256": "2382b3deee2cf69913cb0ca4c28cbf88ddb3898b5384e217431131c81a8ed3d8",
+      "before_pdf_sha256": "8dd424f082988e0703e671b6adb68d7609915d521135136b674d1bf0c90a7625",
+      "after_pdf_sha256": "8dd424f082988e0703e671b6adb68d7609915d521135136b674d1bf0c90a7625",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/bullet-control-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/bullet-control-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/bullet-control-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/bullet-control-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "bullet-trigger1",
+      "changes": {
+        "restart_flags": {
+          "1": "1"
+        },
+        "level1_bullet": true,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "f7e1cc05b0095c13cbf71d013f82fd2cf6710276058fdb0a10a4e340c5921099",
+      "native_pdf_sha256": "143368fcc6d4b64162c19c12c2c3620c7b1077313532028c9951a9780d5a6421",
+      "before_pdf_sha256": "8dd424f082988e0703e671b6adb68d7609915d521135136b674d1bf0c90a7625",
+      "after_pdf_sha256": "f8a1fc7a1c3263124d1489d3ee6a01e9f7631a3e462ec5777b2a2af321ed7346",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/bullet-trigger1-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/bullet-trigger1-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/bullet-trigger1-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/bullet-trigger1-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "bullet-trigger2",
+      "changes": {
+        "restart_flags": {
+          "1": "2"
+        },
+        "level1_bullet": true,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "196cbf6a091dc2326b4edc9a471c50317f6f39932660a3d94d79a03421096ede",
+      "native_pdf_sha256": "1e5f37b41152a3f9696351bccf294a3c99b2996caf0194bdac41683dbc6f9e2c",
+      "before_pdf_sha256": "8dd424f082988e0703e671b6adb68d7609915d521135136b674d1bf0c90a7625",
+      "after_pdf_sha256": "f8a1fc7a1c3263124d1489d3ee6a01e9f7631a3e462ec5777b2a2af321ed7346",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/bullet-trigger2-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/bullet-trigger2-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/bullet-trigger2-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/bullet-trigger2-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "control",
+      "changes": {
+        "restart_flags": {},
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "2799f002dc292c77e9db6d4221994e054027d51188a462b3d481413faeb36cd6",
+      "native_pdf_sha256": "ec4933e8e300b1eff3c0fa1ae3afc732fcdbb0580b8768aef42a827b0c1a3c27",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/control-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/control-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/control-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/control-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level1-explicit-indent",
+      "changes": {
+        "restart_flags": {
+          "1": "1"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": 1080
+      },
+      "source_sha256": "b59cb6adb7f9d0ccbb259d09d85964569ccc28ef98ed07c79136a608506b302b",
+      "native_pdf_sha256": "643e5667c4d587ee416a0afad0ab7f832bed45560691c9ea8108bfa75196f43e",
+      "before_pdf_sha256": "016bb4e73e591b88447d471951fa4570948d54d8edc29cb4c608797632420357",
+      "after_pdf_sha256": "8fa1b3f4d4d99593a6113f33c772ef3547876d589ebb06f9f67f7d47d553dd08",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level1-explicit-indent-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level1-explicit-indent-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level1-explicit-indent-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level1-explicit-indent-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level1-trigger2",
+      "changes": {
+        "restart_flags": {
+          "1": "2"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "7e6666d0ebede91873540717b4e5e821eecf84c730467dd1b1866d448903ba19",
+      "native_pdf_sha256": "40390043c9b96d640153fa2cb9d5569d40473056781d34cccf7facaaa0b5072f",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "f8a1fc7a1c3263124d1489d3ee6a01e9f7631a3e462ec5777b2a2af321ed7346",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level1-trigger2-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level1-trigger2-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level1-trigger2-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level1-trigger2-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level2-trigger3",
+      "changes": {
+        "restart_flags": {
+          "2": "3"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "3b5163c9f19d3cc2e08f0447413bca2afb2c41766b4f67a0e366a42283231fd2",
+      "native_pdf_sha256": "bbde808ba0d077c1cc91ab12a204e4f368fb9d554bc3283adaec226f3b3d07a6",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "ff46c69e8c953014617f2b647ba1a9a48cbf5028ebbf517927b08839fc67b752",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level2-trigger3-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level2-trigger3-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level2-trigger3-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level2-trigger3-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level2-trigger8",
+      "changes": {
+        "restart_flags": {
+          "2": "8"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "db51e0662935a5706ddc1acc285559956ca7704f1f5fad68c49351443bf353e6",
+      "native_pdf_sha256": "60d94c709e77a96f8afb0dd752c94578851c50460ec229446013a3e7f9725ddb",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 1,
+        "text": 1,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level2-trigger8-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level2-trigger8-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level2-trigger8-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level2-trigger8-dispositions.json"
+      },
+      "remaining": [
+        "#1874",
+        "#2094"
+      ]
+    },
+    {
+      "name": "level2-trigger9",
+      "changes": {
+        "restart_flags": {
+          "2": "9"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "44db9b9d70aedf7ef5cec5a2e785ce282e3ad339c476f51186fa992ec1f0b831",
+      "native_pdf_sha256": "295a1276b9e57acf956ef50d546f1f725dcf6efd61e9bfcf8b99ec3cb60a61af",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 1,
+        "text": 1,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level2-trigger9-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level2-trigger9-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level2-trigger9-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level2-trigger9-dispositions.json"
+      },
+      "remaining": [
+        "#1874",
+        "#2094"
+      ]
+    },
+    {
+      "name": "level3-trigger2",
+      "changes": {
+        "restart_flags": {
+          "3": "2"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "9769feab3d050c24a63d9c611ff400ffabb1e90eeb9a67cc3b32ed348e3a77a8",
+      "native_pdf_sha256": "09d782caa24c873fe4da2b7b81067519ffac55200a3a7214d5ed5f768610142f",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level3-trigger2-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level3-trigger2-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level3-trigger2-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level3-trigger2-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level3-trigger3",
+      "changes": {
+        "restart_flags": {
+          "3": "3"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "c44cb8e4101d232f77786b05d1c380decf19b13463a08bb6c9ef335ec708dcb7",
+      "native_pdf_sha256": "d639c2de6cd0399cb035e669054c4befde1b245c190e2f29c9e011abe221e422",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "562644d89b21d44288b8460633b49510a6865557d59424e14b8be662130a63e6",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level3-trigger3-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level3-trigger3-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level3-trigger3-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level3-trigger3-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level3-trigger4",
+      "changes": {
+        "restart_flags": {
+          "3": "4"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "c52a40b7140322a988f0587667b23da6b9478305b3df476203b6dc6060d5b9b8",
+      "native_pdf_sha256": "960f5b544d729f6223b0e64f9827aa61dc7f10225771586f999fd3312da609c0",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "562644d89b21d44288b8460633b49510a6865557d59424e14b8be662130a63e6",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level3-trigger4-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level3-trigger4-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level3-trigger4-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level3-trigger4-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "level3-trigger8",
+      "changes": {
+        "restart_flags": {
+          "3": "8"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "807baebeb76b632dab91199cee722b40adbf7ef5bc024a9e15387940a36ccef4",
+      "native_pdf_sha256": "aabc33b6b39ca3c8ec2e013ace4e5ee70965497bc47264059f48a74c4237ba28",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/level3-trigger8-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/level3-trigger8-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/level3-trigger8-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/level3-trigger8-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    },
+    {
+      "name": "root-trigger1",
+      "changes": {
+        "restart_flags": {
+          "0": "1"
+        },
+        "level1_bullet": false,
+        "item_d_left_twips": null
+      },
+      "source_sha256": "2697ee7387b0561efeff33616e2e183a690c4ef6c62ef15831876e8f9b972c8c",
+      "native_pdf_sha256": "b353553eeeb32490c0b30c6f15fb5667f536c3164494461cb014b30a08a1d07e",
+      "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "after_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2088/probes/root-trigger1-layout.json",
+        "text": "tests/visual_audits/issue-2088/probes/root-trigger1-text.json",
+        "render": "tests/visual_audits/issue-2088/probes/root-trigger1-render.json",
+        "dispositions": "tests/visual_audits/issue-2088/probes/root-trigger1-dispositions.json"
+      },
+      "remaining": [
+        "#1874"
+      ]
+    }
+  ],
+  "follow_up_filing": {
+    "issue": 2094,
+    "source_sha256": "db51e0662935a5706ddc1acc285559956ca7704f1f5fad68c49351443bf353e6",
+    "native_pdf_sha256": "60d94c709e77a96f8afb0dd752c94578851c50460ec229446013a3e7f9725ddb",
+    "before_pdf_sha256": "287a208a3c23ac193ef8159a1605f9eec05e108dae29f1918798a7cd829572da",
+    "office2pdf_revision": "36db34e19f57d2c9e90838f7dd6056d924f34afd",
+    "comparison_path": "assets/bugfixes/issue-2094/compare.jpg",
+    "comparison_sha256": "5773109517b52e463cebe0da28808d44545b6fcc1c305c7ecbe861c8d7f5b5c3"
+  },
+  "font_fallback_regression": {
+    "requested_font": "Office2Pdf Missing Numbering Face",
+    "coverage": "Declared proportional and omitted line rules; ordered and bullet suppression; default and explicit paragraph indents.",
+    "before_extra_baseline_pt": {
+      "proportional": 12.65,
+      "omitted": 11.0
+    },
+    "after_max_control_baseline_delta_pt": 0.15,
+    "generic_unspecified_font_spacing": "Existing regression passes unchanged."
+  }
+}

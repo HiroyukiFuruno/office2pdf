@@ -3417,3 +3417,159 @@ fn docx_implicit_ancestors_follow_each_levels_restart_policy() {
         }
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_restart_threshold_suppresses_leaf_markers() {
+    let data = include_bytes!(
+        "../../../../tests/fixtures/docx/docxide/numbering_restart_suppression.docx"
+    );
+    let text = converted_numbering_text(data);
+    let normalized: String = text.split_whitespace().collect();
+    assert_eq!(
+        normalized, "Numberingrestartpolicy1.ItemA(1)ItemBItemC(2)ItemDItemE2.ItemFItemG",
+        "{text}"
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_restart_threshold_suppression_follows_the_current_level() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    for (level, restart, labels) in [
+        (0, 1, ["1.", "(1)", "[1]", "(2)", "(1)", "2.", "(1)"]),
+        (1, 1, ["1.", "(1)", "[1]", "", "(1)", "2.", "(1)"]),
+        (1, 2, ["1.", "(1)", "[1]", "", "(1)", "2.", "(1)"]),
+        (2, 2, ["1.", "", "[1]", "(2)", "", "2.", ""]),
+        (2, 3, ["1.", "", "[1]", "(2)", "", "2.", ""]),
+        (3, 2, ["1.", "(1)", "[1]", "(2)", "(1)", "2.", "(1)"]),
+        (3, 3, ["1.", "(1)", "", "(2)", "(1)", "2.", "(1)"]),
+        (3, 4, ["1.", "(1)", "", "(2)", "(1)", "2.", "(1)"]),
+    ] {
+        let data = rewrite_numbering_part(base, |xml| {
+            let opener = format!("<w:lvl w:ilvl=\"{level}\">");
+            let (prefix, child) = xml.split_once(&opener).unwrap();
+            format!(
+                "{prefix}{opener}{}",
+                child.replacen(
+                    "</w:lvl>",
+                    &format!("<w:lvlRestart w:val=\"{restart}\"/></w:lvl>"),
+                    1
+                )
+            )
+        });
+        let text = converted_numbering_text(&data);
+        let normalized: String = text.split_whitespace().collect();
+        let expected: String = std::iter::once("Numberingrestartpolicy".to_string())
+            .chain(
+                labels
+                    .into_iter()
+                    .zip('A'..='G')
+                    .map(|(label, letter)| format!("{label}Item{letter}")),
+            )
+            .collect();
+        assert_eq!(
+            normalized, expected,
+            "level {level}, restart {restart}: {text}"
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_suppressed_restart_preserves_paragraph_and_descendant_origins() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_implicit_ancestors.docx");
+    let positions = |data: &[u8], use_fallback: bool, omit_line_multiple: bool| {
+        let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+        if use_fallback {
+            for page in &mut document.pages {
+                let Page::Flow(page) = page else { continue };
+                for block in &mut page.content {
+                    let paragraphs: Vec<&mut Paragraph> = match block {
+                        Block::Paragraph(paragraph) => vec![paragraph],
+                        Block::List(list) => list
+                            .items
+                            .iter_mut()
+                            .flat_map(|item| &mut item.content)
+                            .collect(),
+                        _ => continue,
+                    };
+                    for paragraph in paragraphs {
+                        if omit_line_multiple {
+                            paragraph.style.line_spacing = None;
+                        }
+                        paragraph.style.paragraph_mark_font_family =
+                            Some("Office2Pdf Missing Numbering Face".into());
+                        for run in &mut paragraph.runs {
+                            run.style.font_family =
+                                Some("Office2Pdf Missing Numbering Face".into());
+                        }
+                    }
+                }
+            }
+        }
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap()
+    };
+    for (use_fallback, omit_line_multiple) in [(false, false), (true, false), (true, true)] {
+        let control = positions(base, use_fallback, omit_line_multiple);
+        for bullet in [false, true] {
+            for indent in [0, 1080] {
+                let data = rewrite_numbering_part(base, |xml| {
+                    let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+                    let (level, rest) = child.split_once("</w:lvl>").unwrap();
+                    let level = if bullet {
+                        level
+                            .replace("w:val=\"decimal\"", "w:val=\"bullet\"")
+                            .replace("(%2)", "•")
+                    } else {
+                        level.to_string()
+                    };
+                    format!(
+                        "{prefix}<w:lvl w:ilvl=\"1\">{level}<w:lvlRestart w:val=\"1\"/></w:lvl>{rest}"
+                    )
+                });
+                let data = rewrite_docx_part(&data, "word/document.xml", |xml| {
+                    let paragraph = xml
+                        .split("</w:p>")
+                        .find(|part| part.contains("<w:t>Item D</w:t>"))
+                        .unwrap();
+                    let (_, content) = paragraph.rsplit_once("<w:p>").unwrap();
+                    let original = format!("<w:p>{content}</w:p>");
+                    let replacement = original.replace(
+                        "</w:pPr>",
+                        &format!("<w:ind w:left=\"{indent}\" w:hanging=\"0\"/></w:pPr>"),
+                    );
+                    xml.replace(&original, &replacement)
+                });
+                let runs = positions(&data, use_fallback, omit_line_multiple);
+                for letter in 'A'..='G' {
+                    let label = format!("Item {letter}");
+                    let before = control.iter().find(|run| run.text == label).unwrap();
+                    let after = runs.iter().find(|run| run.text == label).unwrap();
+                    let expected_x = if letter == 'D' {
+                        90.0 + f64::from(indent) / 20.0
+                    } else {
+                        before.left_pt
+                    };
+                    assert!(
+                        (after.left_pt - expected_x).abs() < 0.01,
+                        "{label}, bullet {bullet}, indent {indent}: {after:?}"
+                    );
+                    assert!(
+                        (after.baseline_pt - before.baseline_pt).abs() < 0.15,
+                        "physical baseline {label}, bullet {bullet}, indent {indent}: {before:?} / {after:?}"
+                    );
+                }
+                let body = runs.iter().find(|run| run.text == "Item D").unwrap();
+                assert!(
+                    !runs.iter().any(|run| run.text != "Item D"
+                        && (run.baseline_pt - body.baseline_pt).abs() < 0.01),
+                    "suppressed marker: {runs:?}"
+                );
+            }
+        }
+    }
+}
