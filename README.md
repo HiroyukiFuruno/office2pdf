@@ -259,6 +259,10 @@ Native Rust callers can use the same per-conversion path through
 | PPTX | Supported | Slides, text boxes, shapes, tables, images, masters, gradients, effects |
 | XLSX | Supported | Sheets, formatting, merged cells, column/row sizing, conditional formatting |
 
+DOCX line-based section page borders support page/text offsets, per-edge paint,
+first-page selection, and front/back placement. Custom `FlowPage` values use
+`page_borders: None` to omit decorations. Decorative art borders are not supported.
+
 DOCX and PPTX default language tags set the PDF language and text-layout language.
 Per-run languages and DOCX East Asian/complex-script language tags are not yet used.
 

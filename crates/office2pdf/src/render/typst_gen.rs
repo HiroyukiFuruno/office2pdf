@@ -139,6 +139,8 @@ struct GenCtx {
     /// Which flow section is being written, so a `<w:titlePg/>` header can
     /// label its own section's first page (issue #846).
     flow_section_index: usize,
+    /// Layers containing the previous section's borders must be reset explicitly.
+    flow_border_layers: [bool; 2],
     images: Vec<ImageAsset>,
     next_image_id: usize,
     next_text_box_id: usize,
@@ -276,6 +278,7 @@ impl GenCtx {
     fn new() -> Self {
         Self {
             flow_section_index: 0,
+            flow_border_layers: [false; 2],
             images: Vec::new(),
             next_image_id: 0,
             next_text_box_id: 0,
@@ -738,7 +741,13 @@ fn generate_flow_page(
     // The marker sits at the section's first page, so a first-page header can
     // resolve which page that is without assuming the section starts the
     // document (issue #846).
-    if page.first_header.is_some() || page.first_footer.is_some() {
+    if page.first_header.is_some()
+        || page.first_footer.is_some()
+        || page
+            .page_borders
+            .as_ref()
+            .is_some_and(|border| border.display != crate::ir::PageBorderDisplay::AllPages)
+    {
         let _ = writeln!(
             out,
             "#metadata(none) <{}>",
@@ -3172,6 +3181,10 @@ fn hf_paragraph_height_pt(
     Some(total)
 }
 
+#[path = "typst_gen_page_borders.rs"]
+mod page_borders;
+use page_borders::page_border_layer_markup;
+
 fn write_flow_page_setup(
     out: &mut String,
     page: &FlowPage,
@@ -3188,8 +3201,15 @@ fn write_flow_page_setup(
         && page.footer.is_none()
         && page.first_header.is_none()
         && page.first_footer.is_none()
+        && page.page_borders.is_none()
     {
         write_page_setup(out, size, &page.margins);
+        for (index, layer) in ["background", "foreground"].iter().enumerate() {
+            if ctx.flow_border_layers[index] {
+                let _ = writeln!(out, "#set page({layer}: none)");
+            }
+        }
+        ctx.flow_border_layers = [false; 2];
         return Ok(());
     }
 
@@ -3290,11 +3310,14 @@ fn write_flow_page_setup(
     // `<wp:anchor behindDoc="1">` puts the shape under the page's own content,
     // which is where a decorative banner belongs — over it, the banner would
     // hide the body text it sits behind (issue #961).
-    for (layer, behind_text) in [("background", true), ("foreground", false)] {
+    for (layer_index, (layer, behind_text)) in [("background", true), ("foreground", false)]
+        .into_iter()
+        .enumerate()
+    {
         // `<w:titlePg/>` gives page one its own stories, and on this invoice
         // they are the only ones carrying a banner, so the layers are gated
         // per page exactly as the flow header and footer are (issue #961).
-        let default_markup: String = page_anchored_layer_markup(
+        let mut default_markup: String = page_anchored_layer_markup(
             page.header.as_ref(),
             page.footer.as_ref(),
             page,
@@ -3303,7 +3326,7 @@ fn write_flow_page_setup(
             ctx,
         )?;
         let first_stated: bool = page.first_header.is_some() || page.first_footer.is_some();
-        let first_markup: String = match first_stated {
+        let mut first_markup: String = match first_stated {
             true => page_anchored_layer_markup(
                 page.first_header.as_ref().or(page.header.as_ref()),
                 page.first_footer.as_ref().or(page.footer.as_ref()),
@@ -3314,7 +3337,22 @@ fn write_flow_page_setup(
             )?,
             false => String::new(),
         };
+        let border_markup =
+            page_border_layer_markup(page, size, behind_text, ctx.flow_section_index);
+        if behind_text {
+            // Back borders also sit below page-anchored header/footer artwork.
+            default_markup.insert_str(0, &border_markup);
+            first_markup.insert_str(0, &border_markup);
+        } else {
+            default_markup.push_str(&border_markup);
+            first_markup.push_str(&border_markup);
+        }
+        let had_border: bool = ctx.flow_border_layers[layer_index];
+        ctx.flow_border_layers[layer_index] = !border_markup.is_empty();
         if default_markup.is_empty() && first_markup.is_empty() {
+            if had_border {
+                let _ = write!(out, ", {layer}: none");
+            }
             continue;
         }
         match first_stated {

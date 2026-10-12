@@ -2047,3 +2047,268 @@ fn test_auto_hyphenation_uses_xml_values_and_settings_scope() {
         assert_eq!(extract_auto_hyphenation(&data), expected, "{setting}");
     }
 }
+
+/// The upstream synthetic fixture isolates section decorations from body text.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn test_docx_page_borders_from_word_reference_are_rendered() {
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/page_borders.docx");
+    let (document, _warnings) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let output = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let paints =
+        crate::render::pdf::compiled_paint_sequence(&output.source, &output.images, 0).unwrap();
+    let blue = typst::visualize::Color::from_u8(31, 78, 121, 255);
+    let edges: Vec<_> = paints
+        .iter()
+        .filter(|paint| {
+            paint
+                .stroke
+                .as_ref()
+                .is_some_and(|stroke| stroke.color.as_ref() == Some(&blue))
+        })
+        .collect();
+    assert_eq!(
+        edges.len(),
+        4,
+        "all four declared page-border edges must paint"
+    );
+    for edge in &edges {
+        assert!((edge.stroke.as_ref().unwrap().thickness_pt - 3.0).abs() < 0.01);
+    }
+    let expected = [
+        (24.0, 25.5, 588.0, 25.5),
+        (24.0, 766.5, 588.0, 766.5),
+        (25.5, 25.5, 25.5, 766.5),
+        (586.5, 25.5, 586.5, 766.5),
+    ];
+    for target in expected {
+        assert!(
+            edges.iter().any(|edge| {
+                let b = edge.bounds;
+                (b.0 - target.0).abs() < 0.01
+                    && (b.1 - target.1).abs() < 0.01
+                    && (b.2 - target.2).abs() < 0.01
+                    && (b.3 - target.3).abs() < 0.01
+            }),
+            "missing declared page-space edge {target:?}: {edges:?}"
+        );
+    }
+}
+
+#[test]
+fn test_docx_page_borders_scan_current_sections_and_resolve_namespaces() {
+    let xml = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:x="urn:not-word"><w:body>
+    <w:p><w:pPr><w:sectPr><w:pgBorders w:display="firstPage" w:zOrder="back"><w:top w:val="dashed" w:sz="8" w:space="10" w:color="E02030"/><w:right w:val="nil"/></w:pgBorders>
+    <w:sectPrChange><w:sectPr><w:pgBorders><w:left w:val="single" w:sz="80"/></w:pgBorders></w:sectPr></w:sectPrChange></w:sectPr></w:pPr></w:p>
+    <w:sectPr/><x:sectPr><x:pgBorders><x:top x:val="single"/></x:pgBorders></x:sectPr>
+    </w:body></w:document>"#;
+    let sections = contexts::scan_page_borders(xml);
+    assert_eq!(sections.len(), 2);
+    let border = sections[0].as_ref().unwrap();
+    assert_eq!(border.display, PageBorderDisplay::FirstPage);
+    assert!(border.behind_text);
+    assert!(!border.offset_from_page);
+    assert_eq!(border.spacing.top, 10.0);
+    let top = border.edges.top.as_ref().unwrap();
+    assert_eq!(top.width, 1.0);
+    assert_eq!(top.color, Color::new(224, 32, 48));
+    assert_eq!(top.style, BorderLineStyle::Dashed);
+    assert!(border.edges.right.is_none());
+    assert!(border.edges.left.is_none());
+    assert!(sections[1].is_none());
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn test_docx_page_borders_display_and_section_reset_affect_actual_pages() {
+    use crate::render::pdf::{PaintedKind, compiled_page_paint_sequences};
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/page_borders.docx");
+    let (original, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let Page::Flow(base) = &original.pages[0] else {
+        panic!("expected a flow section")
+    };
+    let blue = typst::visualize::Color::from_u8(31, 78, 121, 255);
+    for (display, expected) in [
+        (PageBorderDisplay::AllPages, [4, 4]),
+        (PageBorderDisplay::FirstPage, [4, 0]),
+        (PageBorderDisplay::NotFirstPage, [0, 4]),
+    ] {
+        let mut page = base.clone();
+        page.page_borders.as_mut().unwrap().display = display;
+        page.content.push(Block::PageBreak);
+        page.content.extend(base.content.clone());
+        let mut doc = original.clone();
+        doc.pages = vec![Page::Flow(page)];
+        let output = crate::render::typst_gen::generate_typst(&doc).unwrap();
+        let pages = compiled_page_paint_sequences(&output.source, &output.images).unwrap();
+        assert_eq!(pages.len(), 2);
+        let counts: Vec<_> = pages
+            .iter()
+            .map(|page| {
+                page.iter()
+                    .filter(|paint| {
+                        paint.kind == PaintedKind::Shape
+                            && paint
+                                .stroke
+                                .as_ref()
+                                .is_some_and(|stroke| stroke.color.as_ref() == Some(&blue))
+                    })
+                    .count()
+            })
+            .collect();
+        assert_eq!(counts, expected, "display mode {display:?}");
+    }
+    let mut plain = base.clone();
+    plain.page_borders = None;
+    let mut doc = original;
+    doc.pages.push(Page::Flow(plain));
+    let output = crate::render::typst_gen::generate_typst(&doc).unwrap();
+    let pages = compiled_page_paint_sequences(&output.source, &output.images).unwrap();
+    assert_eq!(pages.len(), 2);
+    assert!(
+        !pages[1].iter().any(|paint| paint
+            .stroke
+            .as_ref()
+            .is_some_and(|stroke| stroke.color.as_ref() == Some(&blue))),
+        "a section without borders must not inherit the preceding decoration"
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn test_docx_page_borders_text_offsets_partial_edges_and_paint_order() {
+    use crate::render::pdf::{PaintedKind, compiled_paint_sequence};
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/page_borders.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("expected flow page")
+    };
+    page.margins = Margins {
+        top: 40.0,
+        left: 50.0,
+        bottom: 55.0,
+        right: 65.0,
+    };
+    let borders = page.page_borders.as_mut().unwrap();
+    borders.offset_from_page = false;
+    borders.behind_text = true;
+    borders.spacing.top = 6.0;
+    borders.spacing.left = 8.0;
+    borders.edges.bottom = None;
+    borders.edges.right = None;
+    let red = Color::new(160, 40, 90);
+    for (side, width) in [
+        (&mut borders.edges.top, 1.0),
+        (&mut borders.edges.left, 2.0),
+    ] {
+        let side = side.as_mut().unwrap();
+        side.width = width;
+        side.color = red;
+    }
+    let output = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let paints = compiled_paint_sequence(&output.source, &output.images, 0).unwrap();
+    let red = typst::visualize::Color::from_u8(160, 40, 90, 255);
+    let edges: Vec<_> = paints
+        .iter()
+        .enumerate()
+        .filter(|(_, paint)| {
+            paint
+                .stroke
+                .as_ref()
+                .is_some_and(|stroke| stroke.color.as_ref() == Some(&red))
+        })
+        .collect();
+    assert_eq!(edges.len(), 2);
+    let expected = [(40.0, 33.5, 547.0, 33.5), (41.0, 33.5, 41.0, 737.0)];
+    for bounds in expected {
+        assert!(
+            edges.iter().any(|(_, edge)| {
+                let b = edge.bounds;
+                (b.0 - bounds.0).abs() < 0.01
+                    && (b.1 - bounds.1).abs() < 0.01
+                    && (b.2 - bounds.2).abs() < 0.01
+                    && (b.3 - bounds.3).abs() < 0.01
+            }),
+            "missing text-relative border {bounds:?}: {edges:?}"
+        );
+    }
+    let first_text = paints
+        .iter()
+        .position(|paint| paint.kind == PaintedKind::Text)
+        .unwrap();
+    assert!(
+        edges.iter().all(|(index, _)| *index < first_text),
+        "back borders paint before the body"
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn test_docx_page_borders_back_layer_stays_behind_header_artwork() {
+    use crate::render::pdf::compiled_paint_sequence;
+    let data = include_bytes!("../../../../tests/fixtures/docx/docxide/page_borders.docx");
+    let (mut document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let Page::Flow(page) = &mut document.pages[0] else {
+        panic!("expected flow page")
+    };
+    page.page_borders.as_mut().unwrap().behind_text = true;
+    page.header = Some(HeaderFooter {
+        paragraphs: Vec::new(),
+        distance_from_edge: None,
+        sheet_print_scale: None,
+        shapes: vec![HeaderFooterShape {
+            content: HeaderFooterShapeContent::Shape(Shape {
+                kind: ShapeKind::Rectangle,
+                fill: Some(Color::new(240, 120, 20)),
+                gradient_fill: None,
+                pattern_fill: None,
+                stroke: None,
+                rotation_deg: None,
+                opacity: None,
+                shadow: None,
+                top_bevel: None,
+            }),
+            frame: HeaderFooterFrame {
+                x: Some(10.0),
+                y: Some(10.0),
+                width: Some(80.0),
+                height: Some(80.0),
+                horizontal_anchor: FrameAnchor::Page,
+                vertical_anchor: FrameAnchor::Page,
+                horizontal_align: None,
+                vertical_align: None,
+                inset_left: 0.0,
+                inset_top: 0.0,
+                bottom_offset: None,
+                wraps_text: true,
+            },
+            anchor_paragraph_index: None,
+            width: 80.0,
+            height: 80.0,
+            behind_text: true,
+        }],
+    });
+    let output = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let paints = compiled_paint_sequence(&output.source, &output.images, 0).unwrap();
+    let blue = typst::visualize::Color::from_u8(31, 78, 121, 255);
+    let orange = typst::visualize::Color::from_u8(240, 120, 20, 255);
+    let banner = paints
+        .iter()
+        .position(|paint| paint.rectangle_fill.as_ref() == Some(&orange))
+        .unwrap();
+    let borders: Vec<_> = paints
+        .iter()
+        .enumerate()
+        .filter(|(_, paint)| {
+            paint
+                .stroke
+                .as_ref()
+                .is_some_and(|stroke| stroke.color.as_ref() == Some(&blue))
+        })
+        .collect();
+    assert_eq!(borders.len(), 4);
+    assert!(
+        borders.iter().all(|(index, _)| *index < banner),
+        "back borders must not cover the page's header artwork"
+    );
+}

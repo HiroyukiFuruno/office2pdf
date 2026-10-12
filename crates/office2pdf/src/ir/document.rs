@@ -115,6 +115,27 @@ pub struct FlowPage {
     /// restarts, and which numerals a `PAGE` field renders. `None` when the
     /// section declares nothing and simply continues.
     pub page_numbering: Option<PageNumbering>,
+    /// Section page decorations from `w:sectPr/w:pgBorders`.
+    pub page_borders: Option<PageBorders>,
+}
+
+/// Line-based page borders. Art borders are not represented as line strokes.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PageBorders {
+    pub edges: super::elements::CellBorder,
+    pub spacing: super::elements::Insets,
+    /// False measures outward from the section's text margins.
+    pub offset_from_page: bool,
+    pub display: PageBorderDisplay,
+    pub behind_text: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum PageBorderDisplay {
+    #[default]
+    AllPages,
+    FirstPage,
+    NotFirstPage,
 }
 
 /// A section's `w:pgNumType`.

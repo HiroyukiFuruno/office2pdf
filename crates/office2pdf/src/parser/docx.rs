@@ -28,9 +28,9 @@ use self::contexts::{
     VmlTextBoxContext, VmlTextBoxInfo, WordWrapContext, WpgDrawingInfo, WrapContext,
     build_chart_context_from_xml, build_math_context_from_xml, build_note_context_from_xml,
     build_wrap_context_from_xml, extract_column_layout_from_section_property,
-    is_note_reference_run, read_zip_text, scan_column_layouts, scan_page_numbering,
-    scan_style_paragraph_shading, scan_style_word_wrap, seq_identifier, toc_caption_identifier,
-    toc_heading_depth,
+    is_note_reference_run, read_zip_text, scan_column_layouts, scan_page_borders,
+    scan_page_numbering, scan_style_paragraph_shading, scan_style_word_wrap, seq_identifier,
+    toc_caption_identifier, toc_heading_depth,
 };
 use self::lists::{
     NumberingMap, TaggedElement, build_numbering_map, extract_num_info, group_into_lists,
@@ -248,6 +248,7 @@ struct ZipPreParseAssets {
     chart_ctx: ChartContext,
     column_layouts: Vec<Option<ColumnLayout>>,
     page_numbering: Vec<Option<PageNumbering>>,
+    page_borders: Vec<Option<crate::ir::PageBorders>>,
     metafile_images: ImageMap,
     theme_fonts: ThemeFonts,
     default_paragraph_style_id: Option<String>,
@@ -307,6 +308,10 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 .as_deref()
                 .map(scan_column_layouts)
                 .unwrap_or_default();
+            let page_borders = doc_xml
+                .as_deref()
+                .map(scan_page_borders)
+                .unwrap_or_default();
             let page_numbering = doc_xml
                 .as_deref()
                 .map(scan_page_numbering)
@@ -349,6 +354,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 chart_ctx,
                 column_layouts,
                 page_numbering,
+                page_borders,
                 metafile_images,
                 theme_fonts,
                 default_paragraph_style_id,
@@ -383,6 +389,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             chart_ctx: ChartContext::empty(),
             column_layouts: Vec::new(),
             page_numbering: Vec::new(),
+            page_borders: Vec::new(),
             metafile_images: ImageMap::new(),
             theme_fonts: ThemeFonts::default(),
             default_paragraph_style_id: None,
@@ -410,6 +417,7 @@ impl Parser for DocxParser {
             mut chart_ctx,
             column_layouts,
             page_numbering,
+            page_borders,
             metafile_images,
             theme_fonts,
             default_paragraph_style_id,
@@ -574,6 +582,7 @@ impl Parser for DocxParser {
                     SectionOverrides {
                         column_layout,
                         page_numbering: page_numbering.get(section_layout_index).copied().flatten(),
+                        page_borders: page_borders.get(section_layout_index).cloned().flatten(),
                     },
                     header_footer_styles,
                     &mut warnings,
@@ -614,6 +623,7 @@ impl Parser for DocxParser {
             SectionOverrides {
                 column_layout: final_column_layout,
                 page_numbering: page_numbering.get(section_layout_index).copied().flatten(),
+                page_borders: page_borders.get(section_layout_index).cloned().flatten(),
             },
             header_footer_styles,
             &mut warnings,

@@ -16,6 +16,8 @@ mod fields;
 mod math;
 #[path = "docx_context_notes.rs"]
 mod notes;
+#[path = "docx_context_page_borders.rs"]
+mod page_borders;
 #[path = "docx_context_page_numbers.rs"]
 mod page_numbers;
 #[path = "docx_context_paragraph_cursor.rs"]
@@ -48,6 +50,7 @@ pub(super) use math::{MathContext, build_math_context_from_xml};
 pub(super) use notes::{
     NoteContent, NoteContext, build_note_context_from_xml, is_note_reference_run, read_zip_text,
 };
+pub(super) use page_borders::scan_page_borders;
 pub(super) use page_numbers::scan_page_numbering;
 pub(super) use paragraph_mark::ParagraphMarkContext;
 pub(super) use paragraph_shading::{ParagraphShadingContext, scan_style_paragraph_shading};

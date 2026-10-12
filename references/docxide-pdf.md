@@ -29,8 +29,8 @@ The baseline is `tests/compatibility/docxide-pdf/baseline.json`.
 
 Baseline against main `39bcb289`: 390 comparisons, two missing references,
 one image-decoding failure, 64 page-count differences, and 27 empty text layers.
-The custom-XML wrapper case retains its text. HTML/MHTML imports (`altChunk`),
-page borders, and line numbering are concrete feature targets; empty text layers
+The custom-XML wrapper case retains its text. The baseline identifies HTML/MHTML
+imports (`altChunk`), page borders, and line numbering as feature targets; empty text layers
 in drawn shapes require pixel inspection before attributing loss.
 
 This is triage, not a visual pass: missing searchable text can still be painted

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": {
+    "url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case68/input.docx",
+    "sha256": "d0fd0614c8932dbb8c2004d6944ef447e55686c3f470b4303d5acb90674a2a14"
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "46896f4e85d668b2f842a38440534f56525772f71f352dc6c6da1a8aa1789b72"
+  },
+  "before": {
+    "office2pdf_revision": "39bcb28992e8c1a643e7430b220134747b03b830",
+    "pdf_sha256": "0da8a80cc046ba2485d7ad2f28be8bafd2e13af84d9b5d7a591970ed4b920bb6"
+  },
+  "after": {
+    "pdf_sha256": "48bfac97ae5c7440c2265b167d1043e2e988103a138120b6678df2768eb2a2ff"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Before: all four blue frame edges absent; one page, same two text lines and Cambria bold/regular faces, no wrap/clipping/rotation/fill/visibility issue. After: four square-joined edges restored at 24pt outer insets; frame position and page order match. Inspected full GT/output pages, 5% diff, and matched text crops at full scale. Remaining material cluster p1-75430fe7c318 is a Cambria glyph-edge rasterization difference. Native filled border bands are 2.88pt versus declared/output 3pt: a 0.12pt (4%) sub-material stroke-weight difference, tracked in #1874; this geometry difference is not called antialiasing. No elements <=1pt, italic, or underlined text occur in this fixture."
+}
