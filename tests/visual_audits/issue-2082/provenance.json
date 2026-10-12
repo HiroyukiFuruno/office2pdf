@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case71/input.docx",
+    "sha256": "c9c8e8936935bfa1822f873a2689605a67cf9be8fd4694772f293be9073e5ebc",
+    "change": "Unmodified synthetic package; Apache-2.0."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "e10f6cae8768853c7750c0d225587ce9fa65e31bc3bfb48be3691df05fa7bb47"
+  },
+  "before": {
+    "office2pdf_revision": "b810fc9ddc3948f0592aecbfcad4d5a43eec402e",
+    "pdf_sha256": "9f23f1291a73a5e365a0243d212af38c58c7ab5e7a957e9b714c9ab88a47ec51"
+  },
+  "after": {
+    "pdf_sha256": "2eba5cf8ca38f51eb315e2a1e79259208cd554f660342b59566ff7dbc9148d71",
+    "converter_sha256": "d45652af3e654b02f3a606dea77df87984f725ee699880c6dc728c4acaf98972"
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "remaining": {
+    "geometry_and_default_extraction_order": "#2083",
+    "submaterial_native_drift": "#1874"
+  },
+  "model_vision_findings": "Inspected native/before/current full pages, 5% diffs, all matched shifted crops, complete heading/list crop pairs at 150 DPI, and publication JPEGs. Before uses I.1., I.2. and II.1.; current uses native 1.1., 1.2. and 2.1. while retaining Roman parent labels I./II. One Letter page retains its black Cambria 14pt bold heading and 11pt regular list text, indents and all body content. No rotation, shape, fill, stroke/border, hairline <=1pt, italic, underline, clipping or overflow occurs. Two paragraphs remain visibly too high: II. Second section by 10.18pt and 2.1. Sub one again by 20.07pt, tracked in #2083. Default pdftotext order remains different around II./1.2.; raw extraction order/content match Word. The current strict report has zero material clusters, but this does not disposition the large/fine geometry failures; all are tracked in #2083. Small baseline/pitch drift is tracked in #1874. Geometry is not classified as antialiasing.",
+  "text_layer": {
+    "codepoint_census": "matching",
+    "default_normalized_order": "different; retained II. token is placed before 1.2. in default extraction",
+    "raw_normalized_order": "matching",
+    "missing_or_extra_characters": 0
+  }
+}

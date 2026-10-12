@@ -140,3 +140,7 @@ pub(super) use line_numbering::scan_line_numbering;
 #[path = "docx_context_section_alignment.rs"]
 mod section_alignment;
 pub(super) use section_alignment::scan_section_alignment;
+
+#[path = "docx_context_legal_numbering.rs"]
+mod legal_numbering;
+pub(super) use legal_numbering::normalize_legal_numbering;
