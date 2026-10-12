@@ -693,6 +693,7 @@ pub(super) fn merge_paragraph_style(
             .or(style_paragraph.and_then(|style| style.indent_first_line)),
         starts_after_layout_break: false,
         has_inline_list_number: false,
+        numbering_suffix: None,
         line_spacing: explicit
             .line_spacing
             .or(style_paragraph.and_then(|style| style.line_spacing)),

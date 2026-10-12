@@ -274,7 +274,9 @@ and indentation. Skipped resettable ancestors advance later visible counters;
 child levels with restart values of 0 or above 7 count physical items only.
 Child restart values 1–7
 suppress markers and numbering indents when they name the same/later level;
-root flags are ignored. Wide-marker tab clearance (#2089) remains unsupported.
+root flags are ignored. With a tab suffix, wide numbered markers advance the first body line to default
+or custom left tab stops; continuations keep the hanging indent. Placement for
+space/nothing suffixes remains unsupported (#2097).
 
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their

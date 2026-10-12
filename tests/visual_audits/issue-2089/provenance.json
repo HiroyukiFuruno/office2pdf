@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "source": {
+    "upstream_url": "https://github.com/sverrejb/docxide-pdf/blob/1bb140b662a69f8786015c1b532d37d6084d0934/tests/fixtures/cases/case72/input.docx",
+    "fixture": "tests/fixtures/docx/docxide/numbering_wide_markers.docx",
+    "sha256": "fff8d6c648f0791617bc816359ef367cb2507e354fa94626754561c8a7f638d5",
+    "change": "Apache-2.0 case72 derivative: level 1 start 7; no-patch re-ZIP control."
+  },
+  "native_export": {
+    "application": "Microsoft Word",
+    "version": "16.113.4",
+    "platform": "macOS 26.6.2 build 25G83",
+    "pdf_sha256": "010d561bee246fe7dcd16519b80f938dab69ac43661803316a5b569ced5a7156"
+  },
+  "before": {
+    "office2pdf_revision": "70ac3ff350370f8c3a71b7d8db260faff8577647",
+    "converter_sha256": "f35fc1e912f04c5ad07767b7c339360d9293f524f5a87aecfa7d17878efcba5c",
+    "pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+    "readback": "All seven fresh before outputs match previously inspected PDFs byte-for-byte."
+  },
+  "after": {
+    "converter_sha256": "c7e6d9e6f3f1b74d704a3b39e4536525fc9eed07980a5bef494b7e50cdd74190",
+    "pdf_sha256": "23eb0b4abda27588cb90b687619e7a72a2516f865527fd04c118597403c50c64"
+  },
+  "filing_comparison": {
+    "comparison_commit": "d5f866b64ee3f9e188c7cba658732980bfee16b0",
+    "note": "The original compare.jpg remains frozen."
+  },
+  "renderer": "pdftoppm",
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "model_vision_findings": "Inspected all seven native/before/current full pages, their 5% pixel diffs and complete matched heading/list crops at 150 DPI. The five tab-suffix pages now match Word: the final (10) body starts at x=162pt with the default 36pt grid, x=138pt with the 24pt grid, and x=153pt with the custom 63pt numbering stop. Starts 98 through 101 all clear their wider markers at x=162pt. The wrapped variant starts its first body line at x=162pt, retains x=126pt continuations, and matches all three physical lines. Narrow (7)/(8)/(9) markers and their x=126pt bodies remain unchanged. All pages retain one Letter page, the heading and six list items, Cambria 14pt bold headings/11pt regular black body, parentheses, absolute marker origins and physical paragraph gaps. No shapes, fills, strokes/borders, hairlines <=1pt, rotation, italic, underline, clipping, overflow or missing body text appear in the tab cases. The two explicit non-tab suffix outputs remain byte-identical to merged main: their final body at x=126pt overlaps (10) instead of following the marker at native x=131.638pt for space or x=128.582pt for nothing. Nothing also retains the unwanted 3.509pt gap after narrow markers. These remaining visible/searchable defects and every current suffix cluster are tracked in #2097. Sub-material baseline drift <=0.201pt and wrapped pitch drift <=0.191pt are tracked in #1874. Five tab pages pass layout at 0.5pt, searchable text and strict raster review with zero material clusters; the two suffix pages retain text findings and six exact raster clusters dispositioned to #2097. No other material finding appeared.",
+  "remaining": {
+    "non_tab_suffix_placement": "#2097",
+    "submaterial_baseline_and_pitch": "#1874"
+  },
+  "control": "No-patch re-ZIP native export is layout-identical to the original start-7 base. Each probe changes only the stated XML factor in the tracked fixture.",
+  "native_probes": [
+    {
+      "name": "wrapped",
+      "changes": {
+        "part": "word/document.xml",
+        "target": "last w:t containing Continuous item",
+        "text": "Continuous item with a long explanation about the final wide numbering marker and the paragraph continuation origin. This sentence continues across several physical lines to test wrapping at the declared left margin."
+      },
+      "source_sha256": "f0d846805148ef04ba921c558f9484e8bd5ef38aede320854559fdb9bd9a7139",
+      "native_pdf_sha256": "9fe075d744b1fbd0bc8387589aa9dc15f55128a40435c9dfe5f030c0d6ca3fd7",
+      "before_pdf_sha256": "80a49d1500ca278dd3e0e0039578a4b2f192ca9f7de74c294293765cbe59e54f",
+      "after_pdf_sha256": "338c924a4d92ac071da5d67edde62ff4271c94a084f8ed2bce65111179283451",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/wrapped-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/wrapped-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/wrapped-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/wrapped-dispositions.json"
+      },
+      "remaining": "#1874",
+      "byte_identical_to_before": false
+    },
+    {
+      "name": "default24",
+      "changes": {
+        "part": "word/settings.xml",
+        "element": "w:defaultTabStop",
+        "attribute": "w:val",
+        "value": 480
+      },
+      "source_sha256": "61dc24f9b8fff180c51aab6de2d656e05e1c5ff5fa66333765f18dde5e041ab4",
+      "native_pdf_sha256": "b2054a53ccb1242533abed6a0e3e835338d06c04b7533c10723eb7bf2e98baa8",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "f4766796d7861865722a73773c5221ad44c3466e47f2f656dc78912064ee5520",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/default24-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/default24-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/default24-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/default24-dispositions.json"
+      },
+      "remaining": "#1874",
+      "byte_identical_to_before": false
+    },
+    {
+      "name": "custom63",
+      "changes": {
+        "part": "word/numbering.xml",
+        "level": 1,
+        "element": "w:pPr/w:tabs/w:tab",
+        "attributes": {
+          "w:val": "num",
+          "w:pos": 1260
+        }
+      },
+      "source_sha256": "771162922be2b28fa6dffd677321d946a757023682c8597390056c0c7b1369df",
+      "native_pdf_sha256": "fcaf95cc18124fbe23ed832f56106c6aca9781fe731a7d788bb005703e1cd7ef",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "06370d8c58f827e3521e9ec0aa300ec49f13edb0868c4b8c64e781e68d15a02c",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/custom63-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/custom63-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/custom63-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/custom63-dispositions.json"
+      },
+      "remaining": "#1874",
+      "byte_identical_to_before": false
+    },
+    {
+      "name": "start98",
+      "changes": {
+        "part": "word/numbering.xml",
+        "level": 1,
+        "element": "w:start",
+        "attribute": "w:val",
+        "value": 98
+      },
+      "source_sha256": "7e373162a714f19bbcfa5f9ac7c32ff055c789472b4620b70bbae2ae3f5f0fac",
+      "native_pdf_sha256": "dea3b02f021f41a2fc1eef48cecf89341f3681ddba7b5c02c8dd93180a26f55f",
+      "before_pdf_sha256": "9925dabdf27d4ff2233ff3a9af77b2b46f4e2fe3e7a8b27c452bcb597d39b43b",
+      "after_pdf_sha256": "29c749ae8892faf475e0b83a6e8faf94ed40373db0ff744f8b0e21e96b9d1bcd",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 0,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/start98-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/start98-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/start98-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/start98-dispositions.json"
+      },
+      "remaining": "#1874",
+      "byte_identical_to_before": false
+    },
+    {
+      "name": "suffix-space",
+      "changes": {
+        "part": "word/numbering.xml",
+        "level": 1,
+        "element": "w:suff",
+        "attribute": "w:val",
+        "value": "space"
+      },
+      "source_sha256": "6201335403c4e6860a0b25e3f27cefb2a68f4502581c7a5e59d6959aad2e05dd",
+      "native_pdf_sha256": "17d93852bbf6a1322d04db53afbc53d0b8543b34fe22537bccfaa9fd884c60a4",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 1,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/suffix-space-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/suffix-space-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/suffix-space-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/suffix-space-dispositions.json"
+      },
+      "remaining": "#2097 and #1874",
+      "byte_identical_to_before": true
+    },
+    {
+      "name": "suffix-nothing",
+      "changes": {
+        "part": "word/numbering.xml",
+        "level": 1,
+        "element": "w:suff",
+        "attribute": "w:val",
+        "value": "nothing"
+      },
+      "source_sha256": "50d7ca8e860b28cfd20dd8706994ff6722873e802560212748499fdd3e21870f",
+      "native_pdf_sha256": "b2b15f66aac67ef16410e3eac9468b42756aae41aec11cf0ff34474d08e78ba0",
+      "before_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "after_pdf_sha256": "af779bd9bbd287c07a8723443401b3be018d13da66b48ce17a92ab062d1cc1a0",
+      "comparison_exit_codes": {
+        "layout": 0,
+        "text": 1,
+        "render": 0
+      },
+      "reports": {
+        "layout": "tests/visual_audits/issue-2089/probes/suffix-nothing-layout.json",
+        "text": "tests/visual_audits/issue-2089/probes/suffix-nothing-text.json",
+        "render": "tests/visual_audits/issue-2089/probes/suffix-nothing-render.json",
+        "dispositions": "tests/visual_audits/issue-2089/probes/suffix-nothing-dispositions.json"
+      },
+      "remaining": "#2097 and #1874",
+      "byte_identical_to_before": true
+    }
+  ]
+}

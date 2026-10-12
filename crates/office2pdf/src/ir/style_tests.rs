@@ -193,6 +193,7 @@ fn paragraph_style_merge_from_all_none_source_preserves_target() {
         indent_first_line: Some(20.0),
         starts_after_layout_break: false,
         has_inline_list_number: false,
+        numbering_suffix: None,
         line_spacing: Some(LineSpacing::Proportional(1.5)),
         line_box: Some(LineBox {
             ascent_em: 1.0,
@@ -253,6 +254,7 @@ fn paragraph_style_merge_from_all_some_source_overwrites_target() {
         indent_first_line: Some(30.0),
         starts_after_layout_break: false,
         has_inline_list_number: false,
+        numbering_suffix: None,
         line_spacing: Some(LineSpacing::Exact(14.0)),
         line_box: Some(LineBox {
             ascent_em: 1.3125,

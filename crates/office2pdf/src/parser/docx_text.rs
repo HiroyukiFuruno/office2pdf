@@ -68,6 +68,7 @@ pub(super) fn extract_paragraph_style(prop: &docx_rs::ParagraphProperty) -> Para
         indent_first_line,
         starts_after_layout_break: false,
         has_inline_list_number: false,
+        numbering_suffix: None,
         line_spacing,
         line_box: None,
         space_before,

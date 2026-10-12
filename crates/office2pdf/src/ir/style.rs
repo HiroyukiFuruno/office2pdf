@@ -125,6 +125,8 @@ pub struct ParagraphStyle {
     pub starts_after_layout_break: bool,
     /// The leading run carries a list number and tab, emitted inside its paragraph frame.
     pub has_inline_list_number: bool,
+    /// Resolved numbering suffix; absent for generic list paragraphs.
+    pub numbering_suffix: Option<ListMarkerSuffix>,
     pub line_spacing: Option<LineSpacing>,
     /// Font-relative top and bottom edges used to size each text line.
     ///
@@ -556,3 +558,11 @@ impl Color {
 #[cfg(test)]
 #[path = "style_tests.rs"]
 mod tests;
+
+/// Separator after a source list marker.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ListMarkerSuffix {
+    Tab,
+    Space,
+    Nothing,
+}

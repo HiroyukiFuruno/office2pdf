@@ -48,3 +48,7 @@ bullet/numbered levels and continuation spacing against native Word probes.
 `numbering_out_of_range_restarts.docx` sets the four-level derivative’s level 2
 restart to 8. PDF tests vary levels, starts, thresholds and complete overrides
 against native Word probes for continuing physical counters.
+
+`numbering_wide_markers.docx` derives from the same Apache-2.0 case72: child
+start 7 exposes a marker wider than its hanging span. Native probes vary tab
+intervals, custom left/numbering stops, starts and wrapped body text.
