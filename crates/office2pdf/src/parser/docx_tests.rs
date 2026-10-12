@@ -2899,7 +2899,7 @@ fn compiled_legal_list_baselines(document: &Document) -> (Vec<f64>, String) {
 fn docx_nested_list_spacing_survives_every_level_transition() {
     let data = include_bytes!("../../../../tests/fixtures/docx/docxide/legal_numbering.docx");
     let (original, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
-    let positions = |gap: f64| {
+    let positions = |gap: f64, missing_font_metrics: bool| {
         let mut document = original.clone();
         let Page::Flow(page) = &mut document.pages[0] else {
             panic!("flow section")
@@ -2910,22 +2910,29 @@ fn docx_nested_list_spacing_survives_every_level_transition() {
                     for paragraph in &mut item.content {
                         paragraph.style.space_before = Some(0.0);
                         paragraph.style.space_after = Some(gap);
+                        if missing_font_metrics {
+                            for run in &mut paragraph.runs {
+                                run.style.font_family = Some("Unavailable filing font".to_string());
+                            }
+                        }
                     }
                 }
             }
         }
         compiled_legal_list_baselines(&document)
     };
-    let (unspaced, _) = positions(0.0);
-    for gap in [7.5, 10.0, 20.0] {
-        let (spaced, source) = positions(gap);
-        for index in 1..spaced.len() {
-            let added = (spaced[index] - spaced[0]) - (unspaced[index] - unspaced[0]);
-            let expected = index as f64 * gap;
-            assert!(
-                (added - expected).abs() < 0.15,
-                "paragraph {index}: expected {expected}pt accumulated gap, got {added}pt; {source}"
-            );
+    for missing_font_metrics in [false, true] {
+        let (unspaced, _) = positions(0.0, missing_font_metrics);
+        for gap in [7.5, 10.0, 20.0] {
+            let (spaced, source) = positions(gap, missing_font_metrics);
+            for index in 1..spaced.len() {
+                let added = (spaced[index] - spaced[0]) - (unspaced[index] - unspaced[0]);
+                let expected = index as f64 * gap;
+                assert!(
+                    (added - expected).abs() < 0.15,
+                    "paragraph {index}, missing metrics {missing_font_metrics}: expected {expected}pt accumulated gap, got {added}pt; {source}"
+                );
+            }
         }
     }
 }

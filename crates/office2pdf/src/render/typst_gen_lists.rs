@@ -481,7 +481,13 @@ pub(super) fn generate_list_with_spacing_model(
     // those containers instead of inferring it from same-level neighbours.
     let word_boundary_gaps: bool = !per_item_gaps
         && has_nested_items
-        && wrapper_spans_full_line
+        && list
+            .items
+            .iter()
+            .flat_map(|item| &item.content)
+            .any(|paragraph| {
+                paragraph.style.space_before.is_some() || paragraph.style.space_after.is_some()
+            })
         && list
             .items
             .iter()
@@ -1625,10 +1631,9 @@ fn write_list_item_trailing_gap(
     if has_uniform_spacing && word_boundary_gap.is_none() {
         return;
     }
-    // Without a full-line box the item's own line height is not inside the
-    // box, and the existing boundary rule adds it to the gap; that path still
-    // belongs to `common_list_level_spacing`, so leave it alone.
-    if !wrapper_spans_full_line {
+    // PowerPoint's boxless path carries line height through shared spacing.
+    // Word's explicit boundary gap also survives unavailable font metrics.
+    if !wrapper_spans_full_line && word_boundary_gap.is_none() {
         return;
     }
     let gap: f64 = word_boundary_gap.unwrap_or_else(|| paragraph_space_after(item));
