@@ -388,3 +388,206 @@ fn docx_cached_smartart_effect_extents_position_ink_and_reserve_flow() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_auto_spacing_reserves_the_host_run_line_surplus() {
+    let package = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+        let first_end = xml.find("</w:p>").unwrap() + "</w:p>".len();
+        let next_drawing = first_end + xml[first_end..].find("<w:drawing>").unwrap();
+        let next_paragraph = xml[..next_drawing].rfind("<w:p ").unwrap();
+        format!("{}{}", &xml[..first_end], &xml[next_paragraph..])
+    });
+    let measure = |size: f64, proportion: f64, has_text: bool| -> (f64, f64, Option<f64>) {
+        let (mut document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let crate::ir::Page::Flow(page) = &mut document.pages[0] else {
+            panic!("SmartArt report must be a flowing document");
+        };
+        let Block::Paragraph(paragraph) = &mut page.content[0] else {
+            panic!("first diagram must remain in its anchor paragraph");
+        };
+        paragraph.style.line_spacing = Some(LineSpacing::Proportional(proportion));
+        paragraph.runs[0].style.font_family = Some("Noto Sans".into());
+        paragraph.runs[0].style.font_size = Some(size);
+        if has_text {
+            paragraph.runs.push(Run {
+                text: "X".into(),
+                style: paragraph.runs[0].style.clone(),
+                href: None,
+                footnote: None,
+                inline_box: None,
+            });
+        }
+        let source = crate::render::typst_gen::generate_typst(&document)
+            .unwrap()
+            .source;
+        let placed = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+        let first = placed.iter().find(|run| run.text == "Foo").unwrap();
+        let following = placed
+            .iter()
+            .filter(|run| run.text == "Dolor")
+            .max_by(|a, b| a.baseline_pt.total_cmp(&b.baseline_pt))
+            .unwrap();
+        (
+            first.baseline_pt,
+            following.baseline_pt,
+            placed
+                .iter()
+                .find(|run| run.text == "X")
+                .map(|run| run.baseline_pt),
+        )
+    };
+    let (_, _, natural_pitch_em) = crate::render::pdf::font_line_metrics_em("Noto Sans").unwrap();
+    for size in [10.0, 12.0, 24.0] {
+        for has_text in [false, true] {
+            let control = measure(size, 1.0, has_text);
+            for proportion in [278.0 / 240.0, 1.5] {
+                let current = measure(size, proportion, has_text);
+                let expected_extra = natural_pitch_em * size * (proportion - 1.0);
+                assert!((current.0 - control.0).abs() < 0.01);
+                assert!(
+                    (current.1 - control.1 - expected_extra).abs() < 0.01,
+                    "automatic spacing must reserve {expected_extra}pt after the frame: {current:?}, {control:?}"
+                );
+                if let (Some(current_end), Some(control_end)) = (current.2, control.2) {
+                    assert!((current_end - control_end).abs() < 0.01);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_auto_spacing_uses_resolved_document_defaults() {
+    let consecutive = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+        let first_end = xml.find("</w:p>").unwrap() + "</w:p>".len();
+        let next_drawing = first_end + xml[first_end..].find("<w:drawing>").unwrap();
+        let next_paragraph = xml[..next_drawing].rfind("<w:p ").unwrap();
+        format!("{}{}", &xml[..first_end], &xml[next_paragraph..])
+    });
+    let measure = |size: u32, line: u32, has_text: bool| -> (f64, f64, Option<f64>) {
+        let defaults = rewrite_part(&consecutive, "word/styles.xml", |xml| {
+            let start = xml.find("<w:rFonts ").unwrap();
+            let end = start + xml[start..].find("/>").unwrap() + 2;
+            format!(
+                "{}<w:rFonts w:ascii=\"Noto Sans\" w:hAnsi=\"Noto Sans\"/>{}",
+                &xml[..start],
+                &xml[end..],
+            )
+            .replacen("w:line=\"278\"", &format!("w:line=\"{line}\""), 1)
+            .replacen(
+                "<w:sz w:val=\"24\"/>",
+                &format!("<w:sz w:val=\"{}\"/>", size * 2),
+                1,
+            )
+        });
+        let package = if has_text {
+            rewrite_part(&defaults, "word/document.xml", |xml| {
+                xml.replacen("</w:p>", "<w:r><w:t>X</w:t></w:r></w:p>", 1)
+            })
+        } else {
+            defaults
+        };
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document)
+            .unwrap()
+            .source;
+        let placed = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+        let first = placed.iter().find(|run| run.text == "Foo").unwrap();
+        let following = placed
+            .iter()
+            .filter(|run| run.text == "Dolor")
+            .max_by(|a, b| a.baseline_pt.total_cmp(&b.baseline_pt))
+            .unwrap();
+        (
+            first.baseline_pt,
+            following.baseline_pt,
+            placed
+                .iter()
+                .find(|run| run.text == "X")
+                .map(|run| run.baseline_pt),
+        )
+    };
+    let (_, _, natural_pitch_em) = crate::render::pdf::font_line_metrics_em("Noto Sans").unwrap();
+    for size in [10, 12, 24] {
+        for has_text in [false, true] {
+            let control = measure(size, 240, has_text);
+            for line in [278, 360] {
+                let current = measure(size, line, has_text);
+                let extra = natural_pitch_em * f64::from(size) * (f64::from(line) / 240.0 - 1.0);
+                assert!((current.0 - control.0).abs() < 0.01);
+                assert!(
+                    (current.1 - control.1 - extra).abs() < 0.01,
+                    "document defaults must reserve {extra}pt: {current:?}, {control:?}"
+                );
+                if let (Some(current_end), Some(control_end)) = (current.2, control.2) {
+                    assert!((current_end - control_end).abs() < 0.01);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_wrapped_frames_use_their_own_run_metrics() {
+    let combined = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+        let first_end = xml.find("</w:p>").unwrap() + "</w:p>".len();
+        let next_drawing = first_end + xml[first_end..].find("<w:drawing>").unwrap();
+        let next_paragraph = xml[..next_drawing].rfind("<w:p ").unwrap();
+        let next_content = next_paragraph + xml[next_paragraph..].find('>').unwrap() + 1;
+        format!(
+            "{}{}",
+            &xml[..first_end - "</w:p>".len()],
+            &xml[next_content..]
+        )
+    });
+    let measure = |first_size: u32, second_size: u32, second_family: &str| -> f64 {
+        let package = rewrite_part(&combined, "word/document.xml", |xml| {
+            let mut result = xml.to_string();
+            let last = result.rfind("<w:noProof/>").unwrap();
+            result.insert_str(last, &format!(
+                "<w:rFonts w:ascii=\"{second_family}\" w:hAnsi=\"{second_family}\"/><w:sz w:val=\"{}\"/>", second_size * 2,
+            ));
+            let first = result.find("<w:noProof/>").unwrap();
+            result.insert_str(
+                first,
+                &format!(
+                    "<w:rFonts w:ascii=\"Noto Sans\" w:hAnsi=\"Noto Sans\"/><w:sz w:val=\"{}\"/>",
+                    first_size * 2,
+                ),
+            );
+            result
+        });
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document)
+            .unwrap()
+            .source;
+        let placed = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+        placed
+            .iter()
+            .filter(|run| run.text == "Dolor")
+            .max_by(|a, b| a.baseline_pt.total_cmp(&b.baseline_pt))
+            .unwrap()
+            .baseline_pt
+    };
+    let control = measure(12, 12, "Noto Sans");
+    for family in ["Noto Sans", "Noto Serif"] {
+        for size in [10, 24] {
+            assert!(
+                (measure(12, size, family) - control).abs() < 0.01,
+                "a later frame's {size}pt {family} run must not move its origin"
+            );
+        }
+    }
+    let (_, _, natural_pitch_em) = crate::render::pdf::font_line_metrics_em("Noto Sans").unwrap();
+    let expected = natural_pitch_em * 12.0 * (278.0 / 240.0 - 1.0);
+    assert!((measure(24, 12, "Noto Sans") - control - expected).abs() < 0.01);
+}

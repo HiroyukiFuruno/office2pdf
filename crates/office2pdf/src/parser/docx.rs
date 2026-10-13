@@ -1797,9 +1797,26 @@ fn convert_paragraph_blocks(
                             // whatever text its own `w:r` carried, so it joins the runs
                             // rather than becoming a flow block (issue #1690).
                             for inline_box in media.inline_text_boxes {
+                                let is_cached_drawing: bool = inline_box
+                                    .content
+                                    .iter()
+                                    .any(|block| matches!(block, Block::DrawingGroup(_)));
+                                // The cached drawing paints no host-run glyphs, but
+                                // its resolved font still sizes automatic spacing.
+                                let style: TextStyle = if is_cached_drawing {
+                                    resolve_run_style(
+                                        &run_segment.run_property,
+                                        is_small_caps,
+                                        resolved_style,
+                                        style_map,
+                                        &ctx.theme_fonts,
+                                    )
+                                } else {
+                                    TextStyle::default()
+                                };
                                 runs.push(Run {
                                     text: String::new(),
-                                    style: TextStyle::default(),
+                                    style,
                                     href: None,
                                     footnote: None,
                                     inline_box: Some(Box::new(inline_box)),

@@ -472,6 +472,7 @@ pub(super) fn generate_paragraph(
                 paragraph_tab_width_pt,
                 eojeol_wrap,
                 None,
+                style.line_spacing,
                 ctx,
             )?;
             write_terminal_word_paragraph_mark(out, runs, style, line_grid_pitch);
@@ -4008,10 +4009,31 @@ fn generate_word_runs_with_tabs_in_context(
         default_tab_width_pt,
         eojeol_wrap,
         metrics.map(RunLineMetrics::Word),
+        style.line_spacing,
         ctx,
     )
 }
 
+fn word_inline_drawing_spacing_pt(run: &Run, line_spacing: Option<LineSpacing>) -> f64 {
+    let Some(LineSpacing::Proportional(proportion)) = line_spacing else {
+        return 0.0;
+    };
+    if proportion <= 1.0
+        || !run.inline_box.as_deref().is_some_and(|inline_box| {
+            inline_box
+                .content
+                .iter()
+                .any(|block| matches!(block, Block::DrawingGroup(_)))
+        })
+    {
+        return 0.0;
+    }
+    // Native Word reserves automatic spacing below tall inline diagrams,
+    // measured from the host run's natural line rather than the frame height.
+    word_line_advance_pt(std::slice::from_ref(run)).unwrap_or(0.0) * (proportion - 1.0)
+}
+
+#[allow(clippy::too_many_arguments)]
 fn generate_runs_with_tabs_and_metrics_in_context(
     out: &mut String,
     runs: &[Run],
@@ -4019,6 +4041,7 @@ fn generate_runs_with_tabs_and_metrics_in_context(
     default_tab_width_pt: f64,
     eojeol_wrap: EojeolWrap,
     run_line_metrics: Option<RunLineMetrics<'_>>,
+    inline_drawing_line_spacing: Option<LineSpacing>,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
     if !paragraph_contains_tabs(runs) {
@@ -4027,6 +4050,7 @@ fn generate_runs_with_tabs_and_metrics_in_context(
             runs,
             eojeol_wrap,
             run_line_metrics,
+            inline_drawing_line_spacing,
             ctx,
         );
     }
@@ -4043,6 +4067,7 @@ fn generate_runs_with_tabs_and_metrics_in_context(
                 &segments[index],
                 eojeol_wrap,
                 run_line_metrics,
+                inline_drawing_line_spacing,
                 ctx,
             )
         },
@@ -4082,7 +4107,7 @@ pub(super) fn generate_runs_with_context(
     eojeol_wrap: EojeolWrap,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
-    generate_runs_with_metrics_in_context(out, runs, eojeol_wrap, None, ctx)
+    generate_runs_with_metrics_in_context(out, runs, eojeol_wrap, None, None, ctx)
 }
 
 pub(super) fn generate_runs_with_tabs_context(
@@ -4100,6 +4125,7 @@ pub(super) fn generate_runs_with_tabs_context(
         default_tab_width_pt,
         eojeol_wrap,
         None,
+        None,
         ctx,
     )
 }
@@ -4110,7 +4136,7 @@ pub(super) fn generate_run_with_context(
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
     if let Some(inline_box) = run.inline_box.as_deref() {
-        return write_inline_text_box(out, inline_box, ctx);
+        return write_inline_text_box(out, inline_box, 0.0, ctx);
     }
     if let Some(content) = run.footnote.as_deref() {
         out.push_str("#footnote[");
@@ -4136,13 +4162,21 @@ fn generate_runs_with_metrics_in_context(
     runs: &[Run],
     eojeol_wrap: EojeolWrap,
     run_line_metrics: Option<RunLineMetrics<'_>>,
+    inline_drawing_line_spacing: Option<LineSpacing>,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
     // A footnote can carry a box indirectly; its nested blocks still need the
     // image registry and table context used by boxes in the anchor paragraph.
     if runs.iter().any(run_needs_generation_context) {
         for (index, run) in runs.iter().enumerate() {
-            if run.inline_box.is_some() || run.footnote.is_some() {
+            if let Some(inline_box) = run.inline_box.as_deref() {
+                write_inline_text_box(
+                    out,
+                    inline_box,
+                    word_inline_drawing_spacing_pt(run, inline_drawing_line_spacing),
+                    ctx,
+                )?;
+            } else if run.footnote.is_some() {
                 generate_run_with_context(out, run, ctx)?;
             } else {
                 generate_run_at_with_metrics(out, run, index == 0, run_line_metrics);
@@ -5356,17 +5390,32 @@ fn generate_run_at_with_metrics(
 fn write_inline_text_box(
     out: &mut String,
     inline_box: &InlineTextBox,
+    inline_drawing_spacing_pt: f64,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
     let padding: &Insets = &inline_box.padding;
+    let drawing_spacing_pt: f64 = if inline_box
+        .content
+        .iter()
+        .any(|block| matches!(block, Block::DrawingGroup(_)))
+    {
+        inline_drawing_spacing_pt
+    } else {
+        0.0
+    };
     let inner_width: f64 = (inline_box.width - padding.left - padding.right).max(0.0);
     let _ = write!(
         out,
         "#box(width: {}pt, height: {}pt, inset: {}",
         format_f64(inline_box.width),
-        format_f64(inline_box.height),
+        format_f64(inline_box.height + drawing_spacing_pt),
         super::format_insets(padding),
     );
+    if drawing_spacing_pt > 0.0 {
+        // Keep accompanying text on the frame's original baseline while the
+        // extra height participates below it in Typst's line layout.
+        let _ = write!(out, ", baseline: {}pt", format_f64(drawing_spacing_pt));
+    }
     if let Some(fill) = inline_box.fill {
         let _ = write!(out, ", fill: {}", rgb(&fill));
     }
