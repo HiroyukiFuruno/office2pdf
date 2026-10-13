@@ -44,6 +44,6 @@ restarts, suppression, implicit counters and skipped-level origins. MS-OI29500 2
 confirms Word ignores restart rules inside complete level overrides.
 Marker clearance/suffixes follow `pdf/list_label.rs`. Native probes calibrate
 font/size/tab/wrap differences and inline marker ascent versus body descent/leading.
-Damaged-PNG handling follows `src/pdf/images.rs`: preserve the drawing when
-decoding fails. A direct `png` dependency reuses locked 0.18.1 to recover samples;
-native Word probes check CRC and truncated-media behavior.
+Damaged-PNG recovery follows `src/pdf/images.rs`, retaining drawings on decode failure.
+Direct `png` uses locked 0.18.1; Word probes check CRC and truncated-media behavior.
+Picture crops follow `src/docx/images.rs`; [docx-rs#936](https://github.com/bokuweb/docx-rs/pull/936) preserves per-picture offsets.

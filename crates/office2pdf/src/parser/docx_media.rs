@@ -38,7 +38,12 @@ pub(super) fn extract_drawing_image(
         format: asset.format,
         width,
         height,
-        crop: None,
+        crop: pic.crop.map(|crop| crate::ir::ImageCrop {
+            left: f64::from(crop.left) / 100_000.0,
+            top: f64::from(crop.top) / 100_000.0,
+            right: f64::from(crop.right) / 100_000.0,
+            bottom: f64::from(crop.bottom) / 100_000.0,
+        }),
         stroke: None,
         alignment: None,
         clip_shape: None,

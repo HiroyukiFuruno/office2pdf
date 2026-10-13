@@ -1,0 +1,119 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 5191.1424,
+      "bbox_pt": {
+        "height": 140.64,
+        "width": 154.08,
+        "x": 278.4,
+        "y": 249.6
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-d52b6c885f2a",
+      "region": "center"
+    },
+    {
+      "area_pt2": 3598.3872,
+      "bbox_pt": {
+        "height": 88.32,
+        "width": 135.36,
+        "x": 96.0,
+        "y": 276.0
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-750842c534b2",
+      "region": "left"
+    },
+    {
+      "area_pt2": 2339.0208,
+      "bbox_pt": {
+        "height": 12.96,
+        "width": 180.48,
+        "x": 288.0,
+        "y": 96.0
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-5615a514094a",
+      "region": "top"
+    },
+    {
+      "area_pt2": 2339.0208,
+      "bbox_pt": {
+        "height": 12.96,
+        "width": 180.48,
+        "x": 288.0,
+        "y": 141.12
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-d66dbdd525af",
+      "region": "top"
+    },
+    {
+      "area_pt2": 1561.4208,
+      "bbox_pt": {
+        "height": 12.96,
+        "width": 120.48,
+        "x": 96.0,
+        "y": 216.48
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-62500bdb93a8",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 1561.4208,
+      "bbox_pt": {
+        "height": 12.96,
+        "width": 120.48,
+        "x": 96.0,
+        "y": 96.0
+      },
+      "disposition": {
+        "issue": "#2122",
+        "kind": "issue",
+        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+      },
+      "id": "p1-2faaafea39ec",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 6,
+    "duplicate": 0,
+    "total": 6,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
