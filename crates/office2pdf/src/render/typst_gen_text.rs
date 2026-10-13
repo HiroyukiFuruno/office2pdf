@@ -474,6 +474,7 @@ pub(super) fn generate_paragraph(
                 None,
                 ctx,
             )?;
+            write_terminal_word_paragraph_mark(out, runs, style, line_grid_pitch);
             out.push(']');
         }
         None => {
@@ -488,6 +489,7 @@ pub(super) fn generate_paragraph(
                 line_grid_pitch,
                 ctx,
             )?;
+            write_terminal_word_paragraph_mark(out, runs, style, line_grid_pitch);
         }
     }
 
@@ -512,6 +514,51 @@ pub(super) fn generate_paragraph(
 
     out.push('\n');
     Ok(())
+}
+
+fn write_terminal_word_paragraph_mark(
+    out: &mut String,
+    runs: &[Run],
+    style: &ParagraphStyle,
+    line_grid_pitch: Option<f64>,
+) {
+    let last_content = runs
+        .iter()
+        .rev()
+        .find(|run| !run.text.is_empty() || run.footnote.is_some() || run.inline_box.is_some());
+    let Some(last) = last_content.filter(|run| {
+        run.footnote.is_none() && run.inline_box.is_none() && run.text.ends_with('\n')
+    }) else {
+        return;
+    };
+    let mark = Run {
+        text: "x".into(),
+        style: style
+            .paragraph_mark_text_style
+            .as_deref()
+            .unwrap_or(&last.style)
+            .clone(),
+        href: None,
+        footnote: None,
+        inline_box: None,
+    };
+    // Typst drops an empty final line; Word's paragraph mark retains it.
+    // The zero-width strut uses mark metrics and adds no painted/searchable text.
+    if let Some((top, bottom)) =
+        word_line_box_em(std::slice::from_ref(&mark), style, line_grid_pitch)
+    {
+        let size = paragraph_font_size_pt(std::slice::from_ref(&mark));
+        let _ = write!(
+            out,
+            "#box(width: 0pt, height: {}pt, baseline: {}pt)",
+            format_f64((top + bottom) * size),
+            format_f64(bottom * size)
+        );
+    } else {
+        out.push_str("#box(width: 0pt)[#hide[");
+        generate_run(out, &mark);
+        out.push_str("]]");
+    }
 }
 
 /// Drop a heading's plain text under the contents label.
