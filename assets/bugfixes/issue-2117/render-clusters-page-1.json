@@ -1,0 +1,71 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 37.0944,
+      "bbox_pt": {
+        "height": 10.56,
+        "width": 7.2,
+        "x": 72.96,
+        "y": 77.28
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected both complete lines, all matched crops and full pixel diff. These exact clusters lie on the Report start/end glyphs, which share the independently measured -1.72357pt baseline offset. The lost20pt blank line is fixed. Geometry is tracked, not accepted as rasterization."
+      },
+      "id": "p1-8ccb5fa80de7",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 37.0944,
+      "bbox_pt": {
+        "height": 10.56,
+        "width": 7.2,
+        "x": 72.96,
+        "y": 137.28
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected both complete lines, all matched crops and full pixel diff. These exact clusters lie on the Report start/end glyphs, which share the independently measured -1.72357pt baseline offset. The lost20pt blank line is fixed. Geometry is tracked, not accepted as rasterization."
+      },
+      "id": "p1-da0ce1e1f2b2",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 22.5792,
+      "bbox_pt": {
+        "height": 6.72,
+        "width": 4.8,
+        "x": 111.84,
+        "y": 79.2
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected both complete lines, all matched crops and full pixel diff. These exact clusters lie on the Report start/end glyphs, which share the independently measured -1.72357pt baseline offset. The lost20pt blank line is fixed. Geometry is tracked, not accepted as rasterization."
+      },
+      "id": "p1-c075bd114484",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 3,
+    "duplicate": 0,
+    "total": 3,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}

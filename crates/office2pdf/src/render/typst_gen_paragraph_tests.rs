@@ -74,6 +74,80 @@ fn test_first_line_indent_does_not_change_baseline_after_page_break() {
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn docx_terminal_line_break_keeps_the_final_blank_line() {
+    for line_height in [14.0, 20.0] {
+        for break_count in 0..=3 {
+            for has_text_before_break in [false, true] {
+                let paragraph = |text: String| {
+                    let mut block = make_paragraph(&text);
+                    let Block::Paragraph(para) = &mut block else {
+                        unreachable!();
+                    };
+                    para.style.line_spacing = Some(LineSpacing::Exact(line_height));
+                    para.style.space_before = Some(0.0);
+                    para.style.space_after = Some(0.0);
+                    for run in &mut para.runs {
+                        run.style.font_family = Some("Arial".into());
+                        run.style.font_size = Some(12.0);
+                    }
+                    if text.is_empty() {
+                        para.runs.clear();
+                    }
+                    block
+                };
+                let mut blocks = vec![paragraph("Report start".into())];
+                let blank_lines = "\n".repeat(break_count);
+                if has_text_before_break {
+                    let Block::Paragraph(first) = &mut blocks[0] else {
+                        unreachable!();
+                    };
+                    first.runs[0].text.push_str(&blank_lines);
+                } else {
+                    blocks.push(paragraph(blank_lines));
+                }
+                blocks.push(paragraph("Report end".into()));
+                let doc = make_doc(vec![make_flow_page(blocks)]);
+                let source = generate_typst(&doc).unwrap().source;
+                let runs = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+                let baseline = |label: &str| {
+                    runs.iter()
+                        .find(|run| run.text.contains(label))
+                        .unwrap()
+                        .baseline_pt
+                };
+                let expected_lines = break_count + if has_text_before_break { 1 } else { 2 };
+                let actual_gap = baseline("Report end") - baseline("Report start");
+                assert!(
+                    (actual_gap - expected_lines as f64 * line_height).abs() < 0.05,
+                    "terminal breaks retain the paragraph mark's blank line: height={line_height}, breaks={break_count}, text={has_text_before_break}, gap={actual_gap}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn docx_terminal_line_break_fixture_preserves_report_spacing() {
+    use crate::parser::Parser;
+    let data = include_bytes!("../../../../tests/fixtures/docx/terminal_line_break.docx");
+    let (document, _) = crate::parser::docx::DocxParser
+        .parse(data, &crate::ConvertOptions::default())
+        .unwrap();
+    let source = generate_typst(&document).unwrap().source;
+    let runs = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+    let baseline = |label: &str| {
+        runs.iter()
+            .find(|run| run.text.contains(label))
+            .unwrap()
+            .baseline_pt
+    };
+    // Native Word reserves two exact 20pt blank lines for this break-only paragraph.
+    assert!((baseline("Report end") - baseline("Report start") - 60.0).abs() < 0.05);
+}
+
+#[test]
 fn test_generate_empty_paragraph_reserves_line_height() {
     let doc = make_doc(vec![make_flow_page(vec![Block::Paragraph(Paragraph {
         style: ParagraphStyle::default(),
