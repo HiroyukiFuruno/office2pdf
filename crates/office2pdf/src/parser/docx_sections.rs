@@ -96,6 +96,7 @@ fn scan_header_footer_relationships(
 pub(super) fn build_header_footer_assets<R: Read + Seek>(
     archive: &mut zip::ZipArchive<R>,
     styles: HeaderFooterStyleContext<'_>,
+    warnings: &mut Vec<ConvertWarning>,
 ) -> HeaderFooterAssets {
     let rels_xml = match read_zip_text(archive, "word/_rels/document.xml.rels") {
         Some(xml) => xml,
@@ -116,7 +117,7 @@ pub(super) fn build_header_footer_assets<R: Read + Seek>(
         let Some(xml) = read_zip_text(archive, &path) else {
             continue;
         };
-        let images = build_part_image_map(archive, &path);
+        let images = build_part_image_map(archive, &path, warnings);
         let simple_fields = scan_simple_fields(&xml);
         let Ok(header) = <docx_rs::Header as docx_rs::FromXML>::from_xml(xml.as_bytes()) else {
             continue;
@@ -148,7 +149,7 @@ pub(super) fn build_header_footer_assets<R: Read + Seek>(
         let Some(xml) = read_zip_text(archive, &path) else {
             continue;
         };
-        let images = build_part_image_map(archive, &path);
+        let images = build_part_image_map(archive, &path, warnings);
         let bidi_paragraphs = scan_bidi_paragraphs(&xml);
         let simple_fields = scan_simple_fields(&xml);
         let Ok(footer) = <docx_rs::Footer as docx_rs::FromXML>::from_xml(xml.as_bytes()) else {
@@ -313,6 +314,7 @@ fn scan_bidi_paragraphs(xml: &str) -> Vec<bool> {
 fn build_part_image_map<R: Read + Seek>(
     archive: &mut zip::ZipArchive<R>,
     part_path: &str,
+    warnings: &mut Vec<ConvertWarning>,
 ) -> ImageMap {
     let Some((directory, filename)) = part_path.rsplit_once('/') else {
         return ImageMap::new();
@@ -357,7 +359,16 @@ fn build_part_image_map<R: Read + Seek>(
         .filter_map(|(id, path)| {
             let mut bytes: Vec<u8> = Vec::new();
             archive.by_name(&path).ok()?.read_to_end(&mut bytes).ok()?;
-            let image = image::load_from_memory(&bytes).ok()?;
+            let image = match image::load_from_memory(&bytes) {
+                Ok(image) => image,
+                Err(_) if bytes.starts_with(b"\x89PNG\r\n\x1a\n") => {
+                    return Some((
+                        id.clone(),
+                        super::image_assets::normalize_png_preview(&bytes, &id, warnings),
+                    ));
+                }
+                Err(_) => return None,
+            };
             let mut png = Cursor::new(Vec::new());
             image.write_to(&mut png, image::ImageFormat::Png).ok()?;
             Some((

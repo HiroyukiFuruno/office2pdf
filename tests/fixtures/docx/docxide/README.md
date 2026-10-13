@@ -61,3 +61,10 @@ body-controlled proportional advance and wrapping against native Word exports.
 11pt lines, the first bold, using the `ns0` WordprocessingML prefix. Default
 parser and compiled-layout tests vary prefixes and scoped bindings; fresh Word
 exports verify the prefix-only control. No third-party content is included.
+
+`valid_png_report.docx` is an authored Cambria report with an inline 120×60pt
+PNG and surrounding text. `truncated_png_report.docx` changes only that PNG's
+tail. Parser and conversion tests require the picture's extent and surrounding
+text to survive damaged media; runtime-generated variants cover bad checksums,
+RGB/alpha/grayscale samples and header/footer pictures. Native Word exports
+remain outside git. Neither package contains third-party content.

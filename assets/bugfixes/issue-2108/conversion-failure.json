@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status": "conversion_failed",
+  "fixture": "tests/fixtures/docx/docxide/truncated_png_report.docx",
+  "source_sha256": "b0a81338fbbbd173435d28e8b8be0074f0a82f06c451e28076884c52d57ed3b2",
+  "baseline_revision": "b605a5813b0adafadb49587f554a0b2a8d301859",
+  "converter_sha256": "5f0c3a4a949c2aec6dee00ee139632b286d31d5690564611a3c606cb18cad2ba",
+  "exit_code": 1,
+  "output_pdf_generated": false,
+  "diagnostic_path": "assets/bugfixes/issue-2108/conversion-failure.txt",
+  "diagnostic_sha256": "9822c82c4d347059795c4a2385c95c97ab6ac5bdb5236edeb18e2bfc211981dd"
+}

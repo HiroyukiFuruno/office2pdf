@@ -63,6 +63,8 @@ use self::text::{extract_pair_kerning, extract_tab_stops, resolve_highlight_colo
 
 #[path = "docx_contexts.rs"]
 mod contexts;
+#[path = "docx_image_assets.rs"]
+mod image_assets;
 #[path = "docx_lists.rs"]
 mod lists;
 #[path = "docx_media.rs"]
@@ -155,23 +157,18 @@ fn build_hyperlink_map(docx: &docx_rs::Docx) -> HyperlinkMap {
 
 /// Build a lookup map from the DOCX's embedded images.
 ///
-/// docx-rs decodes raster pictures and re-encodes them as PNG previews, and
-/// we use those bytes. A format it cannot decode, such as EMF, arrives with
-/// an empty preview. Those entries are left out: the metafile converter
-/// supplies every EMF/WMF it can draw, and a picture nothing can render is
-/// skipped rather than handed to Typst as an empty PNG, which fails the whole
-/// compilation.
-fn build_image_map(docx: &docx_rs::Docx) -> ImageMap {
+/// PNG previews may be raw, unchecked bytes. Validate them with the renderer's
+/// decoder before use; retain valid bytes and recover damaged pictures without
+/// losing their declared layout extents. Empty previews remain available to the
+/// separate metafile converter rather than becoming empty PNG assets.
+fn build_image_map(docx: &docx_rs::Docx, warnings: &mut Vec<ConvertWarning>) -> ImageMap {
     docx.images
         .iter()
         .filter(|(_id, _path, _image, png)| !png.0.is_empty())
         .map(|(id, _path, _image, png)| {
             (
                 id.clone(),
-                DocxImageAsset {
-                    data: png.0.clone(),
-                    format: ImageFormat::Png,
-                },
+                image_assets::normalize_png_preview(&png.0, id, warnings),
             )
         })
         .collect()
@@ -476,7 +473,7 @@ impl Parser for DocxParser {
         // Populate locale-specific footnote/endnote style IDs from docx styles
         ctx.notes.populate_style_ids(&docx.styles);
 
-        let mut images = build_image_map(&docx);
+        let mut images = build_image_map(&docx, &mut warnings);
         images.extend(metafile_images);
         let hyperlinks = build_hyperlink_map(&docx);
         let style_map = build_style_map(
@@ -501,7 +498,9 @@ impl Parser for DocxParser {
         // archive is opened a second time for it rather than kept alive across
         // the parse; the parts themselves are still read exactly once.
         let header_footer_assets: HeaderFooterAssets = crate::parser::open_zip(data)
-            .map(|mut archive| build_header_footer_assets(&mut archive, header_footer_styles))
+            .map(|mut archive| {
+                build_header_footer_assets(&mut archive, header_footer_styles, &mut warnings)
+            })
             .unwrap_or_default();
         let mut elements: Vec<TaggedElement> = Vec::new();
         let mut pages: Vec<Page> = Vec::new();

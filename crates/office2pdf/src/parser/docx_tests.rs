@@ -116,6 +116,9 @@ mod table_tests;
 #[path = "docx_image_tests.rs"]
 mod image_tests;
 
+#[path = "docx_image_recovery_tests.rs"]
+mod image_recovery_tests;
+
 // ----- List parsing tests -----
 
 /// Helper: build a DOCX with numbering definitions and list paragraphs.

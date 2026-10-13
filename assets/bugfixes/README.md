@@ -1,7 +1,7 @@
 # Bug-fix evidence
 
 Visual evidence lives in an issue-numbered directory and is checked by the Visual
-PR Contract job (`scripts/check_visual_pr.py`). There are two modes; a pull
+PR Contract job (`scripts/check_visual_pr.py`). There are three modes; a pull
 request declares which one it uses in `Visual audit > Evidence mode`.
 
 ## Evidence mode: `fix`
@@ -314,6 +314,37 @@ report in `Visual audit > Render cluster reports`; the PR gate requires all of
 them to be freshly changed and passing. A reference-exporter group must equal
 its manifest entry's complete cluster-ID set, so a new or unrelated cluster
 remains undispositioned.
+
+## Evidence mode: `conversion-recovery`
+
+Use this mode only when the baseline conversion exits unsuccessfully without
+producing a PDF. Keep `gt.jpg`, `after.jpg`, the layout audit and each page's
+strict render-cluster report, following the same inspection and disposition
+rules as `fix`. Declare `Before: None`; never fabricate `before.jpg`.
+Include rendered GT/After previews and an issue-local `Baseline failure report`:
+
+```json
+{
+  "schema_version": 1,
+  "status": "conversion_failed",
+  "fixture": "tests/fixtures/docx/example.docx",
+  "source_sha256": "<64 lowercase hex characters>",
+  "baseline_revision": "<40 lowercase hex characters>",
+  "converter_sha256": "<64 lowercase hex characters>",
+  "exit_code": 1,
+  "output_pdf_generated": false,
+  "diagnostic_path": "assets/bugfixes/issue-<number>/conversion-failure.txt",
+  "diagnostic_sha256": "<64 lowercase hex characters>"
+}
+```
+
+Save this as `assets/bugfixes/issue-<number>/conversion-failure.json` and change
+it with the PR. Capture the diagnostic from a fresh baseline run in an empty
+output directory; remove private paths before hashing the captured text.
+The gate checks the fixture/log hashes, failure fields and absent before image.
+Reviewers must verify the baseline revision, binary provenance and actual
+failure independently; a receipt does not prove execution. This mode does not
+waive current-output audits or qualify as a text-layer-only fix.
 
 ## Evidence mode: `defect`
 

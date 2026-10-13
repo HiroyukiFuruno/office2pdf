@@ -259,6 +259,10 @@ Native Rust callers can use the same per-conversion path through
 | PPTX | Supported | Slides, text boxes, shapes, tables, images, masters, gradients, effects |
 | XLSX | Supported | Sheets, formatting, merged cells, column/row sizing, conditional formatting |
 
+Damaged DOCX PNG pictures recover available pixels with warnings and keep their
+drawing extent; undecodable headers use a black placeholder. Partial previews
+may differ from Word's damaged-image rendering.
+
 DOCX line-based section page borders support page/text offsets, per-edge paint,
 first-page selection, and front/back placement. Custom `FlowPage` values use
 `page_borders: None` to omit decorations. Decorative art borders are not supported.

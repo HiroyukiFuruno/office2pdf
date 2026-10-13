@@ -9,11 +9,9 @@ Direct OOXML-to-PDF renderer with a Word-exported reference corpus. Useful
 implementation references: `src/docx/alt_chunk.rs` (HTML/MHTML imports),
 `sections.rs` (page borders, line numbering, vertical alignment), `numbering.rs`
 (restart/override/legal-numbering semantics), and the preset-geometry engine.
-Our Typst backend already handles some features this renderer lacks, including
-complex-script shaping; copy patterns only after reproducing a missing behavior.
+Our Typst backend handles complex-script shaping; reproduce gaps before copying patterns.
 
-The pinned corpus has 393 inputs/391 references; 376 published cases identify
-office2pdf by release version only. Re-run current code.
+Pinned corpus: 393 inputs/391 references; re-run current code against release-only comparisons.
 
 ```sh
 python3 scripts/audit_docxide_corpus.py --corpus-root /path/to/pinned/docxide-pdf \
@@ -32,8 +30,7 @@ URI-based parsing backported from [docx-rs#934](https://github.com/bokuweb/docx-
 
 This is triage, not a visual pass: missing searchable text can still be painted
 as an image/path, and extraction order or font availability can change scores.
-Every selected fix still needs fresh native GT, all comparison axes, direct image
-inspection, and explicit issue dispositions under our visual contract.
+Fixes need fresh native GT, all comparison axes, image inspection and issue dispositions.
 HTML expansion follows its CSS mapping, using Rust [html5ever](https://github.com/servo/html5ever) and
 [mailparse](https://github.com/staktrace/mailparse); docx-rs and contextual scans read the expanded XML.
 Section line numbering maps starts, intervals and restarts to Typst margin labels.
@@ -47,3 +44,6 @@ restarts, suppression, implicit counters and skipped-level origins. MS-OI29500 2
 confirms Word ignores restart rules inside complete level overrides.
 Marker clearance/suffixes follow `pdf/list_label.rs`. Native probes calibrate
 font/size/tab/wrap differences and inline marker ascent versus body descent/leading.
+Damaged-PNG handling follows `src/pdf/images.rs`: preserve the drawing when
+decoding fails. A direct `png` dependency reuses locked 0.18.1 to recover samples;
+native Word probes check CRC and truncated-media behavior.

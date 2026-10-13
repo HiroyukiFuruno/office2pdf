@@ -1,0 +1,55 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 2109.5424,
+      "bbox_pt": {
+        "height": 17.76,
+        "width": 120.48,
+        "x": 72.0,
+        "y": 92.64
+      },
+      "disposition": {
+        "issue": "#2110",
+        "kind": "issue",
+        "note": "Current full-page and picture crop show recovered colored rows where fresh Word paints a black damaged-image preview; material image-content difference, not rasterizer noise."
+      },
+      "id": "p1-6a666e4ffcad",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 21.4272,
+      "bbox_pt": {
+        "height": 6.24,
+        "width": 4.8,
+        "x": 124.8,
+        "y": 75.36
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Fresh chart-label crop shows the same Cambria glyph outlines and alignment, with edge-weight/rasterization differences."
+      },
+      "id": "p1-ffbb5e847b7c",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 2,
+    "duplicate": 0,
+    "total": 2,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
