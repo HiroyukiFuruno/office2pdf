@@ -27,8 +27,8 @@ Token identities are hashed; source-document text stays outside the report.
 The baseline is `tests/compatibility/docxide-pdf/baseline.json`.
 Baseline against main `39bcb289`: 390 comparisons, two missing references,
 one image-decoding failure, 64 page-count differences, and 27 empty text layers.
-Custom-XML text is retained. Historical feature targets were HTML/MHTML imports,
-page borders and line numbering; empty shape text layers need pixel inspection.
+Custom-XML text is retained. Alternate-prefix body/header/footer runs use
+URI-based parsing backported from [docx-rs#934](https://github.com/bokuweb/docx-rs/pull/934).
 
 This is triage, not a visual pass: missing searchable text can still be painted
 as an image/path, and extraction order or font availability can change scores.
