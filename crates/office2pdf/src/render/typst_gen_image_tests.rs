@@ -57,6 +57,7 @@ fn floating_band_picture(
                 width,
                 height,
                 crop,
+                fill_rect: None,
                 stroke: None,
                 alignment: None,
                 clip_shape: None,
@@ -261,6 +262,7 @@ fn make_image(format: ImageFormat, width: Option<f64>, height: Option<f64>) -> B
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     })
@@ -284,6 +286,7 @@ fn picture_paragraph_spacing_becomes_block_gaps() {
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: Some(ImageParagraphSpacing {
             before: Some(6.0),
@@ -350,6 +353,7 @@ fn test_image_crop_preprocesses_raster_asset() {
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     })])]);
@@ -531,6 +535,7 @@ fn test_image_with_border_renders_box_stroke() {
         }),
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     })])]);
@@ -586,6 +591,7 @@ fn a_bordered_picture_casts_its_shadow_from_the_stroked_frame() {
                 }),
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: Some(Shadow {
                     blur_radius: 0.0,
                     distance: 4.0,
@@ -647,6 +653,7 @@ fn a_bordered_picture_rounds_its_shadow_corner_like_the_border_join() {
                     }),
                     alignment: None,
                     clip_shape: None,
+                    fill_rect: None,
                     // Crisp, so the border's own arc is the whole radius.
                     shadow: Some(Shadow {
                         blur_radius: 0.0,
@@ -704,6 +711,7 @@ fn a_blurred_picture_uses_one_filtered_frame_asset() {
                 stroke: None,
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: Some(Shadow {
                     // The theme effect `customGeo.pptx` page 46 carries.
                     blur_radius: 40000.0 / 12700.0,
@@ -769,6 +777,7 @@ fn test_fixed_image_with_border_uses_rect_overlay() {
                 }),
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
             }),
@@ -820,6 +829,7 @@ fn a_fixed_picture_flip_is_applied_inside_its_rotation() {
                 stroke: None,
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
             }),
@@ -877,6 +887,7 @@ fn oversized_turned_picture() -> (Document, [(f64, f64); 4]) {
                 stroke: None,
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
             }),
@@ -993,6 +1004,7 @@ fn an_svg_crop_narrows_the_view_box() {
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     })])]);
@@ -1057,6 +1069,7 @@ fn an_uncropped_svg_is_left_alone() {
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     })])]);

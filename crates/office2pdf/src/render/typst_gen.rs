@@ -1533,14 +1533,18 @@ fn generate_fixed_page(
 ///
 /// PowerPoint drops master text covered by later slide artwork from its PDF
 /// text layer. Keep this deliberately narrow: non-page-sized pictures and
-/// transformed/clipped images may leave part of the text visible (issue #1432).
+/// transformed, clipped, or destination-inset images may leave text visible
+/// (issue #1432).
 fn is_full_page_opaque_image(element: &FixedElement, page_size: PageSize) -> bool {
     const EDGE_TOLERANCE_PT: f64 = 0.5;
 
     let FixedElementKind::Image(image) = &element.kind else {
         return false;
     };
-    if image.rotation_deg.is_some_and(|degrees| degrees != 0.0) || image.clip_shape.is_some() {
+    if image.rotation_deg.is_some_and(|degrees| degrees != 0.0)
+        || image.clip_shape.is_some()
+        || image.fill_rect.is_some()
+    {
         return false;
     }
     if element.x > EDGE_TOLERANCE_PT
@@ -2329,6 +2333,7 @@ fn fixed_raster_placement_y(elem: &FixedElement, page_height_pt: f64) -> f64 {
         || image.rotation_deg.is_some_and(|degrees| degrees != 0.0)
         || image.crop.is_some_and(|crop| !crop.is_empty())
         || image.clip_shape.is_some()
+        || image.fill_rect.is_some()
         || elem.y <= 0.0
     {
         return elem.y;
@@ -5732,6 +5737,7 @@ fn generate_block_inner(
             generate_floating_shape(out, fs, ctx);
             Ok(())
         }
+        Block::DrawingGroup(group) => generate_drawing_group(out, group, ctx),
         Block::List(list) => {
             // Grid-snapped line height applies to list items too (Word's
             // document grid covers all body text).
@@ -5855,6 +5861,37 @@ fn generate_image(out: &mut String, img: &ImageData, ctx: &mut GenCtx) {
         generate_image(out, &inner, ctx);
         out.pop();
         out.push_str("]\n");
+        return;
+    }
+
+    if let Some(fill) = img.fill_rect
+        && let (Some(width), Some(height)) = (img.width, img.height)
+    {
+        let fill_width = width * (1.0 - fill.left - fill.right);
+        let fill_height = height * (1.0 - fill.top - fill.bottom);
+        if !(fill_width.is_finite()
+            && fill_height.is_finite()
+            && fill_width > 0.0
+            && fill_height > 0.0)
+        {
+            return;
+        }
+        // Destination outsets enlarge the source inside the fixed shape frame;
+        // insets expose its background. The frame itself never changes size.
+        let _ = write!(
+            out,
+            "#box(width: {}pt, height: {}pt, clip: true)[#place(top + left, dx: {}pt, dy: {}pt)[",
+            format_f64(width),
+            format_f64(height),
+            format_f64(width * fill.left),
+            format_f64(height * fill.top),
+        );
+        let mut inner = img.clone();
+        inner.fill_rect = None;
+        inner.width = Some(fill_width);
+        inner.height = Some(fill_height);
+        generate_image(out, &inner, ctx);
+        out.push_str("]]\n");
         return;
     }
 
@@ -6042,6 +6079,71 @@ fn generate_floating_shape(out: &mut String, fs: &FloatingShape, ctx: &mut GenCt
     out.push_str("#box(width: 0pt, height: 0pt)[\n");
     generate_floating_shape_overlay(out, fs, ctx);
     out.push_str("]\n");
+}
+
+fn generate_drawing_group(
+    out: &mut String,
+    group: &crate::ir::DrawingGroup,
+    ctx: &mut GenCtx,
+) -> Result<(), ConvertError> {
+    if let Some(anchor) = &group.anchor {
+        out.push_str("#box(width: 0pt, height: 0pt)[#context [\n");
+        let margins = ctx.active_page_margins.unwrap_or_default();
+        let x_origin = if anchor.horizontal_anchor == FrameAnchor::Margin {
+            margins.left
+        } else {
+            0.0
+        };
+        let y_origin = if anchor.vertical_anchor == FrameAnchor::Margin {
+            margins.top
+        } else {
+            0.0
+        };
+        let x = if anchor.horizontal_anchor == FrameAnchor::Text {
+            format!("{}pt", format_f64(anchor.offset_x))
+        } else {
+            format!(
+                "{}pt - here().position().x",
+                format_f64(x_origin + anchor.offset_x)
+            )
+        };
+        let y = if anchor.vertical_anchor == FrameAnchor::Text {
+            format!("{}pt", format_f64(anchor.offset_y))
+        } else {
+            format!(
+                "{}pt - here().position().y",
+                format_f64(y_origin + anchor.offset_y)
+            )
+        };
+        let _ = write!(out, "#place(top + left, dx: {x}, dy: {y}");
+        if matches!(
+            anchor.wrap_mode,
+            crate::ir::WrapMode::TopAndBottom
+                | crate::ir::WrapMode::Square
+                | crate::ir::WrapMode::Tight
+        ) {
+            out.push_str(", float: true");
+        }
+        out.push_str(")[\n");
+    }
+    let _ = writeln!(
+        out,
+        "#block(width: {}pt, height: {}pt, breakable: false, above: 0pt, below: 0pt)[",
+        format_f64(group.width),
+        format_f64(group.height)
+    );
+    // Fixed DrawingML text calls these helpers even inside a flowing document.
+    // Keep their definitions local so ordinary Word paragraphs are unaffected.
+    write_powerpoint_ligature_state(out);
+    write_powerpoint_advance_grid_helpers(out);
+    for element in &group.elements {
+        generate_fixed_element(out, element, group.height, ctx)?;
+    }
+    out.push_str("]\n");
+    if group.anchor.is_some() {
+        out.push_str("]\n]]\n");
+    }
+    Ok(())
 }
 
 fn generate_floating_shape_overlay(out: &mut String, fs: &FloatingShape, ctx: &mut GenCtx) {

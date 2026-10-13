@@ -1921,6 +1921,12 @@ fn visit_block_fonts(block: &Block, visitor: &mut impl FnMut(&str, &str) -> bool
                 .all(|paragraph| visit_paragraph_fonts(paragraph, visitor))
         }),
         Block::Chart(chart) => visit_chart_fonts(chart, visitor),
+        Block::DrawingGroup(group) => group.elements.iter().all(|element| match &element.kind {
+            FixedElementKind::TextBox(text_box) => visit_blocks_fonts(&text_box.content, visitor),
+            FixedElementKind::Table(table) => visit_table_fonts(table, visitor),
+            FixedElementKind::Chart(chart) => visit_chart_fonts(chart, visitor),
+            _ => true,
+        }),
         Block::Image(_)
         | Block::InlineImages(_)
         | Block::FloatingImage(_)

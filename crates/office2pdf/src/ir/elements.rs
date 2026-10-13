@@ -164,6 +164,8 @@ pub enum Block {
     FloatingImage(FloatingImage),
     FloatingTextBox(FloatingTextBox),
     FloatingShape(FloatingShape),
+    /// Cached DrawingML artwork that occupies one document-flow frame.
+    DrawingGroup(Box<DrawingGroup>),
     List(List),
     MathEquation(MathEquation),
     /// Boxed for the same reason [`super::document::FixedElementKind::Chart`]
@@ -1169,6 +1171,27 @@ pub enum WrapMode {
     None,
 }
 
+/// Fixed-position shapes, pictures and searchable text within a flow frame.
+#[derive(Debug, Clone)]
+pub struct DrawingGroup {
+    pub width: f64,
+    pub height: f64,
+    /// Extra inline layout space around the DrawingML frame, in points.
+    pub effect_extent: Insets,
+    pub elements: Vec<super::document::FixedElement>,
+    /// None places the frame inline; an anchor positions it independently.
+    pub anchor: Option<DrawingGroupAnchor>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DrawingGroupAnchor {
+    pub offset_x: f64,
+    pub offset_y: f64,
+    pub horizontal_anchor: FrameAnchor,
+    pub vertical_anchor: FrameAnchor,
+    pub wrap_mode: WrapMode,
+}
+
 /// A floating image with positioning and text wrap mode.
 #[derive(Debug, Clone)]
 pub struct FloatingImage {
@@ -1808,6 +1831,16 @@ impl ImageCrop {
     }
 }
 
+/// DrawingML destination offsets, as signed fractions of the picture frame.
+/// Positive values inset the source; negative values expand it before clipping.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ImageFillRect {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
+}
+
 /// Image data.
 #[derive(Debug, Clone)]
 pub struct ImageData {
@@ -1834,6 +1867,8 @@ pub struct ImageData {
     pub alignment: Option<Alignment>,
     /// Clip geometry from the picture's `<a:prstGeom>` (crop to shape).
     pub clip_shape: Option<ImageClipShape>,
+    /// Stretch the cropped source into this rectangle before shape clipping.
+    pub fill_rect: Option<ImageFillRect>,
     /// Outer shadow effect (`a:effectLst/a:outerShdw` on `p:pic`).
     pub shadow: Option<Shadow>,
     /// Vertical gaps declared by the containing paragraph's `w:spacing`

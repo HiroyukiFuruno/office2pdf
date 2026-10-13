@@ -54,6 +54,7 @@ pub(super) use notes::{
 };
 pub(super) use page_borders::scan_page_borders;
 pub(super) use page_numbers::scan_page_numbering;
+pub(super) use paragraph_cursor::is_skipped_subtree;
 pub(super) use paragraph_mark::ParagraphMarkContext;
 pub(super) use paragraph_shading::{ParagraphShadingContext, scan_style_paragraph_shading};
 pub(super) use picture::PictureCropContext;
@@ -79,6 +80,7 @@ pub(super) struct DocxConversionContext {
     pub(super) picture_crops: PictureCropContext,
     pub(super) drawing_text_boxes: DrawingTextBoxContext,
     pub(super) drawing_shapes: DrawingShapeContext,
+    pub(super) smartart: super::smartart::SmartArtContext,
     pub(super) table_headers: TableHeaderContext,
     pub(super) table_styles: TableStyleContext,
     pub(super) vml_text_boxes: VmlTextBoxContext,
@@ -117,6 +119,7 @@ impl DocxConversionContext {
         let story_xml: Option<&str> = Some(story_xml);
         Self {
             theme_fonts,
+            smartart: super::smartart::SmartArtContext::default(),
             notes: NoteContext::empty(),
             wraps: build_wrap_context_from_xml(story_xml),
             picture_crops: PictureCropContext::from_xml(story_xml),

@@ -1278,6 +1278,7 @@ fn sheet_image(x: f64, width: f64) -> crate::ir::SheetImage {
             stroke: None,
             alignment: None,
             clip_shape: None,
+            fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
             flip_h: false,

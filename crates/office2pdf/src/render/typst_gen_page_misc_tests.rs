@@ -1312,6 +1312,7 @@ fn multiline_sheet_footer_keeps_text_clear_of_inline_picture() {
             stroke: None,
             alignment: None,
             clip_shape: None,
+            fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
         }));
@@ -5580,6 +5581,7 @@ fn sheet_with_a_picture_over_a_filled_panel() -> Page {
                 stroke: None,
                 alignment: None,
                 clip_shape: None,
+                fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
             },

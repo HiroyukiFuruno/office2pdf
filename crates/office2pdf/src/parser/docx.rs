@@ -72,6 +72,8 @@ mod lists;
 mod media;
 #[path = "docx_sections.rs"]
 mod sections;
+#[path = "docx_smartart.rs"]
+mod smartart;
 #[path = "docx_styles.rs"]
 mod styles;
 #[path = "docx_tables.rs"]
@@ -329,6 +331,11 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             let metafile_images = build_document_metafile_image_map(&mut archive);
             let ctx = DocxConversionContext {
                 theme_fonts: theme_fonts.clone(),
+                smartart: smartart::SmartArtContext::from_archive(
+                    doc_xml.as_deref(),
+                    theme_xml.as_deref(),
+                    &mut archive,
+                ),
                 notes,
                 wraps,
                 picture_crops: PictureCropContext::from_xml(doc_xml.as_deref()),
@@ -379,6 +386,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             metadata: crate::ir::Metadata::default(),
             ctx: DocxConversionContext {
                 theme_fonts: ThemeFonts::default(),
+                smartart: smartart::SmartArtContext::default(),
                 notes: NoteContext::empty(),
                 wraps: WrapContext::empty(),
                 picture_crops: PictureCropContext::default(),
@@ -444,6 +452,8 @@ impl Parser for DocxParser {
             pair_kerning,
             default_language,
         } = build_zip_preparse_assets(data);
+
+        warnings.append(&mut ctx.smartart.warnings);
 
         if section_alignment
             .iter()
@@ -1141,7 +1151,24 @@ fn extract_run_children_media(
             let canvas_image_offset: Option<(f64, f64)> =
                 ctx.drawing_shapes.consume_canvas_image_offset();
             let crop = ctx.picture_crops.next_drawing(false);
-            if let Some(wpg_drawing) = wpg_drawing {
+            if let Some(mut group) = ctx.smartart.consume_next() {
+                if let Some(anchor) = group.anchor.as_mut() {
+                    anchor.wrap_mode = ctx.wraps.consume_next();
+                    text_box_blocks.push(Block::DrawingGroup(Box::new(group)));
+                } else {
+                    // Word seats an inline diagram on its paragraph's baseline,
+                    // reserving its effect extents outside the drawing itself.
+                    let padding: crate::ir::Insets = group.effect_extent;
+                    inline_text_boxes.push(InlineTextBox {
+                        width: group.width + padding.left + padding.right,
+                        height: group.height + padding.top + padding.bottom,
+                        content: vec![Block::DrawingGroup(Box::new(group))],
+                        padding,
+                        stroke: None,
+                        fill: None,
+                    });
+                }
+            } else if let Some(wpg_drawing) = wpg_drawing {
                 // docx-rs represents only one child from a WPG group. Use the
                 // complete raw-XML group instead to avoid dropping its siblings.
                 text_box_blocks.extend(convert_wpg_drawing_blocks(
@@ -1774,9 +1801,26 @@ fn convert_paragraph_blocks(
                             // whatever text its own `w:r` carried, so it joins the runs
                             // rather than becoming a flow block (issue #1690).
                             for inline_box in media.inline_text_boxes {
+                                let is_cached_drawing: bool = inline_box
+                                    .content
+                                    .iter()
+                                    .any(|block| matches!(block, Block::DrawingGroup(_)));
+                                // The cached drawing paints no host-run glyphs, but
+                                // its resolved font still sizes automatic spacing.
+                                let style: TextStyle = if is_cached_drawing {
+                                    resolve_run_style(
+                                        &run_segment.run_property,
+                                        is_small_caps,
+                                        resolved_style,
+                                        style_map,
+                                        &ctx.theme_fonts,
+                                    )
+                                } else {
+                                    TextStyle::default()
+                                };
                                 runs.push(Run {
                                     text: String::new(),
-                                    style: TextStyle::default(),
+                                    style,
                                     href: None,
                                     footnote: None,
                                     inline_box: Some(Box::new(inline_box)),
