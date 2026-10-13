@@ -1,0 +1,188 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 282.0096,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 48.96,
+        "x": 251.04,
+        "y": 80.64
+      },
+      "disposition": {
+        "issue": "#2130",
+        "kind": "issue",
+        "note": "Current full page and highlight crop show missing green coverage above and below Foo."
+      },
+      "id": "p1-a802c8916ef7",
+      "region": "top"
+    },
+    {
+      "area_pt2": 92.6208,
+      "bbox_pt": {
+        "height": 1.44,
+        "width": 64.32,
+        "x": 196.8,
+        "y": 624.0
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-9deaba58d7fb",
+      "region": "bottom"
+    },
+    {
+      "area_pt2": 70.5024,
+      "bbox_pt": {
+        "height": 1.44,
+        "width": 48.96,
+        "x": 251.04,
+        "y": 117.6
+      },
+      "disposition": {
+        "issue": "#2130",
+        "kind": "issue",
+        "note": "Current full page and highlight crop show missing green coverage above and below Foo."
+      },
+      "id": "p1-4e6d6623ca62",
+      "region": "top"
+    },
+    {
+      "area_pt2": 33.408,
+      "bbox_pt": {
+        "height": 6.72,
+        "width": 10.56,
+        "x": 252.96,
+        "y": 203.52
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-66d41a674508",
+      "region": "top"
+    },
+    {
+      "area_pt2": 25.8048,
+      "bbox_pt": {
+        "height": 2.88,
+        "width": 12.0,
+        "x": 326.88,
+        "y": 199.2
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-deb2950e4bc2",
+      "region": "top"
+    },
+    {
+      "area_pt2": 22.8096,
+      "bbox_pt": {
+        "height": 5.28,
+        "width": 10.08,
+        "x": 216.48,
+        "y": 212.64
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-fc9851cc44ba",
+      "region": "top"
+    },
+    {
+      "area_pt2": 21.888,
+      "bbox_pt": {
+        "height": 1.92,
+        "width": 11.52,
+        "x": 252.96,
+        "y": 87.84
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-b7065efa518d",
+      "region": "top"
+    },
+    {
+      "area_pt2": 20.9664,
+      "bbox_pt": {
+        "height": 3.84,
+        "width": 11.04,
+        "x": 286.56,
+        "y": 108.0
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-20bd9dc1a8ba",
+      "region": "top"
+    },
+    {
+      "area_pt2": 20.9664,
+      "bbox_pt": {
+        "height": 3.84,
+        "width": 11.04,
+        "x": 268.8,
+        "y": 108.0
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Freshly inspected text/underline fragments: fine baseline, glyph-edge and decoration-placement differences; no absent, clipped or wrong-style label."
+      },
+      "id": "p1-7bfb760a93b7",
+      "region": "top"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [
+    {
+      "bbox_pt": {
+        "height": 260.0,
+        "width": 150.0,
+        "x": 68.0,
+        "y": 72.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current full-resolution curved-band crop preserves the outline and width; sparse edge fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 108.0,
+        "width": 115.0,
+        "x": 174.0,
+        "y": 440.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current matched lower-card crop preserves rounded corners; sparse corner-edge fragments remain below the material-cluster floor."
+    }
+  ],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 9,
+    "duplicate": 0,
+    "total": 9,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
