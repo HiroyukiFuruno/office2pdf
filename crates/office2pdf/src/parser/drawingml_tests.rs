@@ -199,9 +199,45 @@ fn a_theme_keyed_by_the_using_name_keeps_winning() {
 
 #[test]
 fn tint_blends_toward_white() {
-    // OOXML tint 0.4: channel = 255 - (255 - c) * 0.4
+    // Measured from the native Word export of drawingml_linear_tint.docx.
     let out = apply_color_transforms(Color::new(0, 100, 255), &[ColorTransform::Tint(0.4)]);
-    assert_eq!(out, Color::new(153, 193, 255));
+    assert_eq!(out, Color::new(203, 211, 255));
+}
+
+#[test]
+fn tint_matches_native_word_theme_and_direct_colors() {
+    let samples = [
+        (Color::new(79, 129, 189), 0.6, Color::new(178, 193, 219)),
+        (Color::new(21, 96, 130), 0.4, Color::new(204, 210, 216)),
+        (Color::new(255, 0, 0), 0.5, Color::new(255, 188, 188)),
+        (Color::new(0, 0, 0), 0.5, Color::new(188, 188, 188)),
+        (Color::new(1, 4, 10), 0.6, Color::new(170, 170, 170)),
+    ];
+    for (input, tint, expected) in samples {
+        assert_eq!(
+            apply_color_transforms(input, &[ColorTransform::Tint(tint)]),
+            expected,
+            "native Word tint of {input:?} at {tint}"
+        );
+    }
+}
+
+#[test]
+fn tint_endpoints_preserve_input_or_produce_white() {
+    for color in [
+        Color::new(1, 4, 10),
+        Color::new(79, 129, 189),
+        Color::new(255, 255, 255),
+    ] {
+        assert_eq!(
+            apply_color_transforms(color, &[ColorTransform::Tint(1.0)]),
+            color
+        );
+        assert_eq!(
+            apply_color_transforms(color, &[ColorTransform::Tint(0.0)]),
+            Color::new(255, 255, 255)
+        );
+    }
 }
 
 #[test]

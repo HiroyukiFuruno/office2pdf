@@ -1,6 +1,50 @@
 use super::*;
 use crate::ir::{ArrowHead, LineCap, LineJoin, ShapeKind};
 
+#[test]
+fn wpg_tints_match_native_word_swatch_fills() {
+    let fixture = include_bytes!("../../../../tests/fixtures/docx/drawingml_linear_tint.docx");
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(fixture)).unwrap();
+    let mut document_xml = String::new();
+    std::io::Read::read_to_string(
+        &mut archive.by_name("word/document.xml").unwrap(),
+        &mut document_xml,
+    )
+    .unwrap();
+    let mut theme_xml = String::new();
+    std::io::Read::read_to_string(
+        &mut archive.by_name("word/theme/theme1.xml").unwrap(),
+        &mut theme_xml,
+    )
+    .unwrap();
+    let records = scan_wpg_drawings(&document_xml, Some(&theme_xml));
+    let fills: Vec<Option<Color>> = records
+        .iter()
+        .map(|record| {
+            record.as_ref().expect("drawing group").children[0]
+                .shape
+                .as_ref()
+                .expect("rectangle")
+                .shape
+                .fill
+        })
+        .collect();
+    // Flat interior colors sampled from a fresh native Word PDF export.
+    assert_eq!(
+        fills,
+        vec![
+            Some(Color::new(178, 193, 219)),
+            Some(Color::new(204, 210, 216)),
+            Some(Color::new(255, 188, 188)),
+            Some(Color::new(203, 211, 255)),
+            Some(Color::new(188, 188, 188)),
+            Some(Color::new(170, 170, 170)),
+            Some(Color::white()),
+            Some(Color::new(21, 96, 130)),
+        ]
+    );
+}
+
 /// A document.xml body wrapper around `inner` run/drawing markup.
 fn body(inner: &str) -> String {
     format!(
