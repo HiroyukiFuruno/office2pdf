@@ -332,3 +332,59 @@ fn docx_cached_smartart_degradation_warnings_identify_the_document_format() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_effect_extents_position_ink_and_reserve_flow() {
+    let placement = |left: f64, top: f64, right: f64, bottom: f64| -> (f64, f64, f64, f64) {
+        let package = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+            xml.replacen(
+                r#"<wp:effectExtent l="12700" t="38100" r="12700" b="12700"/>"#,
+                &format!(
+                    r#"<wp:effectExtent l="{}" t="{}" r="{}" b="{}"/>"#,
+                    (left * 12700.0) as i64,
+                    (top * 12700.0) as i64,
+                    (right * 12700.0) as i64,
+                    (bottom * 12700.0) as i64,
+                ),
+                1,
+            )
+            .replacen("</w:p>", "<w:r><w:t>End</w:t></w:r></w:p>", 1)
+        });
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let source = crate::render::typst_gen::generate_typst(&document)
+            .unwrap()
+            .source;
+        let placed = crate::render::pdf::compiled_text_runs(&source, 0).unwrap();
+        let first = placed.iter().find(|run| run.text == "Foo").unwrap();
+        let end = placed.iter().find(|run| run.text == "End").unwrap();
+        let following = placed
+            .iter()
+            .filter(|run| run.text == "Dolor")
+            .max_by(|a, b| a.baseline_pt.total_cmp(&b.baseline_pt))
+            .unwrap();
+        (
+            first.left_pt,
+            first.baseline_pt,
+            following.baseline_pt,
+            end.left_pt,
+        )
+    };
+    let control = placement(0.0, 0.0, 0.0, 0.0);
+    for (left, top, right, bottom) in [
+        (1.0, 3.0, 1.0, 1.0),
+        (2.5, 7.0, 0.75, 4.0),
+        (0.0, 0.0, 0.0, 5.0),
+    ] {
+        let current = placement(left, top, right, bottom);
+        assert!((current.0 - control.0 - left).abs() < 0.01);
+        assert!((current.1 - control.1 - top).abs() < 0.01);
+        assert!((current.3 - control.3 - left - right).abs() < 0.01);
+        assert!(
+            (current.2 - control.2 - top - bottom).abs() < 0.01,
+            "following diagram must reserve both effect edges: {current:?}, {control:?}"
+        );
+    }
+}

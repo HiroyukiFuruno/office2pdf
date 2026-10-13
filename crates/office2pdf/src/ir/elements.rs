@@ -1176,6 +1176,8 @@ pub enum WrapMode {
 pub struct DrawingGroup {
     pub width: f64,
     pub height: f64,
+    /// Extra inline layout space around the DrawingML frame, in points.
+    pub effect_extent: Insets,
     pub elements: Vec<super::document::FixedElement>,
     /// None places the frame inline; an anchor positions it independently.
     pub anchor: Option<DrawingGroupAnchor>,

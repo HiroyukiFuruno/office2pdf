@@ -33,6 +33,7 @@ pub(super) struct SmartArtContext {
 struct Frame {
     width: f64,
     height: f64,
+    effect_extent: crate::ir::Insets,
     data_id: Option<String>,
     anchor: Option<DrawingGroupAnchor>,
     horizontal_position: bool,
@@ -93,6 +94,14 @@ impl SmartArtContext {
                                 b"extent" => {
                                     frame.width = number(&element, b"cx");
                                     frame.height = number(&element, b"cy");
+                                }
+                                b"effectExtent" => {
+                                    frame.effect_extent = crate::ir::Insets {
+                                        left: number(&element, b"l"),
+                                        top: number(&element, b"t"),
+                                        right: number(&element, b"r"),
+                                        bottom: number(&element, b"b"),
+                                    };
                                 }
                                 b"positionH" | b"positionV" => {
                                     frame.horizontal_position = name.as_ref() == b"positionH";
@@ -258,6 +267,7 @@ fn load_frame<R: Read + Seek>(
         Some(DrawingGroup {
             width: frame.width,
             height: frame.height,
+            effect_extent: frame.effect_extent,
             elements,
             anchor: frame.anchor,
         })

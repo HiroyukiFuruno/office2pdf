@@ -1153,12 +1153,13 @@ fn extract_run_children_media(
                     text_box_blocks.push(Block::DrawingGroup(Box::new(group)));
                 } else {
                     // Word seats an inline diagram on its paragraph's baseline,
-                    // just like an inline text box, including the paragraph gaps.
+                    // reserving its effect extents outside the drawing itself.
+                    let padding: crate::ir::Insets = group.effect_extent;
                     inline_text_boxes.push(InlineTextBox {
-                        width: group.width,
-                        height: group.height,
+                        width: group.width + padding.left + padding.right,
+                        height: group.height + padding.top + padding.bottom,
                         content: vec![Block::DrawingGroup(Box::new(group))],
-                        padding: crate::ir::Insets::default(),
+                        padding,
                         stroke: None,
                         fill: None,
                     });
