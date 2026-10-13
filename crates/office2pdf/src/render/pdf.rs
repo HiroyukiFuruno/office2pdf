@@ -1054,6 +1054,8 @@ pub(crate) struct PaintedPrimitive {
     pub transform: typst::layout::Transform,
     /// Solid rectangle fill; other shape geometry and paint types remain absent.
     pub rectangle_fill: Option<typst::visualize::Color>,
+    /// The face actually selected for a glyph run, absent on non-text paint.
+    pub text_font: Option<typst::text::FontInfo>,
 }
 
 /// Stroke geometry after compilation, before the enclosing frame transform.
@@ -1106,6 +1108,17 @@ pub(crate) fn compiled_page_paint_sequences(
     typst_source: &str,
     images: &[ImageAsset],
 ) -> Result<Vec<Vec<PaintedPrimitive>>, ConvertError> {
+    compiled_page_paint_sequences_with_fonts(typst_source, images, &[])
+}
+
+/// Compile paint geometry with the same caller-provided faces the codegen
+/// metrics use, so a controlled-font probe cannot silently paint a fallback.
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) fn compiled_page_paint_sequences_with_fonts(
+    typst_source: &str,
+    images: &[ImageAsset],
+    fonts: &[Font],
+) -> Result<Vec<Vec<PaintedPrimitive>>, ConvertError> {
     use typst::layout::{Frame, FrameItem, Transform};
     use typst::visualize::Geometry;
 
@@ -1148,6 +1161,7 @@ pub(crate) fn compiled_page_paint_sequences(
                 }
                 FrameItem::Image(_, size, _) => out.push(PaintedPrimitive {
                     kind: PaintedKind::Image,
+                    text_font: None,
                     rectangle_fill: None,
                     geometry: None,
                     transform: at,
@@ -1183,6 +1197,7 @@ pub(crate) fn compiled_page_paint_sequences(
                     };
                     out.push(PaintedPrimitive {
                         kind: PaintedKind::Shape,
+                        text_font: None,
                         geometry: Some(shape.geometry.clone()),
                         transform: at,
                         rectangle_fill: match (&shape.geometry, &shape.fill) {
@@ -1213,6 +1228,7 @@ pub(crate) fn compiled_page_paint_sequences(
                     let bottom: (f64, f64) = place(at, width, size / 4.0);
                     out.push(PaintedPrimitive {
                         kind: PaintedKind::Text,
+                        text_font: Some(text.font.info().clone()),
                         rectangle_fill: None,
                         geometry: None,
                         transform: at,
@@ -1230,7 +1246,7 @@ pub(crate) fn compiled_page_paint_sequences(
         }
     }
 
-    let world = MinimalWorld::new(typst_source, images, &[]);
+    let world = MinimalWorld::new_with_in_memory_fonts(typst_source, images, &[], fonts);
     let warned = typst::compile::<PagedDocument>(&world);
     let mut document = warned.output.map_err(|errors| {
         let messages: Vec<String> = errors.iter().map(|e| e.message.to_string()).collect();
