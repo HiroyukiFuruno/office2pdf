@@ -348,6 +348,9 @@ CLI build, run `scripts/audit_docxide_corpus.py --help` for repeatable conversio
 page-count, and searchable-text triage. Geometry, pixels, fonts, and direct visual
 inspection remain required before calling a document correct.
 
+Picture outlines in PPTX and cached DOCX drawings retain ellipse, rounded-rectangle
+and custom-path geometry, line opacity, and picture flips/rotation.
+
 DOCX body SmartArt imports saved drawing caches as vector shapes and searchable
 text, inline or anchored in Word flow. The IR represents them as `DrawingGroup`
 blocks; inline frames reserve their effect extents. Picture fills apply source

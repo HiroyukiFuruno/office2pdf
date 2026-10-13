@@ -534,6 +534,7 @@ fn anchored_image(
         crop: None,
         stroke: None,
         alignment: None,
+        stroke_outline: None,
         clip_shape: None,
         fill_rect: None,
         shadow: None,

@@ -1012,6 +1012,61 @@ pub(super) fn write_image_border_stroke(out: &mut String, stroke: &BorderSide) {
     out.push_str(&drawingml_stroke_value(stroke));
 }
 
+/// Paint only the picture frame, after masking and inside its flip/rotation.
+pub(super) fn write_image_outline(out: &mut String, image: &ImageData, width: f64, height: f64) {
+    use crate::ir::ImageOutlineGeometry;
+    let Some(stroke) = image.stroke.as_ref() else {
+        return;
+    };
+    if stroke.style == BorderLineStyle::None || stroke.width <= 0.0 {
+        return;
+    }
+    let outline = image.stroke_outline.as_ref();
+    let rectangle = ImageOutlineGeometry::Rectangle;
+    let geometry = outline
+        .map(|outline| &outline.geometry)
+        .unwrap_or(&rectangle);
+    match geometry {
+        ImageOutlineGeometry::Ellipse => out.push_str("#ellipse("),
+        ImageOutlineGeometry::Path { .. } => out.push_str("#curve(fill-rule: \"even-odd\", "),
+        _ => out.push_str("#rect("),
+    }
+    if !matches!(geometry, ImageOutlineGeometry::Path { .. }) {
+        let _ = write!(
+            out,
+            "width: {}pt, height: {}pt, ",
+            format_f64(width),
+            format_f64(height)
+        );
+    }
+    out.push_str("fill: none, stroke: ");
+    if let Some(opacity) = outline.and_then(|outline| outline.opacity) {
+        let paint = rgb_with_alpha(
+            &stroke.color,
+            (opacity.clamp(0.0, 1.0) * 255.0).round() as u8,
+        );
+        out.push_str(&drawingml_stroke_value_with_paint(stroke, &paint));
+    } else {
+        write_image_border_stroke(out, stroke);
+    }
+    match geometry {
+        ImageOutlineGeometry::RoundedRectangle { radius_fraction } => {
+            let _ = write!(
+                out,
+                ", radius: {}pt",
+                format_f64(radius_fraction * width.min(height))
+            );
+        }
+        ImageOutlineGeometry::Path { subpaths } => {
+            for subpath in subpaths {
+                write_curve_subpath(out, width, height, subpath);
+            }
+        }
+        _ => {}
+    }
+    out.push_str(")\n");
+}
+
 /// Write polygon vertex coordinates scaled to actual dimensions.
 fn write_polygon_vertices(out: &mut String, width: f64, height: f64, vertices: &[(f64, f64)]) {
     for (i, (vx, vy)) in vertices.iter().enumerate() {

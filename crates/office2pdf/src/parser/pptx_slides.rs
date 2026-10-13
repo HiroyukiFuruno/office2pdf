@@ -470,6 +470,7 @@ fn build_background_image_element<R: Read + std::io::Seek>(
             crop: None,
             stroke: None,
             alignment: None,
+            stroke_outline: None,
             clip_shape: None,
             fill_rect: None,
             shadow: None,
@@ -759,6 +760,7 @@ struct PictureState {
     in_ln: bool,
     ln_width_emu: i64,
     ln_color: Option<Color>,
+    ln_alpha: Option<f64>,
     ln_dash_style: BorderLineStyle,
     /// The `a:ln` corner join, or `None` when it names none (issue #1090).
     ln_join: Option<LineJoin>,
@@ -854,6 +856,7 @@ struct ShapeState {
     in_ln: bool,
     ln_width_emu: i64,
     ln_color: Option<Color>,
+    ln_alpha: Option<f64>,
     ln_dash_style: BorderLineStyle,
     /// The `a:ln` corner join, or `None` when it names none, in which case the
     /// `<a:lnRef>` theme line decides and DrawingML's round default backs it
@@ -931,6 +934,7 @@ impl Default for ShapeState {
             in_ln: false,
             ln_width_emu: 0,
             ln_color: None,
+            ln_alpha: None,
             ln_dash_style: BorderLineStyle::Solid,
             ln_join: None,
             ln_cap: None,
@@ -1068,6 +1072,7 @@ fn finalize_shape(
             flip_v: shape.flip_v,
             ln_width_emu: effective_ln_width_emu,
             ln_color: effective_ln_color,
+            ln_alpha: shape.ln_alpha,
             ln_dash_style: shape.ln_dash_style,
             ln_join: Some(effective_ln_join),
             ln_cap: Some(effective_ln_cap),
@@ -1365,6 +1370,26 @@ fn finalize_picture(
         join: pic.ln_join.unwrap_or_default(),
         cap: pic.ln_cap.unwrap_or_default(),
     });
+    let stroke_outline: Option<crate::ir::ImageStrokeOutline> = stroke.as_ref().map(|_| {
+        use crate::ir::{ImageOutlineGeometry, ImageStrokeOutline};
+        let geometry: ImageOutlineGeometry = if !pic.custom_geometry.is_empty() {
+            ImageOutlineGeometry::Path {
+                subpaths: pic.custom_geometry.clone(),
+            }
+        } else {
+            match picture_clip_shape(pic.prst_geom.as_deref(), pic.prst_adj) {
+                Some(ImageClipShape::Ellipse) => ImageOutlineGeometry::Ellipse,
+                Some(ImageClipShape::RoundedRect(radius_fraction)) => {
+                    ImageOutlineGeometry::RoundedRectangle { radius_fraction }
+                }
+                None => ImageOutlineGeometry::Rectangle,
+            }
+        };
+        ImageStrokeOutline {
+            geometry,
+            opacity: pic.ln_alpha,
+        }
+    });
     let element = selected_asset.and_then(|asset| {
         asset.format().map(|format| {
             let mut clip_shape = picture_clip_shape(pic.prst_geom.as_deref(), pic.prst_adj);
@@ -1443,6 +1468,7 @@ fn finalize_picture(
                     height: Some(emu_to_pt(pic.cy)),
                     crop: pic.crop,
                     stroke: stroke.clone(),
+                    stroke_outline: stroke_outline.clone(),
                     alignment: None,
                     clip_shape,
                     fill_rect: pic.fill_rect,
@@ -1832,7 +1858,10 @@ fn apply_solid_fill_color(
                 shape.opacity = Some(alpha);
             }
         }
-        SolidFillCtx::LineFill => shape.ln_color = parsed.color,
+        SolidFillCtx::LineFill => {
+            shape.ln_color = parsed.color;
+            shape.ln_alpha = parsed.alpha;
+        }
         SolidFillCtx::RunFill => {
             run_style.color = parsed.color;
             run_style.color_alpha = parsed.alpha;
@@ -1846,7 +1875,10 @@ fn apply_solid_fill_color(
         SolidFillCtx::BulletFill => {
             bullet_def.color = parsed.color.map(PptxBulletColorSource::Explicit);
         }
-        SolidFillCtx::PicLineFill => pic.ln_color = parsed.color,
+        SolidFillCtx::PicLineFill => {
+            pic.ln_color = parsed.color;
+            pic.ln_alpha = parsed.alpha;
+        }
         SolidFillCtx::None => {}
     }
 }

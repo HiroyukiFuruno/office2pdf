@@ -363,6 +363,7 @@ fn test_drawings_shift_with_the_inset_grid() {
             crop: None,
             stroke: None,
             alignment: None,
+            stroke_outline: None,
             clip_shape: None,
             fill_rect: None,
             shadow: None,
