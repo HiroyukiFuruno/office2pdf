@@ -880,3 +880,215 @@ fn docx_cached_smartart_picture_fill_masks_in_destination_coordinates() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_picture_strokes_follow_the_authored_outline_after_masking() {
+    use typst::visualize::{Color as TypstColor, CurveItem, Geometry};
+    const PICTURES: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/smartart_picture_fill.docx");
+    for (preset, curved) in [("ellipse", true), ("roundRect", true), ("rect", false)] {
+        let package = rewrite_part(PICTURES, "word/diagrams/drawing1.xml", |xml| {
+            xml.replace("prst=\"ellipse\"", &format!("prst=\"{preset}\""))
+        });
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let generated = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let painted =
+            crate::render::pdf::compiled_paint_sequence(&generated.source, &generated.images, 0)
+                .unwrap();
+        let outlines: Vec<_> = painted
+            .iter()
+            .filter(|item| {
+                item.stroke.as_ref().is_some_and(|stroke| {
+                    stroke
+                        .color
+                        .as_ref()
+                        .is_some_and(|color| color.to_rgb() == TypstColor::WHITE.to_rgb())
+                        && (stroke.thickness_pt - 2.0).abs() < 0.01
+                }) && (item.bounds.2 - item.bounds.0) > 75.0
+                    && (item.bounds.2 - item.bounds.0) < 85.0
+                    && (item.bounds.3 - item.bounds.1) > 75.0
+                    && (item.bounds.3 - item.bounds.1) < 90.0
+            })
+            .collect();
+        assert_eq!(
+            outlines.len(),
+            5,
+            "{preset}: five authored picture outlines"
+        );
+        for outline in outlines {
+            if let Some(Geometry::Curve(curve)) = &outline.geometry {
+                let lines = curve
+                    .0
+                    .iter()
+                    .filter(|item| matches!(item, CurveItem::Line(_)))
+                    .count();
+                assert_eq!(
+                    lines > 0,
+                    preset == "roundRect",
+                    "{preset}: straight sides distinguish rounded rectangles from ellipses"
+                );
+            }
+            assert_eq!(
+                matches!(outline.geometry, Some(Geometry::Curve(_))),
+                curved,
+                "{preset}: compiled outline must preserve the authored geometry: {outline:?}"
+            );
+        }
+        let pdf = crate::convert_bytes(&package, crate::Format::Docx, &ConvertOptions::default())
+            .unwrap();
+        let text = pdf_extract::extract_text_from_mem(&pdf.pdf).unwrap();
+        for label in ["Foo", "Bar", "Lorem", "Ipsum", "Dolor"] {
+            assert!(
+                text.contains(label),
+                "{preset}: missing searchable label {label}"
+            );
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_picture_strokes_keep_custom_paths_alpha_and_frame_transforms() {
+    use crate::render::pdf::{PaintedKind, compiled_paint_sequence};
+    use typst::visualize::{CurveItem, Geometry};
+    const PICTURES: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/smartart_picture_fill.docx");
+    const TRIANGLE: &str = "<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l=\"0\" t=\"0\" r=\"100000\" b=\"100000\"/><a:pathLst><a:path w=\"100000\" h=\"100000\"><a:moveTo><a:pt x=\"0\" y=\"0\"/></a:moveTo><a:lnTo><a:pt x=\"100000\" y=\"0\"/></a:lnTo><a:lnTo><a:pt x=\"0\" y=\"100000\"/></a:lnTo><a:close/></a:path></a:pathLst></a:custGeom>";
+    for (transform, alpha, custom) in [
+        ("rot=\"1800000\" flipH=\"1\"", 25000, false),
+        ("rot=\"-4200000\" flipV=\"1\"", 65000, true),
+        ("flipH=\"1\" flipV=\"1\"", 100000, true),
+    ] {
+        let package = rewrite_part(PICTURES, "word/diagrams/drawing1.xml", |xml| {
+            let mut xml = xml
+                .replace("<a:xfrm>", &format!("<a:xfrm {transform}>"))
+                .replace("<a:fillRect l=\"-25000\" r=\"-25000\"/>", "<a:fillRect/>")
+                .replace(
+                    "<a:schemeClr val=\"lt1\">",
+                    &format!("<a:schemeClr val=\"lt1\"><a:alpha val=\"{alpha}\"/>"),
+                );
+            if custom {
+                xml = xml.replace(
+                    "<a:prstGeom prst=\"ellipse\"><a:avLst/></a:prstGeom>",
+                    TRIANGLE,
+                );
+            }
+            xml
+        });
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let generated = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let painted = compiled_paint_sequence(&generated.source, &generated.images, 0).unwrap();
+        let images: Vec<_> = painted
+            .iter()
+            .filter(|item| item.kind == PaintedKind::Image)
+            .collect();
+        assert_eq!(images.len(), 5);
+        let outlines: Vec<_> = painted
+            .iter()
+            .filter(|item| {
+                let Some(Geometry::Curve(curve)) = &item.geometry else {
+                    return false;
+                };
+                let size = curve.bbox(None);
+                item.stroke
+                    .as_ref()
+                    .is_some_and(|stroke| (stroke.thickness_pt - 2.0).abs() < 0.01)
+                    && size.max.x.to_pt() - size.min.x.to_pt() > 75.0
+                    && size.max.x.to_pt() - size.min.x.to_pt() < 85.0
+                    && size.max.y.to_pt() - size.min.y.to_pt() > 75.0
+                    && size.max.y.to_pt() - size.min.y.to_pt() < 90.0
+            })
+            .collect();
+        assert_eq!(
+            outlines.len(),
+            5,
+            "{transform}: every picture has a curved/path outline"
+        );
+        for (image, outline) in images.iter().zip(outlines) {
+            let color = outline
+                .stroke
+                .as_ref()
+                .unwrap()
+                .color
+                .as_ref()
+                .unwrap()
+                .to_rgb();
+            assert!(
+                (color.alpha as f64 - alpha as f64 / 100000.0).abs() < 0.005,
+                "{transform}: source line alpha must survive masking"
+            );
+            let a = image.transform;
+            let b = outline.transform;
+            let Some(Geometry::Curve(curve)) = &outline.geometry else {
+                unreachable!();
+            };
+            let bounds = curve.bbox(None);
+            if custom {
+                let mut vertices: Vec<_> = curve
+                    .0
+                    .iter()
+                    .filter_map(|item| match item {
+                        CurveItem::Move(point) | CurveItem::Line(point) => Some(*point),
+                        CurveItem::Cubic(..) | CurveItem::Close => None,
+                    })
+                    .collect();
+                if vertices.first() == vertices.last() {
+                    vertices.pop();
+                }
+                assert_eq!(
+                    vertices.len(),
+                    3,
+                    "custom triangle must preserve three distinct vertices"
+                );
+                assert!(
+                    curve.0.iter().any(|item| matches!(item, CurveItem::Close)),
+                    "custom picture stroke must close its triangle"
+                );
+                for (actual, expected) in vertices.iter().zip([
+                    bounds.min,
+                    typst::layout::Point::new(bounds.max.x, bounds.min.y),
+                    typst::layout::Point::new(bounds.min.x, bounds.max.y),
+                ]) {
+                    assert!(
+                        (actual.x.to_pt() - expected.x.to_pt()).abs() < 0.01
+                            && (actual.y.to_pt() - expected.y.to_pt()).abs() < 0.01,
+                        "custom picture stroke must retain the asymmetric triangle outline"
+                    );
+                }
+            }
+            // Ellipses have a centre-based internal curve; compare painted
+            // positions rather than requiring identical internal origins.
+            let x = (bounds.min.x.to_pt() + bounds.max.x.to_pt()) / 2.0;
+            let y = (bounds.min.y.to_pt() + bounds.max.y.to_pt()) / 2.0;
+            let stroke_centre = (
+                b.sx.get() * x + b.kx.get() * y + b.tx.to_pt(),
+                b.ky.get() * x + b.sy.get() * y + b.ty.to_pt(),
+            );
+            let image_centre = (
+                (image.bounds.0 + image.bounds.2) / 2.0,
+                (image.bounds.1 + image.bounds.3) / 2.0,
+            );
+            assert!(
+                (stroke_centre.0 - image_centre.0).abs() < 0.01
+                    && (stroke_centre.1 - image_centre.1).abs() < 0.01,
+                "{transform}: stroke and picture frame centres must coincide"
+            );
+            for (a, b) in [
+                (a.sx.get(), b.sx.get()),
+                (a.sy.get(), b.sy.get()),
+                (a.kx.get(), b.kx.get()),
+                (a.ky.get(), b.ky.get()),
+            ] {
+                assert!(
+                    (a - b).abs() < 0.01,
+                    "{transform}: picture and stroke must share page-space transforms, {a} vs {b}"
+                );
+            }
+        }
+    }
+}

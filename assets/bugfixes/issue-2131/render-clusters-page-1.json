@@ -1,0 +1,93 @@
+{
+  "clusters": [],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [
+    {
+      "bbox_pt": {
+        "height": 96.0,
+        "width": 93.0,
+        "x": 70.0,
+        "y": 82.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected ellipse crop preserves the white curved border and circular grid mask; scattered outline/grid boundary fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 96.0,
+        "width": 93.0,
+        "x": 156.88,
+        "y": 82.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected ellipse crop preserves the white curved border and circular grid mask; scattered outline/grid boundary fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 96.0,
+        "width": 93.0,
+        "x": 243.76,
+        "y": 82.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected ellipse crop preserves the white curved border and circular grid mask; scattered outline/grid boundary fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 96.0,
+        "width": 93.0,
+        "x": 330.64,
+        "y": 82.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected ellipse crop preserves the white curved border and circular grid mask; scattered outline/grid boundary fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 96.0,
+        "width": 93.0,
+        "x": 417.52,
+        "y": 82.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected ellipse crop preserves the white curved border and circular grid mask; scattered outline/grid boundary fragments remain below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 24.0,
+        "width": 440.0,
+        "x": 70.0,
+        "y": 70.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Current inspected panel-corner crop retains the rounded outlines; sparse edge fragments are below the material-cluster floor."
+    },
+    {
+      "bbox_pt": {
+        "height": 20.0,
+        "width": 440.0,
+        "x": 70.0,
+        "y": 310.0
+      },
+      "class": "shape-edge-antialiasing",
+      "note": "Full current page/diff retains rounded panel bottoms; sparse corner-edge fragments are below the material-cluster floor."
+    }
+  ],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 0,
+    "duplicate": 0,
+    "total": 0,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}

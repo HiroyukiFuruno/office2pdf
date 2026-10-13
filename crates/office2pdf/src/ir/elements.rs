@@ -1841,6 +1841,27 @@ pub struct ImageFillRect {
     pub bottom: f64,
 }
 
+/// Picture-frame outline retained separately from image clipping.
+#[derive(Debug, Clone)]
+pub struct ImageStrokeOutline {
+    pub geometry: ImageOutlineGeometry,
+    /// DrawingML line-paint opacity, independent of the image's alpha.
+    pub opacity: Option<f64>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ImageOutlineGeometry {
+    Rectangle,
+    Ellipse,
+    RoundedRectangle {
+        radius_fraction: f64,
+    },
+    /// Normalized frame-space paths, before the picture's flip/rotation.
+    Path {
+        subpaths: Vec<Subpath>,
+    },
+}
+
 /// Image data.
 #[derive(Debug, Clone)]
 pub struct ImageData {
@@ -1862,6 +1883,8 @@ pub struct ImageData {
     pub crop: Option<ImageCrop>,
     /// Optional border stroke around the image.
     pub stroke: Option<BorderSide>,
+    /// Fixed-frame outline; absent means a rectangular picture border.
+    pub stroke_outline: Option<ImageStrokeOutline>,
     /// Horizontal placement inherited from the containing paragraph
     /// (flow documents); None renders at the flow default (left).
     pub alignment: Option<Alignment>,

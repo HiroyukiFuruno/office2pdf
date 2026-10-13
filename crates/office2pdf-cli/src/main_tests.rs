@@ -310,6 +310,7 @@ fn fixed_raster_image_does_not_round_below_the_exact_bottom_edge() {
             crop: None,
             stroke: None,
             alignment: None,
+            stroke_outline: None,
             clip_shape: None,
             fill_rect: None,
             shadow: None,

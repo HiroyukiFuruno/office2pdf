@@ -2235,6 +2235,13 @@ fn generate_fixed_element(
                 );
             }
             generate_image(out, img, ctx);
+            // Keep the border in the image's frame transform; source crops and
+            // destination stretch affect its pixels, not the authored outline.
+            if img.stroke.is_some() {
+                out.push_str("#place(top + left)[");
+                shapes::write_image_outline(out, img, elem.width, elem.height);
+                out.push_str("]\n");
+            }
             if flipped {
                 out.push(']');
             }
@@ -2243,24 +2250,6 @@ fn generate_fixed_element(
             }
             if rotation.is_some() || flipped {
                 out.push(']');
-            }
-            // Render image border as a separate overlay so that #image()
-            // dimensions are not affected by Typst's #box(stroke:) sizing.
-            if let Some(ref stroke) = img.stroke {
-                let _ = write!(
-                    out,
-                    "]\n#place(top + left, dx: {}pt, dy: {}pt)[\n",
-                    format_f64(elem.x),
-                    format_f64(placement_y),
-                );
-                let _ = write!(
-                    out,
-                    "#rect(width: {}pt, height: {}pt, fill: none, stroke: ",
-                    format_f64(elem.width),
-                    format_f64(elem.height),
-                );
-                shapes::write_image_border_stroke(out, stroke);
-                out.push_str(")\n");
             }
         }
         FixedElementKind::Shape(shape) => {

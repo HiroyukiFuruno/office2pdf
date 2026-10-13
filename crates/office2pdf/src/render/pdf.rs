@@ -1048,6 +1048,10 @@ pub(crate) struct PaintedPrimitive {
     /// Page-space bounding box in points, as `(min x, min y, max x, max y)`.
     pub bounds: (f64, f64, f64, f64),
     pub stroke: Option<PaintedStroke>,
+    /// Compiled vector outline, before its enclosing frame transform.
+    pub geometry: Option<typst::visualize::Geometry>,
+    /// Maps the primitive geometry into page space.
+    pub transform: typst::layout::Transform,
     /// Solid rectangle fill; other shape geometry and paint types remain absent.
     pub rectangle_fill: Option<typst::visualize::Color>,
 }
@@ -1145,6 +1149,8 @@ pub(crate) fn compiled_page_paint_sequences(
                 FrameItem::Image(_, size, _) => out.push(PaintedPrimitive {
                     kind: PaintedKind::Image,
                     rectangle_fill: None,
+                    geometry: None,
+                    transform: at,
                     bounds: transformed_bounds(at, size.x.to_pt(), size.y.to_pt()),
                     stroke: None,
                 }),
@@ -1177,6 +1183,8 @@ pub(crate) fn compiled_page_paint_sequences(
                     };
                     out.push(PaintedPrimitive {
                         kind: PaintedKind::Shape,
+                        geometry: Some(shape.geometry.clone()),
+                        transform: at,
                         rectangle_fill: match (&shape.geometry, &shape.fill) {
                             (Geometry::Rect(_), Some(typst::visualize::Paint::Solid(color))) => {
                                 Some(color.clone())
@@ -1206,6 +1214,8 @@ pub(crate) fn compiled_page_paint_sequences(
                     out.push(PaintedPrimitive {
                         kind: PaintedKind::Text,
                         rectangle_fill: None,
+                        geometry: None,
+                        transform: at,
                         stroke: None,
                         bounds: (
                             top.0.min(bottom.0),
