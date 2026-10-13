@@ -640,3 +640,48 @@ fn a_stated_line_cap_reaches_the_compiled_stroke() {
         assert_eq!(stroke.cap, expected, "IR cap {cap:?}");
     }
 }
+
+#[test]
+fn inset_page_sized_picture_keeps_text_visible_in_its_unfilled_margin() {
+    let mut jpeg = Vec::new();
+    image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(1, 1, image::Rgb([20, 40, 60])))
+        .write_to(
+            &mut std::io::Cursor::new(&mut jpeg),
+            image::ImageFormat::Jpeg,
+        )
+        .unwrap();
+    let mut cover = make_fixed_image(0.0, 0.0, 960.0, 540.0, ImageFormat::Jpeg);
+    let FixedElementKind::Image(image) = &mut cover.kind else {
+        unreachable!();
+    };
+    image.data = jpeg;
+    image.fill_rect = Some(crate::ir::ImageFillRect {
+        left: 0.25,
+        ..crate::ir::ImageFillRect::default()
+    });
+    let document = make_doc(vec![make_fixed_page(
+        960.0,
+        540.0,
+        vec![
+            make_text_box(10.0, 10.0, 200.0, 30.0, "Visible margin caption"),
+            cover,
+        ],
+    )]);
+    let generated = generate_typst(&document).unwrap();
+    let pdf = crate::render::pdf::compile_to_pdf(
+        &generated.source,
+        &generated.images,
+        None,
+        &[],
+        false,
+        false,
+    )
+    .unwrap();
+    let text = pdf_extract::extract_text_from_mem(&pdf).unwrap();
+    assert!(
+        text.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .contains("Visible margin caption")
+    );
+}

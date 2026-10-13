@@ -1831,6 +1831,16 @@ impl ImageCrop {
     }
 }
 
+/// DrawingML destination offsets, as signed fractions of the picture frame.
+/// Positive values inset the source; negative values expand it before clipping.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ImageFillRect {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
+}
+
 /// Image data.
 #[derive(Debug, Clone)]
 pub struct ImageData {
@@ -1857,6 +1867,8 @@ pub struct ImageData {
     pub alignment: Option<Alignment>,
     /// Clip geometry from the picture's `<a:prstGeom>` (crop to shape).
     pub clip_shape: Option<ImageClipShape>,
+    /// Stretch the cropped source into this rectangle before shape clipping.
+    pub fill_rect: Option<ImageFillRect>,
     /// Outer shadow effect (`a:effectLst/a:outerShdw` on `p:pic`).
     pub shadow: Option<Shadow>,
     /// Vertical gaps declared by the containing paragraph's `w:spacing`

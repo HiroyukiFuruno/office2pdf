@@ -1533,14 +1533,18 @@ fn generate_fixed_page(
 ///
 /// PowerPoint drops master text covered by later slide artwork from its PDF
 /// text layer. Keep this deliberately narrow: non-page-sized pictures and
-/// transformed/clipped images may leave part of the text visible (issue #1432).
+/// transformed, clipped, or destination-inset images may leave text visible
+/// (issue #1432).
 fn is_full_page_opaque_image(element: &FixedElement, page_size: PageSize) -> bool {
     const EDGE_TOLERANCE_PT: f64 = 0.5;
 
     let FixedElementKind::Image(image) = &element.kind else {
         return false;
     };
-    if image.rotation_deg.is_some_and(|degrees| degrees != 0.0) || image.clip_shape.is_some() {
+    if image.rotation_deg.is_some_and(|degrees| degrees != 0.0)
+        || image.clip_shape.is_some()
+        || image.fill_rect.is_some()
+    {
         return false;
     }
     if element.x > EDGE_TOLERANCE_PT
@@ -2329,6 +2333,7 @@ fn fixed_raster_placement_y(elem: &FixedElement, page_height_pt: f64) -> f64 {
         || image.rotation_deg.is_some_and(|degrees| degrees != 0.0)
         || image.crop.is_some_and(|crop| !crop.is_empty())
         || image.clip_shape.is_some()
+        || image.fill_rect.is_some()
         || elem.y <= 0.0
     {
         return elem.y;
@@ -5856,6 +5861,37 @@ fn generate_image(out: &mut String, img: &ImageData, ctx: &mut GenCtx) {
         generate_image(out, &inner, ctx);
         out.pop();
         out.push_str("]\n");
+        return;
+    }
+
+    if let Some(fill) = img.fill_rect
+        && let (Some(width), Some(height)) = (img.width, img.height)
+    {
+        let fill_width = width * (1.0 - fill.left - fill.right);
+        let fill_height = height * (1.0 - fill.top - fill.bottom);
+        if !(fill_width.is_finite()
+            && fill_height.is_finite()
+            && fill_width > 0.0
+            && fill_height > 0.0)
+        {
+            return;
+        }
+        // Destination outsets enlarge the source inside the fixed shape frame;
+        // insets expose its background. The frame itself never changes size.
+        let _ = write!(
+            out,
+            "#box(width: {}pt, height: {}pt, clip: true)[#place(top + left, dx: {}pt, dy: {}pt)[",
+            format_f64(width),
+            format_f64(height),
+            format_f64(width * fill.left),
+            format_f64(height * fill.top),
+        );
+        let mut inner = img.clone();
+        inner.fill_rect = None;
+        inner.width = Some(fill_width);
+        inner.height = Some(fill_height);
+        generate_image(out, &inner, ctx);
+        out.push_str("]]\n");
         return;
     }
 

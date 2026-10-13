@@ -73,3 +73,8 @@ remain outside git. Neither package contains third-party content.
 revision above. It contains two cached diagrams with curved panels, rounded
 boxes, arrows, bullets and mixed text styles; no photographs or font binaries.
 Tests require searchable labels, frame extents and renamed-part lookup.
+
+`smartart_picture_fill.docx` derives the first cached diagram from case59 at
+that same Apache-2.0 revision. All five photographs are replaced by an authored
+800×600 color-coordinate grid; no photographs or embedded font binaries remain. Tests
+vary signed destination offsets and source crops while preserving the shape frame.

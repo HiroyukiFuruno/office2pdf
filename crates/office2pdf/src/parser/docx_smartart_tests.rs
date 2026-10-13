@@ -591,3 +591,148 @@ fn docx_cached_smartart_wrapped_frames_use_their_own_run_metrics() {
     let expected = natural_pitch_em * 12.0 * (278.0 / 240.0 - 1.0);
     assert!((measure(24, 12, "Noto Sans") - control - expected).abs() < 0.01);
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_picture_fill_places_the_source_in_its_destination_rectangle() {
+    const PICTURE_REPORT: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/smartart_picture_fill.docx");
+    let measure = |fill_rect: &str| {
+        let package = rewrite_part(PICTURE_REPORT, "word/diagrams/drawing1.xml", |xml| {
+            xml.replacen("<a:fillRect l=\"-25000\" r=\"-25000\"/>", fill_rect, 1)
+        });
+        let (document, _) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        let generated = crate::render::typst_gen::generate_typst(&document).unwrap();
+        crate::render::pdf::compiled_image_bounds(&generated.source, &generated.images).unwrap()
+    };
+    let control = measure("<a:fillRect/>");
+    assert_eq!(control.len(), 5);
+    for (xml, left, top, right, bottom) in [
+        (
+            "<a:fillRect l=\"-25000\" r=\"-25000\"/>",
+            -0.25,
+            0.0,
+            -0.25,
+            0.0,
+        ),
+        (
+            "<a:fillRect l=\"-50000\" r=\"-50000\"/>",
+            -0.5,
+            0.0,
+            -0.5,
+            0.0,
+        ),
+        (
+            "<a:fillRect l=\"25000\" r=\"25000\"/>",
+            0.25,
+            0.0,
+            0.25,
+            0.0,
+        ),
+        (
+            "<a:fillRect l=\"-50000\" t=\"10000\" r=\"25000\" b=\"20000\"/>",
+            -0.5,
+            0.1,
+            0.25,
+            0.2,
+        ),
+        (
+            "<a:fillRect l=\"-25000\" r=\"-25000\"></a:fillRect>",
+            -0.25,
+            0.0,
+            -0.25,
+            0.0,
+        ),
+    ] {
+        let actual = measure(xml);
+        assert_eq!(actual.len(), control.len());
+        let c = control[0];
+        let expected = (
+            c.left_pt + c.width_pt * left,
+            c.top_pt + c.height_pt * top,
+            c.width_pt * (1.0 - left - right),
+            c.height_pt * (1.0 - top - bottom),
+        );
+        let a = actual[0];
+        for (actual, expected) in [
+            (a.left_pt, expected.0),
+            (a.top_pt, expected.1),
+            (a.width_pt, expected.2),
+            (a.height_pt, expected.3),
+        ] {
+            assert!(
+                (actual - expected).abs() < 0.01,
+                "{xml}: destination expected {expected}, got {actual}"
+            );
+        }
+        assert!(
+            a.is_clipped,
+            "the expanded picture must remain clipped to its shape frame"
+        );
+        assert_eq!(
+            actual[1..],
+            control[1..],
+            "unmodified picture fills must not move"
+        );
+    }
+    let empty = measure("<a:fillRect l=\"100000\"/>");
+    assert_eq!(empty.len(), 4, "an empty destination must paint no image");
+    assert_eq!(empty, control[1..]);
+}
+
+#[test]
+fn docx_cached_smartart_picture_fill_masks_in_destination_coordinates() {
+    const PICTURE_REPORT: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/smartart_picture_fill.docx");
+    for (fill_rect, source_rect, transparent, painted) in [
+        (
+            "<a:fillRect l=\"-25000\" r=\"-25000\"/>",
+            "<a:srcRect/>",
+            (160, 120),
+            (400, 120),
+        ),
+        (
+            "<a:fillRect l=\"25000\" r=\"25000\"/>",
+            "<a:srcRect/>",
+            (0, 0),
+            (80, 60),
+        ),
+        (
+            "<a:fillRect l=\"-25000\" r=\"-25000\"/>",
+            "<a:srcRect l=\"20000\" t=\"10000\" r=\"10000\" b=\"20000\"/>",
+            (240, 120),
+            (400, 120),
+        ),
+    ] {
+        let package = rewrite_part(PICTURE_REPORT, "word/diagrams/drawing1.xml", |xml| {
+            xml.replacen("<a:fillRect l=\"-25000\" r=\"-25000\"/>", fill_rect, 1)
+                .replacen("<a:srcRect/>", source_rect, 1)
+        });
+        let (document, warnings) = DocxParser
+            .parse(&package, &ConvertOptions::default())
+            .unwrap();
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+        let group = drawing_groups(all_blocks(&document))[0];
+        let image = group
+            .elements
+            .iter()
+            .find_map(|element| match &element.kind {
+                crate::ir::FixedElementKind::Image(image) => Some(image),
+                _ => None,
+            })
+            .unwrap();
+        let rgba = image::load_from_memory(&image.data).unwrap().into_rgba8();
+        assert_eq!(
+            rgba.get_pixel(transparent.0, transparent.1)[3],
+            0,
+            "outside the destination ellipse: {fill_rect} {source_rect}"
+        );
+        assert_eq!(
+            rgba.get_pixel(painted.0, painted.1)[3],
+            255,
+            "inside the destination ellipse: {fill_rect} {source_rect}"
+        );
+    }
+}

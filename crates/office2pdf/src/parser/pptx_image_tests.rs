@@ -1496,3 +1496,71 @@ fn picture_outline_carries_its_stated_line_cap() {
         assert_eq!(stroke.cap, expected, "cap attribute `{cap_attribute}`");
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn picture_and_shape_fills_share_the_destination_rectangle_mapping() {
+    for is_shape in [false, true] {
+        for is_svg in [false, true] {
+            for fill in [
+                "<a:fillRect l=\"-25000\" t=\"10000\" r=\"50000\" b=\"20000\"/>",
+                "<a:fillRect l=\"-25%\" t=\"10%\" r=\"50%\" b=\"20%\"></a:fillRect>",
+            ] {
+                let fill_xml = format!(
+                    "<a:blip r:embed=\"rId3\"/><a:srcRect l=\"25000\"/><a:stretch>{fill}</a:stretch>"
+                );
+                let element = if is_shape {
+                    format!(
+                        r#"<p:sp><p:nvSpPr><p:cNvPr id="5" name="Grid"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="1270000" y="635000"/><a:ext cx="2540000" cy="1270000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:blipFill>{fill_xml}</a:blipFill></p:spPr></p:sp>"#
+                    )
+                } else {
+                    make_custom_pic_xml(1_270_000, 635_000, 2_540_000, 1_270_000, &fill_xml)
+                };
+                let source = build_test_pptx_with_images(
+                    SLIDE_CX,
+                    SLIDE_CY,
+                    &[(
+                        make_slide_xml(&[element]),
+                        vec![TestSlideImage {
+                            rid: "rId3".into(),
+                            path: if is_svg {
+                                "../media/grid.svg"
+                            } else {
+                                "../media/grid.bmp"
+                            }
+                            .into(),
+                            data: if is_svg {
+                                make_test_svg()
+                            } else {
+                                make_test_bmp()
+                            },
+                            relationship_type: None,
+                        }],
+                    )],
+                );
+                let (document, warnings) = PptxParser
+                    .parse(&source, &ConvertOptions::default())
+                    .unwrap();
+                assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+                let generated = crate::render::typst_gen::generate_typst(&document).unwrap();
+                let images =
+                    crate::render::pdf::compiled_image_bounds(&generated.source, &generated.images)
+                        .unwrap();
+                assert_eq!(images.len(), 1);
+                let bounds = images[0];
+                for (actual, expected) in [
+                    (bounds.left_pt, 50.0),
+                    (bounds.top_pt, 60.0),
+                    (bounds.width_pt, 150.0),
+                    (bounds.height_pt, 70.0),
+                ] {
+                    assert!(
+                        (actual - expected).abs() < 0.01,
+                        "{is_shape} {fill}: {images:?}"
+                    );
+                }
+                assert!(bounds.is_clipped);
+            }
+        }
+    }
+}

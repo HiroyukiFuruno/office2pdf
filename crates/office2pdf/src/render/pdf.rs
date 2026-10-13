@@ -778,6 +778,94 @@ fn compiled_text_runs_with_line_seating(
     Ok(runs)
 }
 
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct PlacedImageBounds {
+    pub left_pt: f64,
+    pub top_pt: f64,
+    pub width_pt: f64,
+    pub height_pt: f64,
+    pub is_clipped: bool,
+}
+
+/// Inspect compiled image bounds and whether an ancestor clips them.
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) fn compiled_image_bounds(
+    source: &str,
+    images: &[ImageAsset],
+) -> Result<Vec<PlacedImageBounds>, ConvertError> {
+    use typst::layout::{Abs, Frame, FrameItem, Point, Transform};
+
+    fn collect(
+        frame: &Frame,
+        transform: Transform,
+        clipped: bool,
+        output: &mut Vec<PlacedImageBounds>,
+    ) {
+        for (position, item) in frame.items() {
+            let at = transform.pre_concat(Transform::translate(position.x, position.y));
+            match item {
+                FrameItem::Group(group) => collect(
+                    &group.frame,
+                    at.pre_concat(group.transform),
+                    clipped || group.clip.is_some(),
+                    output,
+                ),
+                FrameItem::Image(_, size, _) => {
+                    let corners = [
+                        Point::zero(),
+                        Point::new(size.x, Abs::zero()),
+                        Point::new(Abs::zero(), size.y),
+                        Point::new(size.x, size.y),
+                    ]
+                    .map(|point| point.transform(at));
+                    let left = corners
+                        .iter()
+                        .map(|p| p.x.to_pt())
+                        .fold(f64::INFINITY, f64::min);
+                    let top = corners
+                        .iter()
+                        .map(|p| p.y.to_pt())
+                        .fold(f64::INFINITY, f64::min);
+                    let right = corners
+                        .iter()
+                        .map(|p| p.x.to_pt())
+                        .fold(f64::NEG_INFINITY, f64::max);
+                    let bottom = corners
+                        .iter()
+                        .map(|p| p.y.to_pt())
+                        .fold(f64::NEG_INFINITY, f64::max);
+                    output.push(PlacedImageBounds {
+                        left_pt: left,
+                        top_pt: top,
+                        width_pt: right - left,
+                        height_pt: bottom - top,
+                        is_clipped: clipped,
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+    let world = MinimalWorld::new(source, images, &[]);
+    let document = typst::compile::<PagedDocument>(&world)
+        .output
+        .map_err(|errors| {
+            ConvertError::Render(
+                errors
+                    .iter()
+                    .map(|e| e.message.to_string())
+                    .collect::<Vec<_>>()
+                    .join("; "),
+            )
+        })?;
+    let mut bounds = Vec::new();
+    for page in document.pages() {
+        collect(&page.frame, Transform::identity(), false, &mut bounds);
+    }
+    Ok(bounds)
+}
+
 /// One shaped run's glyph pacing as the layout engine actually placed it.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[derive(Debug, Clone)]

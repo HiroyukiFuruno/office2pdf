@@ -471,6 +471,7 @@ fn build_background_image_element<R: Read + std::io::Seek>(
             stroke: None,
             alignment: None,
             clip_shape: None,
+            fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
         }),
@@ -747,6 +748,7 @@ struct PictureState {
     has_live_feed_properties: bool,
     img_layer_embeds: Vec<String>,
     crop: Option<ImageCrop>,
+    fill_rect: Option<crate::ir::ImageFillRect>,
     /// Clockwise rotation from `a:xfrm/@rot` (issue #682).
     rotation_deg: Option<f64>,
     /// Picture-frame mirrors from `a:xfrm` (issue #1017).
@@ -844,6 +846,7 @@ struct ShapeState {
     blip_grayscale: bool,
     /// Source crop from the shape fill's `<a:srcRect>`.
     blip_crop: Option<ImageCrop>,
+    blip_fill_rect: Option<crate::ir::ImageFillRect>,
     in_blip_fill: bool,
     in_xfrm: bool,
     in_text_xfrm: bool,
@@ -920,6 +923,7 @@ impl Default for ShapeState {
             blip_alpha: None,
             blip_grayscale: false,
             blip_crop: None,
+            blip_fill_rect: None,
             in_blip_fill: false,
             in_xfrm: false,
             in_text_xfrm: false,
@@ -1058,6 +1062,7 @@ fn finalize_shape(
             prst_geom: shape.prst_geom.clone(),
             custom_geometry: shape.custom_geometry.clone(),
             crop: shape.blip_crop,
+            fill_rect: shape.blip_fill_rect,
             rotation_deg: shape.rotation_deg,
             flip_h: shape.flip_h,
             flip_v: shape.flip_v,
@@ -1399,10 +1404,10 @@ fn finalize_picture(
                 // so the clip written here has to live in the cropped frame's
                 // coordinates or it lands on the pre-crop artwork (#1018).
                 let clipped: Option<(Vec<u8>, ImageFormat)> = if format == ImageFormat::Svg {
-                    clip_svg_to_path(&data, &pic.custom_geometry, pic.crop)
+                    clip_svg_to_path(&data, &pic.custom_geometry, pic.crop, pic.fill_rect)
                         .map(|svg| (svg, ImageFormat::Svg))
                 } else {
-                    apply_path_mask(&data, &pic.custom_geometry, pic.crop)
+                    apply_path_mask(&data, &pic.custom_geometry, pic.crop, pic.fill_rect)
                 };
                 match clipped {
                     Some(masked) => {
@@ -1413,7 +1418,7 @@ fn finalize_picture(
                 }
             } else if clip_shape == Some(ImageClipShape::Ellipse) {
                 // A radius cannot describe a true ellipse on a non-square box.
-                match apply_ellipse_mask(&data) {
+                match apply_ellipse_mask(&data, pic.crop, pic.fill_rect) {
                     Some(masked) => {
                         clip_shape = None;
                         masked
@@ -1440,6 +1445,7 @@ fn finalize_picture(
                     stroke: stroke.clone(),
                     alignment: None,
                     clip_shape,
+                    fill_rect: pic.fill_rect,
                     shadow: pic.shadow.clone(),
                     paragraph_spacing: None,
                 }),
@@ -1464,18 +1470,66 @@ fn picture_clip_shape(
     }
 }
 
+fn parse_fill_rect(element: &BytesStart<'_>) -> Option<crate::ir::ImageFillRect> {
+    let fraction = |name| {
+        get_attr_str(element, name)
+            .and_then(|text| {
+                let value = if let Some(percent) = text.strip_suffix('%') {
+                    percent.parse::<f64>().ok()? / 100.0
+                } else {
+                    text.parse::<f64>().ok()? / 100_000.0
+                };
+                value.is_finite().then_some(value)
+            })
+            .unwrap_or(0.0)
+    };
+    let rect = crate::ir::ImageFillRect {
+        left: fraction(b"l"),
+        top: fraction(b"t"),
+        right: fraction(b"r"),
+        bottom: fraction(b"b"),
+    };
+    (rect != crate::ir::ImageFillRect::default()).then_some(rect)
+}
+
+/// Map the shape's clip back through destination stretch and source cropping.
+/// The renderer applies those transforms later, after these masks are baked.
+fn picture_mask_source_frame(
+    crop: Option<ImageCrop>,
+    fill_rect: Option<crate::ir::ImageFillRect>,
+) -> (f64, f64, f64, f64) {
+    let (left, top, width, height) = crop_kept_fractions(crop).unwrap_or((0.0, 0.0, 1.0, 1.0));
+    let fill = fill_rect.unwrap_or_default();
+    let fill_width = 1.0 - fill.left - fill.right;
+    let fill_height = 1.0 - fill.top - fill.bottom;
+    if !(fill_width.is_finite() && fill_height.is_finite() && fill_width > 0.0 && fill_height > 0.0)
+    {
+        return (left, top, width, height);
+    }
+    (
+        left - fill.left * width / fill_width,
+        top - fill.top * height / fill_height,
+        width / fill_width,
+        height / fill_height,
+    )
+}
+
 /// Zero the alpha outside the inscribed ellipse and re-encode as PNG.
-fn apply_ellipse_mask(data: &[u8]) -> Option<(Vec<u8>, ImageFormat)> {
+fn apply_ellipse_mask(
+    data: &[u8],
+    crop: Option<ImageCrop>,
+    fill_rect: Option<crate::ir::ImageFillRect>,
+) -> Option<(Vec<u8>, ImageFormat)> {
     let decoded = image::load_from_memory(data).ok()?;
     let mut rgba = decoded.into_rgba8();
     let (width, height) = rgba.dimensions();
     if width == 0 || height == 0 {
         return None;
     }
-    let (cx, cy) = (f64::from(width) / 2.0, f64::from(height) / 2.0);
+    let (left, top, kept_width, kept_height) = picture_mask_source_frame(crop, fill_rect);
     for (x, y, pixel) in rgba.enumerate_pixels_mut() {
-        let nx = (f64::from(x) + 0.5 - cx) / cx;
-        let ny = (f64::from(y) + 0.5 - cy) / cy;
+        let nx = (((f64::from(x) + 0.5) / f64::from(width) - left) / kept_width) * 2.0 - 1.0;
+        let ny = (((f64::from(y) + 0.5) / f64::from(height) - top) / kept_height) * 2.0 - 1.0;
         if nx * nx + ny * ny > 1.0 {
             pixel[3] = 0;
         }
@@ -1519,6 +1573,7 @@ fn clip_svg_to_path(
     data: &[u8],
     subpaths: &[crate::ir::Subpath],
     crop: Option<ImageCrop>,
+    fill_rect: Option<crate::ir::ImageFillRect>,
 ) -> Option<Vec<u8>> {
     use std::fmt::Write as _;
 
@@ -1546,15 +1601,13 @@ fn clip_svg_to_path(
     if !(width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0) {
         return None;
     }
-    let (frame_x, frame_y, frame_w, frame_h) = match crop_kept_fractions(crop) {
-        Some((left, top, kept_w, kept_h)) => (
-            x + width * left,
-            y + height * top,
-            width * kept_w,
-            height * kept_h,
-        ),
-        None => (x, y, width, height),
-    };
+    let (left, top, kept_width, kept_height) = picture_mask_source_frame(crop, fill_rect);
+    let (frame_x, frame_y, frame_w, frame_h) = (
+        x + width * left,
+        y + height * top,
+        width * kept_width,
+        height * kept_height,
+    );
 
     let mut path: String = String::new();
     // A clip region is an area however the geometry ended, so every subpath
@@ -1708,6 +1761,7 @@ fn apply_path_mask(
     data: &[u8],
     subpaths: &[crate::ir::Subpath],
     crop: Option<ImageCrop>,
+    fill_rect: Option<crate::ir::ImageFillRect>,
 ) -> Option<(Vec<u8>, ImageFormat)> {
     let decoded = image::load_from_memory(data).ok()?;
     let mut rgba = decoded.into_rgba8();
@@ -1718,10 +1772,7 @@ fn apply_path_mask(
     // The renderer crops the bitmap after this mask is baked, so the path is
     // evaluated in the cropped frame's coordinates: a full-bitmap mapping
     // would clip the pre-crop artwork instead (issue #1018).
-    let (frame_x, frame_y, frame_w, frame_h) = match crop_kept_fractions(crop) {
-        Some((left, top, kept_w, kept_h)) => (left, top, kept_w, kept_h),
-        None => (0.0, 0.0, 1.0, 1.0),
-    };
+    let (frame_x, frame_y, frame_w, frame_h) = picture_mask_source_frame(crop, fill_rect);
     for (x, y, pixel) in rgba.enumerate_pixels_mut() {
         let px = ((f64::from(x) + 0.5) / f64::from(width) - frame_x) / frame_w;
         let py = ((f64::from(y) + 0.5) / f64::from(height) - frame_y) / frame_h;
@@ -2484,6 +2535,12 @@ impl<'a> SlideXmlParser<'a> {
             b"blipFill" if self.shape.in_sp_pr && !self.shape.in_ln => {
                 self.shape.in_blip_fill = true;
             }
+            b"srcRect" if self.shape.in_blip_fill => {
+                self.shape.blip_crop = parse_src_rect(e);
+            }
+            b"fillRect" if self.shape.in_blip_fill => {
+                self.shape.blip_fill_rect = parse_fill_rect(e);
+            }
             b"blip" if self.shape.in_blip_fill => {
                 self.shape.blip_embed = get_attr_str(e, b"r:embed");
             }
@@ -2632,6 +2689,9 @@ impl<'a> SlideXmlParser<'a> {
             b"srcRect" if self.in_pic => {
                 self.pic.crop = parse_src_rect(e);
             }
+            b"fillRect" if self.in_pic => {
+                self.pic.fill_rect = parse_fill_rect(e);
+            }
             _ => return false,
         }
         true
@@ -2713,6 +2773,9 @@ impl<'a> SlideXmlParser<'a> {
             }
             b"srcRect" if self.in_pic => {
                 self.pic.crop = parse_src_rect(e);
+            }
+            b"fillRect" if self.in_pic => {
+                self.pic.fill_rect = parse_fill_rect(e);
             }
             b"prstDash" if self.in_pic && self.pic.in_ln => {
                 self.pic.ln_dash_style = get_attr_str(e, b"val")
@@ -2846,6 +2909,9 @@ impl<'a> SlideXmlParser<'a> {
             }
             b"srcRect" if self.shape.in_blip_fill => {
                 self.shape.blip_crop = parse_src_rect(e);
+            }
+            b"fillRect" if self.shape.in_blip_fill => {
+                self.shape.blip_fill_rect = parse_fill_rect(e);
             }
             b"fontRef" if self.in_shape && !self.shape.in_sp_pr && !self.in_txbody => {
                 self.shape.style_font_family = match get_attr_str(e, b"idx").as_deref() {
@@ -3494,7 +3560,8 @@ mod picture_mask_tests {
             (1.0, 0.0),
             (0.0, 1.0),
         ])];
-        let out = clip_svg_to_path(SVG.as_bytes(), &triangle, None).expect("the SVG is clipped");
+        let out =
+            clip_svg_to_path(SVG.as_bytes(), &triangle, None, None).expect("the SVG is clipped");
         let text = String::from_utf8(out).expect("still an SVG");
 
         assert!(text.contains("<clipPath"), "a clipPath is added: {text}");
@@ -3531,7 +3598,7 @@ mod picture_mask_tests {
             (1.0, 0.0),
             (0.0, 1.0),
         ])];
-        assert!(clip_svg_to_path(NO_BOX.as_bytes(), &triangle, None).is_none());
+        assert!(clip_svg_to_path(NO_BOX.as_bytes(), &triangle, None, None).is_none());
     }
 
     /// The unit square, and a smaller square inside it.
@@ -3627,8 +3694,8 @@ mod picture_mask_tests {
             right: 0.25,
             bottom: 0.0,
         };
-        let out =
-            clip_svg_to_path(SVG.as_bytes(), &triangle, Some(crop)).expect("the SVG is clipped");
+        let out = clip_svg_to_path(SVG.as_bytes(), &triangle, Some(crop), None)
+            .expect("the SVG is clipped");
         let text = String::from_utf8(out).expect("still an SVG");
         // The kept region is x 25..75 of the 100 x 50 viewBox.
         assert!(
@@ -3652,8 +3719,8 @@ mod picture_mask_tests {
             right: 0.7,
             bottom: 0.0,
         };
-        let out =
-            clip_svg_to_path(SVG.as_bytes(), &triangle, Some(crop)).expect("the SVG is clipped");
+        let out = clip_svg_to_path(SVG.as_bytes(), &triangle, Some(crop), None)
+            .expect("the SVG is clipped");
         let text = String::from_utf8(out).expect("still an SVG");
         assert!(
             text.contains("M 0 0 L 100 0 L 0 50 Z"),
@@ -3686,8 +3753,8 @@ mod picture_mask_tests {
             (0.5, 1.0),
             (0.0, 1.0),
         ])];
-        let (data, _format) =
-            apply_path_mask(&png.into_inner(), &half, Some(crop)).expect("the raster is masked");
+        let (data, _format) = apply_path_mask(&png.into_inner(), &half, Some(crop), None)
+            .expect("the raster is masked");
         let masked = image::load_from_memory(&data).expect("decode").into_rgba8();
         assert_eq!(
             masked.get_pixel(4, 4)[3],
@@ -3732,6 +3799,46 @@ mod picture_mask_tests {
             svg.contains("M 480 60") && svg.contains("L 160 330"),
             "the clip is written in cropped-frame coordinates: {}",
             &svg[..svg.len().min(600)]
+        );
+    }
+    #[test]
+    fn source_crop_and_destination_stretch_preserve_custom_mask_coordinates() {
+        let half = vec![crate::ir::Subpath::closed_outline(vec![
+            (0.0, 0.0),
+            (0.5, 0.0),
+            (0.5, 1.0),
+            (0.0, 1.0),
+        ])];
+        let crop = Some(ImageCrop {
+            left: 0.25,
+            ..ImageCrop::default()
+        });
+        let fill = Some(crate::ir::ImageFillRect {
+            left: -0.5,
+            ..crate::ir::ImageFillRect::default()
+        });
+        let svg = clip_svg_to_path(SVG.as_bytes(), &half, crop, fill).unwrap();
+        let svg = std::str::from_utf8(&svg).unwrap();
+        assert!(
+            svg.contains("M 50 0 L 75 0 L 75 50 L 50 50 Z"),
+            "custom clip must occupy the destination's left half: {svg}"
+        );
+        let original = image::RgbaImage::from_pixel(8, 8, image::Rgba([40, 120, 225, 255]));
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::ImageRgba8(original)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .unwrap();
+        let masked = apply_path_mask(&png.into_inner(), &half, crop, fill).unwrap();
+        let masked = image::load_from_memory(&masked.0).unwrap().into_rgba8();
+        assert_eq!(
+            masked.get_pixel(5, 4)[3],
+            255,
+            "the destination's left half remains painted"
+        );
+        assert_eq!(
+            masked.get_pixel(6, 4)[3],
+            0,
+            "its right half is clipped out"
         );
     }
 }

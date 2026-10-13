@@ -42,6 +42,7 @@ pub(super) fn extract_drawing_image(
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     };
@@ -111,6 +112,7 @@ pub(super) fn extract_shape_image(shape: &docx_rs::Shape, images: &ImageMap) -> 
         stroke: None,
         alignment: None,
         clip_shape: None,
+        fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
     }))

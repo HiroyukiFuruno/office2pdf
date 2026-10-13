@@ -346,7 +346,8 @@ inspection remain required before calling a document correct.
 
 DOCX SmartArt imports saved drawing caches as vector shapes and searchable
 text, inline or anchored in Word flow. The IR represents them as `DrawingGroup`
-blocks; inline frames reserve their effect extents. Unavailable linked caches
+blocks; inline frames reserve their effect extents. Picture fills apply source
+crops and signed stretch rectangles before shape clipping. Unavailable linked caches
 and unsupported per-path painting produce warnings.
 
 ## Contributing files
