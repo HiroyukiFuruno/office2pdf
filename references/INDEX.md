@@ -34,6 +34,7 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 | [krilla](https://github.com/LaurenzV/krilla) | Rust | PDF generation (PDF/A + PDF/UA) | [krilla.md](krilla.md) |
 | [hayro](https://github.com/LaurenzV/hayro) | Rust | PDF renderer (visual comparison testing) | [hayro.md](hayro.md) |
 | [veraPDF](https://github.com/veraPDF/veraPDF-library) | Java | PDF/A and PDF/UA validation | [verapdf.md](verapdf.md) |
+| [zune-image](https://github.com/etemesi254/zune-image) | Rust | JPEG decoding used through image and Typst | [zune-image.md](zune-image.md) |
 
 ## Math Equations
 
