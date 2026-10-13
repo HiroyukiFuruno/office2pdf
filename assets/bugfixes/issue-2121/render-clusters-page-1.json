@@ -11,7 +11,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-d52b6c885f2a",
       "region": "center"
@@ -27,7 +27,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-750842c534b2",
       "region": "left"
@@ -43,7 +43,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-5615a514094a",
       "region": "top"
@@ -59,7 +59,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-d66dbdd525af",
       "region": "top"
@@ -75,7 +75,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-62500bdb93a8",
       "region": "top-left"
@@ -91,7 +91,7 @@
       "disposition": {
         "issue": "#2122",
         "kind": "issue",
-        "note": "Fresh full-page, diff, and four matched picture crops show the same 13.05pt upward displacement. Third-picture selection now contains only green/blue; remaining strips and rotated-edge regions are positional."
+        "note": "Freshly inspected rebuilt-CLI full GT/output pages, 5-percent diff, and all four matched picture crops at 150 DPI. All four pictures remain 13.05pt above native Word. The third selects green/blue in its unchanged 135x75pt frame; the fourth retains 27-degree rotation. These six current strip/rotated-edge clusters track the positional defect in #2122; the sub-material GT crop-edge fringe spans three pixels (1.44pt at150 DPI), tracked in #1874."
       },
       "id": "p1-2faaafea39ec",
       "region": "top-left"

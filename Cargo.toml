@@ -15,7 +15,7 @@ repository = "https://github.com/developer0hye/office2pdf"
 
 [patch.crates-io]
 umya-spreadsheet = { git = "https://github.com/developer0hye/umya-spreadsheet.git", branch = "fix/panic-safety-v2" }
-# Preserve the pinned parser fixes plus picture source crops (upstream PR #936).
+# Retain parser fixes; source crops are read from raw XML, independent of this pin.
 docx-rs = { git = "https://github.com/developer0hye/docx-rs.git", rev = "71954c60f6a90c0e8dc637b8d8e8876310b29f48" }
 # Retain the stable-version compiler fix (#816) and backport upstream 2e540da3:
 # separate progressive DC scans must select their declared Huffman table.

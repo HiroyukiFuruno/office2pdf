@@ -11,7 +11,7 @@ use crate::ir::{
     TextStyle,
 };
 
-use super::contexts::{DocxConversionContext, WrapContext};
+use super::contexts::{DocxConversionContext, PictureCropContext, WrapContext};
 use super::media::extract_drawing_image;
 use super::tables::convert_table;
 use super::text::ThemeFonts;
@@ -687,32 +687,35 @@ fn convert_docx_header_with_context(
     let shapes = hf_anchored_shapes(anchors);
     let mut shapes: Vec<HeaderFooterShape> = shapes;
     let mut anchors = anchors.iter();
-    let mut story_paragraphs = Vec::new();
-    let mut story_tables: Vec<&docx_rs::Table> = Vec::new();
+    let mut story_children: Vec<StoryChild<'_>> = Vec::new();
     for child in &header.children {
         match child {
             docx_rs::HeaderChild::Paragraph(paragraph) => {
-                story_paragraphs.push(paragraph.as_ref());
+                story_children.push(StoryChild::Paragraph(paragraph))
             }
-            docx_rs::HeaderChild::Table(table) => story_tables.push(table.as_ref()),
+            docx_rs::HeaderChild::Table(table) => story_children.push(StoryChild::Table(table)),
             docx_rs::HeaderChild::StructuredDataTag(sdt) => {
-                append_sdt_paragraphs(sdt, &mut story_paragraphs);
-                append_sdt_tables(sdt, &mut story_tables);
+                append_story_sdt_children(sdt, &mut story_children)
             }
         }
     }
-    for table in story_tables {
-        shapes.push(convert_hf_table(
-            table,
-            images,
-            hyperlinks,
-            styles.style_map,
-            conversion_context,
-        ));
-    }
-    let mut source_to_rendered_paragraphs: Vec<usize> = Vec::with_capacity(story_paragraphs.len());
+    let mut source_to_rendered_paragraphs: Vec<usize> = Vec::new();
     let mut paragraphs: Vec<HeaderFooterParagraph> = Vec::new();
-    for (index, paragraph) in story_paragraphs.into_iter().enumerate() {
+    let mut index: usize = 0;
+    for child in story_children {
+        let paragraph = match child {
+            StoryChild::Table(table) => {
+                shapes.push(convert_hf_table(
+                    table,
+                    images,
+                    hyperlinks,
+                    styles.style_map,
+                    conversion_context,
+                ));
+                continue;
+            }
+            StoryChild::Paragraph(paragraph) => paragraph,
+        };
         source_to_rendered_paragraphs.push(paragraphs.len());
         paragraphs.push(convert_hf_paragraph(
             paragraph,
@@ -720,12 +723,14 @@ fn convert_docx_header_with_context(
             false,
             simple_fields.get(index).map(Vec::as_slice).unwrap_or(&[]),
             styles,
+            &conversion_context.picture_crops,
         ));
         paragraphs.extend(hf_anchored_text_box_paragraphs(
             paragraph,
             &mut anchors,
             styles,
         ));
+        index += 1;
     }
     remap_hf_shape_paragraph_indices(&mut shapes, &source_to_rendered_paragraphs);
     // A story that draws only a decorative banner has no paragraph worth
@@ -789,32 +794,35 @@ fn convert_docx_footer_with_context(
     let shapes = hf_anchored_shapes(anchors);
     let mut shapes: Vec<HeaderFooterShape> = shapes;
     let mut anchors = anchors.iter();
-    let mut story_paragraphs = Vec::new();
-    let mut story_tables: Vec<&docx_rs::Table> = Vec::new();
+    let mut story_children: Vec<StoryChild<'_>> = Vec::new();
     for child in &footer.children {
         match child {
             docx_rs::FooterChild::Paragraph(paragraph) => {
-                story_paragraphs.push(paragraph.as_ref());
+                story_children.push(StoryChild::Paragraph(paragraph))
             }
-            docx_rs::FooterChild::Table(table) => story_tables.push(table.as_ref()),
+            docx_rs::FooterChild::Table(table) => story_children.push(StoryChild::Table(table)),
             docx_rs::FooterChild::StructuredDataTag(sdt) => {
-                append_sdt_paragraphs(sdt, &mut story_paragraphs);
-                append_sdt_tables(sdt, &mut story_tables);
+                append_story_sdt_children(sdt, &mut story_children)
             }
         }
     }
-    for table in story_tables {
-        shapes.push(convert_hf_table(
-            table,
-            images,
-            hyperlinks,
-            styles.style_map,
-            conversion_context,
-        ));
-    }
-    let mut source_to_rendered_paragraphs: Vec<usize> = Vec::with_capacity(story_paragraphs.len());
+    let mut source_to_rendered_paragraphs: Vec<usize> = Vec::new();
     let mut paragraphs: Vec<HeaderFooterParagraph> = Vec::new();
-    for (index, paragraph) in story_paragraphs.into_iter().enumerate() {
+    let mut index: usize = 0;
+    for child in story_children {
+        let paragraph = match child {
+            StoryChild::Table(table) => {
+                shapes.push(convert_hf_table(
+                    table,
+                    images,
+                    hyperlinks,
+                    styles.style_map,
+                    conversion_context,
+                ));
+                continue;
+            }
+            StoryChild::Paragraph(paragraph) => paragraph,
+        };
         source_to_rendered_paragraphs.push(paragraphs.len());
         paragraphs.push(convert_hf_paragraph(
             paragraph,
@@ -830,12 +838,14 @@ fn convert_docx_footer_with_context(
                 .map(Vec::as_slice)
                 .unwrap_or(&[]),
             styles,
+            &conversion_context.picture_crops,
         ));
         paragraphs.extend(hf_anchored_text_box_paragraphs(
             paragraph,
             &mut anchors,
             styles,
         ));
+        index += 1;
     }
     remap_hf_shape_paragraph_indices(&mut shapes, &source_to_rendered_paragraphs);
     // A story that draws only a decorative banner has no paragraph worth
@@ -1050,33 +1060,27 @@ fn frame_align(value: &str) -> Option<FrameAlign> {
     }
 }
 
-/// Treat block-level content controls as transparent wrappers around their paragraphs.
-fn append_sdt_paragraphs<'a>(
+enum StoryChild<'a> {
+    Paragraph(&'a docx_rs::Paragraph),
+    Table(&'a docx_rs::Table),
+}
+
+// Crop cursors must see the same drawing order as the raw story scan, even
+// though tables become overlays and paragraphs become a separate IR list.
+fn append_story_sdt_children<'a>(
     sdt: &'a docx_rs::StructuredDataTag,
-    paragraphs: &mut Vec<&'a docx_rs::Paragraph>,
+    children: &mut Vec<StoryChild<'a>>,
 ) {
     for child in &sdt.children {
         match child {
             docx_rs::StructuredDataTagChild::Paragraph(paragraph) => {
-                paragraphs.push(paragraph.as_ref());
+                children.push(StoryChild::Paragraph(paragraph))
+            }
+            docx_rs::StructuredDataTagChild::Table(table) => {
+                children.push(StoryChild::Table(table))
             }
             docx_rs::StructuredDataTagChild::StructuredDataTag(nested) => {
-                append_sdt_paragraphs(nested, paragraphs);
-            }
-            _ => {}
-        }
-    }
-}
-
-fn append_sdt_tables<'a>(
-    sdt: &'a docx_rs::StructuredDataTag,
-    tables: &mut Vec<&'a docx_rs::Table>,
-) {
-    for child in &sdt.children {
-        match child {
-            docx_rs::StructuredDataTagChild::Table(table) => tables.push(table.as_ref()),
-            docx_rs::StructuredDataTagChild::StructuredDataTag(nested) => {
-                append_sdt_tables(nested, tables);
+                append_story_sdt_children(nested, children)
             }
             _ => {}
         }
@@ -1276,6 +1280,7 @@ fn convert_hf_paragraph(
     is_bidi: bool,
     simple_fields: &[SimpleFieldMarker],
     styles: HeaderFooterStyleContext<'_>,
+    picture_crops: &PictureCropContext,
 ) -> HeaderFooterParagraph {
     // A header paragraph resolves `w:pStyle` exactly as a body paragraph
     // does. It used to resolve none, so everything a style supplied — Word's
@@ -1325,10 +1330,17 @@ fn convert_hf_paragraph(
                 );
                 extract_hf_run_elements(&run.children, &run_style, &mut elements, &mut field_state);
                 for run_child in &run.children {
-                    if let docx_rs::RunChild::Drawing(drawing) = run_child
-                        && let Some(block) =
-                            extract_drawing_image(drawing, images, &WrapContext::empty(), None)
-                    {
+                    if let docx_rs::RunChild::Drawing(drawing) = run_child {
+                        let crop = picture_crops.next_drawing(true);
+                        let Some(block) = extract_drawing_image(
+                            drawing,
+                            images,
+                            &WrapContext::empty(),
+                            None,
+                            crop,
+                        ) else {
+                            continue;
+                        };
                         match block {
                             Block::Image(image) => elements.push(HFInline::Image(image)),
                             Block::FloatingImage(image) => {
@@ -1601,8 +1613,14 @@ fn hf_anchored_text_box_paragraphs(
                 let docx_rs::TextBoxContentChild::Paragraph(inner) = text_box_child else {
                     continue;
                 };
-                let mut converted =
-                    convert_hf_paragraph(inner, &ImageMap::new(), false, &[], styles);
+                let mut converted = convert_hf_paragraph(
+                    inner,
+                    &ImageMap::new(),
+                    false,
+                    &[],
+                    styles,
+                    &PictureCropContext::default(),
+                );
                 if !hf_paragraph_carries_text(&converted) {
                     continue;
                 }
@@ -2572,7 +2590,14 @@ mod structured_tag_tests {
             paragraph_property_defaults_are_declared: false,
         };
 
-        let converted = convert_hf_paragraph(&paragraph, &ImageMap::new(), false, &[], styles);
+        let converted = convert_hf_paragraph(
+            &paragraph,
+            &ImageMap::new(),
+            false,
+            &[],
+            styles,
+            &PictureCropContext::default(),
+        );
 
         assert!(
             converted

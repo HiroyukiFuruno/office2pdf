@@ -46,4 +46,4 @@ Marker clearance/suffixes follow `pdf/list_label.rs`. Native probes calibrate
 font/size/tab/wrap differences and inline marker ascent versus body descent/leading.
 Damaged-PNG recovery follows `src/pdf/images.rs`, retaining drawings on decode failure.
 Direct `png` uses locked 0.18.1; Word probes check CRC and truncated-media behavior.
-Picture crops follow `src/docx/images.rs`; [docx-rs#936](https://github.com/bokuweb/docx-rs/pull/936) preserves per-picture offsets.
+Picture crops follow `src/docx/images.rs`; raw XML retains per-picture offsets independently of [docx-rs#936](https://github.com/bokuweb/docx-rs/pull/936).

@@ -261,6 +261,7 @@ Native Rust callers can use the same per-conversion path through
 
 DOCX picture crops apply per picture, including body, header and footer images.
 Crops extending beyond the original image are not yet rendered.
+Published library builds can omit DOCX picture rotation.
 
 Damaged DOCX PNG pictures recover available pixels with warnings and keep their
 drawing extent; undecodable headers use a black placeholder. Partial previews
