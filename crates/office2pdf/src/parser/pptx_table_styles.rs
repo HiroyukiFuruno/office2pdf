@@ -668,7 +668,7 @@ pub(super) fn add_builtin_table_styles(
     }
 }
 
-/// DrawingML tint: blend toward white keeping `factor` of the base color.
+/// Encoded-sRGB blend for the built-in Medium Style 2 approximation.
 fn tint_color(color: Color, factor: f64) -> Color {
     let tint = |channel: u8| -> u8 {
         (255.0 - (255.0 - channel as f64) * factor)
