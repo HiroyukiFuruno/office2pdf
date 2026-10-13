@@ -2491,6 +2491,7 @@ dependencies = [
  "markup5ever_rcdom",
  "paste",
  "pdf-extract",
+ "png",
  "quick-xml 0.41.0",
  "serde",
  "serde_json",

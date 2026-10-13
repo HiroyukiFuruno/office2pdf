@@ -36,9 +36,10 @@ by applicable law.
 - Fixture: <!-- repository path -->
 - Page(s): <!-- compared page numbers -->
 - Renderer and DPI: <!-- e.g. pdftoppm, 150 DPI -->
-- Evidence mode: `fix` <!-- `fix` requires gt/before/after; `defect` requires compare -->
-- Layout audit report: `assets/bugfixes/issue-<!-- N -->/layout-audit.json` <!-- fix mode only -->
-- Render cluster reports: `assets/bugfixes/issue-<!-- N -->/render-clusters-page-<!-- P -->.json` <!-- fix mode: one strict report per compared page -->
+- Evidence mode: `fix` <!-- fix: GT/Before/After; conversion-recovery: GT/After and hashed baseline failure without a PDF; defect: Compare -->
+- Baseline failure report: None <!-- conversion-recovery only: assets/bugfixes/issue-N/conversion-failure.json; declare Before: None -->
+- Layout audit report: `assets/bugfixes/issue-<!-- N -->/layout-audit.json` <!-- fix and conversion-recovery -->
+- Render cluster reports: `assets/bugfixes/issue-<!-- N -->/render-clusters-page-<!-- P -->.json` <!-- fix and conversion-recovery: one strict report per compared page -->
 - Reference exporter differences: None <!-- or assets/bugfixes/issue-N/reference-exporter-differences.json -->
 - Fine-detail threshold: <!-- e.g. 0.5pt; must match compare_layout.py --fine-shift -->
 - Layout audit page count: <!-- Pass, or #N references when the report differs -->
@@ -62,6 +63,8 @@ by applicable law.
 | GT | Before | After |
 | --- | --- | --- |
 | <!-- ![GT](IMAGE_URL) --> | <!-- ![Before](IMAGE_URL) --> | <!-- ![After](IMAGE_URL) --> |
+
+<!-- Conversion-recovery only: remove the Before column; retain GT/After previews. -->
 
 <!-- Reference exporter difference only: render the native Office evidence. -->
 

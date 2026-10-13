@@ -51,6 +51,8 @@ mailparse = "0.18"
 umya-spreadsheet = "2"
 unicode-normalization = "0.1"
 image = "0.25"
+# Access partial frames when damaged DOCX pictures cannot be fully decoded.
+png = "0.18"
 tracing = "0.1"
 wasm-bindgen = { version = "0.2", optional = true }
 ts-rs = { version = "12", optional = true }

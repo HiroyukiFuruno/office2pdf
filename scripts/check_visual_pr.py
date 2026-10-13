@@ -40,6 +40,10 @@ RENDER_CLUSTER_REPORT_PATH = re.compile(
 REFERENCE_DIFFERENCE_PATH = re.compile(
     r"^assets/bugfixes/issue-(?P<issue>\d+)/reference-exporter-differences\.json$"
 )
+CONVERSION_FAILURE_PATH = re.compile(
+    r"^assets/bugfixes/issue-(?P<issue>\d+)/conversion-failure\.json$"
+)
+FIX_MODES = frozenset({"fix", "conversion-recovery"})
 REFERENCE_DIFFERENCE_ID = re.compile(r"ref:([a-z0-9]+(?:-[a-z0-9]+)*)")
 # These bounds match diff_page's missing_text/extra_text diagnostic labels.
 LAYOUT_TEXT_SAMPLE_LIMIT = 20
@@ -240,22 +244,33 @@ def validate_pr_body(body: str, changed_paths: list[str]) -> list[str]:
         errors.append("Visual audit > Renderer and DPI must record at least 150 DPI.")
 
     mode = field(audit, "Evidence mode")
-    if mode not in {"fix", "defect"}:
-        errors.append("Visual audit > Evidence mode must be `fix` or `defect`.")
+    if mode not in FIX_MODES | {"defect"}:
+        errors.append("Visual audit > Evidence mode must be `fix`, `conversion-recovery`, or `defect`.")
     elif issue_number:
         expected = (
             ("GT", "gt"),
             ("Before", "before"),
             ("After", "after"),
-        ) if mode == "fix" else (("Compare", "compare"),)
+        ) if mode == "fix" else (
+            (("GT", "gt"), ("After", "after"))
+            if mode == "conversion-recovery" else (("Compare", "compare"),)
+        )
         for field_name, basename in expected:
             expected_path = f"assets/bugfixes/issue-{issue_number}/{basename}.jpg"
             if field(audit, field_name) != expected_path:
                 errors.append(f"Visual audit > {field_name} must be `{expected_path}`.")
+        if mode == "conversion-recovery":
+            expected_failure = f"assets/bugfixes/issue-{issue_number}/conversion-failure.json"
+            if field(audit, "Baseline failure report") != expected_failure:
+                errors.append(f"Visual audit > Baseline failure report must be `{expected_failure}`.")
+            if field(audit, "Before") != "None":
+                errors.append("Conversion-recovery evidence must declare Before: None.")
 
     preview_labels: tuple[str, ...] = ()
     if mode == "fix":
         preview_labels = FIX_PREVIEW_LABELS
+    elif mode == "conversion-recovery":
+        preview_labels = ("GT", "After")
     elif mode == "defect":
         preview_labels = DEFECT_PREVIEW_LABELS
     preview_urls = rendered_preview_urls(audit, preview_labels)
@@ -759,7 +774,7 @@ def validate_reference_exporter_differences(
     if checked(impact, "No rendered PDF change"):
         return None, []
     audit = extract_section(body, "## Visual audit")
-    if field(audit, "Evidence mode") != "fix":
+    if field(audit, "Evidence mode") not in FIX_MODES:
         return None, []
     issue_match = re.fullmatch(r"#(\d+)", field(audit, "Issue") or "")
     if issue_match is None:
@@ -905,7 +920,7 @@ def validate_layout_audit(
         return []
 
     audit = extract_section(body, "## Visual audit")
-    if field(audit, "Evidence mode") != "fix":
+    if field(audit, "Evidence mode") not in FIX_MODES:
         return []
     issue_match = re.fullmatch(r"#(\d+)", field(audit, "Issue") or "")
     if not issue_match:
@@ -1461,7 +1476,7 @@ def validate_render_cluster_audits(
     if checked(impact, "No rendered PDF change"):
         return []
     audit = extract_section(body, "## Visual audit")
-    if field(audit, "Evidence mode") != "fix":
+    if field(audit, "Evidence mode") not in FIX_MODES:
         return []
     issue_match = re.fullmatch(r"#(\d+)", field(audit, "Issue") or "")
     if issue_match is None:
@@ -1617,7 +1632,7 @@ def validate_jpeg(path: Path) -> list[str]:
     return errors
 
 
-def validate_evidence(changed_paths: list[str], root: Path) -> list[str]:
+def validate_evidence(changed_paths: list[str], root: Path, *, mode: str = "fix") -> list[str]:
     errors: list[str] = []
     touched: dict[str, set[str]] = {}
 
@@ -1626,6 +1641,7 @@ def validate_evidence(changed_paths: list[str], root: Path) -> list[str]:
             LAYOUT_AUDIT_PATH.fullmatch(raw_path)
             or RENDER_CLUSTER_REPORT_PATH.fullmatch(raw_path)
             or REFERENCE_DIFFERENCE_PATH.fullmatch(raw_path)
+            or CONVERSION_FAILURE_PATH.fullmatch(raw_path)
         ):
             continue
         if not is_visual_asset(raw_path):
@@ -1647,6 +1663,10 @@ def validate_evidence(changed_paths: list[str], root: Path) -> list[str]:
     for issue, names in touched.items():
         issue_dir = root / VISUAL_ROOT / f"issue-{issue}"
         required = {"gt", "before", "after"} if names & {"gt", "before", "after"} else set()
+        if mode == "conversion-recovery":
+            required.discard("before")
+            if (issue_dir / "before.jpg").exists():
+                errors.append("Conversion-recovery evidence cannot include a before image.")
         standalone = ({"compare"} if "compare" in names else set()) | (
             {"native"} if "native" in names else set()
         )
@@ -1657,6 +1677,64 @@ def validate_evidence(changed_paths: list[str], root: Path) -> list[str]:
             else:
                 errors.extend(validate_jpeg(path))
 
+    return errors
+
+
+def validate_conversion_failure(body: str, changed_paths: list[str], root: Path) -> list[str]:
+    """Bind an absent baseline PDF to a hashed source and captured failing run."""
+    audit = extract_section(body, "## Visual audit")
+    reports = [path for path in changed_paths if CONVERSION_FAILURE_PATH.fullmatch(path)]
+    if field(audit, "Evidence mode") != "conversion-recovery":
+        return ["Conversion-failure evidence requires conversion-recovery mode."] if reports else []
+    issue_match = re.fullmatch(r"#(\d+)", field(audit, "Issue") or "")
+    if issue_match is None:
+        return ["Conversion recovery requires an issue reference."]
+    directory = f"assets/bugfixes/issue-{issue_match.group(1)}"
+    expected_path = f"{directory}/conversion-failure.json"
+    errors: list[str] = []
+    if reports != [expected_path] or field(audit, "Baseline failure report") != expected_path:
+        errors.append("The issue-local conversion-failure report must be freshly changed.")
+    if (root / directory / "before.jpg").exists() or field(audit, "Before") != "None":
+        errors.append("Conversion recovery requires an absent before image.")
+    if field(audit, "Text-layer-only") == "Yes":
+        errors.append("Conversion recovery is not a text-layer-only fix.")
+    try:
+        receipt = json.loads((root / expected_path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return errors + ["A readable conversion-failure report is required."]
+    if not isinstance(receipt, dict):
+        return errors + ["Conversion-failure report must be an object."]
+    if type(receipt.get("schema_version")) is not int or receipt["schema_version"] != 1:
+        errors.append("Conversion-failure schema_version must be 1.")
+    if receipt.get("status") != "conversion_failed":
+        errors.append("The baseline must record conversion_failed.")
+    if type(receipt.get("exit_code")) is not int or receipt["exit_code"] <= 0:
+        errors.append("The baseline must record a positive failure exit code.")
+    if receipt.get("output_pdf_generated") is not False:
+        errors.append("The failed baseline must not have generated a PDF.")
+    for name, length in [("baseline_revision", 40), ("converter_sha256", 64)]:
+        if not isinstance(receipt.get(name), str) or not re.fullmatch(f"[0-9a-f]{{{length}}}", receipt[name]):
+            errors.append(f"Conversion failure requires a valid {name}.")
+    fixture = receipt.get("fixture")
+    if not isinstance(fixture, str) or fixture != field(audit, "Fixture"):
+        errors.append("Conversion failure must name the audited fixture.")
+    else:
+        path = PurePosixPath(fixture)
+        resolved = (root / fixture).resolve()
+        if path.is_absolute() or ".." in path.parts or not resolved.is_relative_to(root.resolve()):
+            errors.append("The failure fixture must stay inside the repository.")
+        elif not resolved.is_file() or hashlib.sha256(resolved.read_bytes()).hexdigest() != receipt.get("source_sha256"):
+            errors.append("The failure source SHA-256 must match the audited fixture.")
+    diagnostic_path = f"{directory}/conversion-failure.txt"
+    if receipt.get("diagnostic_path") != diagnostic_path:
+        errors.append("The failure diagnostic must use the issue-local text path.")
+    else:
+        try:
+            diagnostic = (root / diagnostic_path).read_bytes()
+            if not diagnostic.strip() or hashlib.sha256(diagnostic).hexdigest() != receipt.get("diagnostic_sha256"):
+                errors.append("The captured failure diagnostic SHA-256 must match its text file.")
+        except OSError:
+            errors.append("The captured failure diagnostic is missing.")
     return errors
 
 
@@ -1684,7 +1762,9 @@ def main() -> int:
     body = event.get("pull_request", {}).get("body") or ""
     changed_paths = git_changed_paths(args.base, args.head, args.root)
     errors = validate_pr_body(body, changed_paths)
-    errors.extend(validate_evidence(changed_paths, args.root))
+    audit = extract_section(body, "## Visual audit")
+    errors.extend(validate_evidence(changed_paths, args.root, mode=field(audit, "Evidence mode") or "fix"))
+    errors.extend(validate_conversion_failure(body, changed_paths, args.root))
     reference_differences, reference_errors = validate_reference_exporter_differences(
         body, changed_paths, args.root
     )
