@@ -164,6 +164,8 @@ pub enum Block {
     FloatingImage(FloatingImage),
     FloatingTextBox(FloatingTextBox),
     FloatingShape(FloatingShape),
+    /// Cached DrawingML artwork that occupies one document-flow frame.
+    DrawingGroup(Box<DrawingGroup>),
     List(List),
     MathEquation(MathEquation),
     /// Boxed for the same reason [`super::document::FixedElementKind::Chart`]
@@ -1167,6 +1169,25 @@ pub enum WrapMode {
     InFront,
     /// No text wrapping.
     None,
+}
+
+/// Fixed-position shapes, pictures and searchable text within a flow frame.
+#[derive(Debug, Clone)]
+pub struct DrawingGroup {
+    pub width: f64,
+    pub height: f64,
+    pub elements: Vec<super::document::FixedElement>,
+    /// None places the frame inline; an anchor positions it independently.
+    pub anchor: Option<DrawingGroupAnchor>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DrawingGroupAnchor {
+    pub offset_x: f64,
+    pub offset_y: f64,
+    pub horizontal_anchor: FrameAnchor,
+    pub vertical_anchor: FrameAnchor,
+    pub wrap_mode: WrapMode,
 }
 
 /// A floating image with positioning and text wrap mode.

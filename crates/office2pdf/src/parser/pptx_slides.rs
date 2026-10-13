@@ -215,6 +215,26 @@ pub(super) fn parse_smartart_drawing(
     frame_y_pt: f64,
 ) -> Vec<FixedElement> {
     let images: SlideImageMap = SlideImageMap::new();
+    let Ok((mut elements, _warnings)) =
+        parse_cached_drawing(drawing_xml, theme, color_map, &images)
+    else {
+        return Vec::new();
+    };
+    for element in &mut elements {
+        element.x += frame_x_pt;
+        element.y += frame_y_pt;
+    }
+    elements
+}
+
+pub(super) fn parse_cached_drawing(
+    drawing_xml: &str,
+    theme: &ThemeData,
+    color_map: &ColorMapData,
+    images: &SlideImageMap,
+) -> Result<(Vec<FixedElement>, Vec<ConvertWarning>), ConvertError> {
+    let (drawing_xml, mut preset_warnings) =
+        super::cached_presets::expand_cached_presets(drawing_xml)?;
     let table_styles: table_styles::TableStyleMap = table_styles::TableStyleMap::new();
     let inherited_text_body_defaults: PptxTextBodyStyleDefaults =
         PptxTextBodyStyleDefaults::default();
@@ -224,7 +244,7 @@ pub(super) fn parse_smartart_drawing(
         image: None,
     };
     let ctx = SlideParseContext {
-        images: &images,
+        images,
         slide_number: 1,
         theme,
         color_map,
@@ -234,15 +254,56 @@ pub(super) fn parse_smartart_drawing(
         default_text_size_pt: None,
         background: &background,
     };
-    let Ok((mut elements, _warnings)) = parse_slide_xml_inner(drawing_xml, &ctx, false, None)
-    else {
-        return Vec::new();
+    let (elements, warnings) = parse_slide_xml_inner(&drawing_xml, &ctx, false, None)?;
+    preset_warnings.extend(warnings);
+    Ok((elements, preset_warnings))
+}
+
+fn apply_cached_text_transform(
+    elements: Vec<FixedElement>,
+    transform: Option<CachedTextTransform>,
+    shape_rotation_deg: Option<f64>,
+) -> Vec<FixedElement> {
+    let Some(transform) = transform.filter(|value| value.cx > 0 && value.cy > 0) else {
+        return elements;
     };
-    for element in &mut elements {
-        element.x += frame_x_pt;
-        element.y += frame_y_pt;
+    let mut result = Vec::new();
+    for mut element in elements {
+        if let FixedElementKind::TextBox(text_box) = &mut element.kind {
+            // SmartArt saves the text rectangle independently of its outline.
+            // Keep the original background at its full extent before moving text.
+            let mut background = text_box.clone();
+            background.content.clear();
+            result.push(FixedElement {
+                x: element.x,
+                y: element.y,
+                width: element.width,
+                height: element.height,
+                kind: FixedElementKind::TextBox(background),
+            });
+            text_box.fill = None;
+            text_box.stroke = None;
+            text_box.shape_kind = None;
+            // txXfrm rotation is relative to the outline; diagram labels
+            // commonly cancel a rotated shape to remain upright.
+            text_box.shape_rotation_deg =
+                if transform.rotation_deg.is_some() || shape_rotation_deg.is_some() {
+                    Some(
+                        (shape_rotation_deg.unwrap_or_default()
+                            + transform.rotation_deg.unwrap_or_default())
+                        .rem_euclid(360.0),
+                    )
+                } else {
+                    None
+                };
+            element.x = emu_to_pt(transform.x);
+            element.y = emu_to_pt(transform.y);
+            element.width = emu_to_pt(transform.cx);
+            element.height = emu_to_pt(transform.cy);
+        }
+        result.push(element);
     }
-    elements
+    result
 }
 
 /// Collect Chart elements referenced by the slide XML.
@@ -727,6 +788,15 @@ impl GraphicFrameState {
 }
 
 /// Accumulated state for a `<p:sp>` or `<p:cxnSp>` element and its nested properties.
+#[derive(Debug, Clone, Copy, Default)]
+struct CachedTextTransform {
+    x: i64,
+    y: i64,
+    cx: i64,
+    cy: i64,
+    rotation_deg: Option<f64>,
+}
+
 struct ShapeState {
     depth: usize,
     x: i64,
@@ -776,6 +846,8 @@ struct ShapeState {
     blip_crop: Option<ImageCrop>,
     in_blip_fill: bool,
     in_xfrm: bool,
+    in_text_xfrm: bool,
+    cached_text_transform: Option<CachedTextTransform>,
     in_ln: bool,
     ln_width_emu: i64,
     ln_color: Option<Color>,
@@ -850,6 +922,8 @@ impl Default for ShapeState {
             blip_crop: None,
             in_blip_fill: false,
             in_xfrm: false,
+            in_text_xfrm: false,
+            cached_text_transform: None,
             in_ln: false,
             ln_width_emu: 0,
             ln_color: None,
@@ -1716,6 +1790,8 @@ fn apply_solid_fill_color(
             end_run_style.color = parsed.color;
             end_run_style.color_alpha = parsed.alpha;
         }
+        SolidFillCtx::RunHighlight => run_style.highlight = parsed.color,
+        SolidFillCtx::EndParaHighlight => end_run_style.highlight = parsed.color,
         SolidFillCtx::BulletFill => {
             bullet_def.color = parsed.color.map(PptxBulletColorSource::Explicit);
         }
@@ -1997,6 +2073,13 @@ impl<'a> SlideXmlParser<'a> {
             }
             b"spPr" if self.in_shape && !self.in_txbody => {
                 self.shape.in_sp_pr = true;
+            }
+            b"txXfrm" if self.in_shape => {
+                self.shape.in_text_xfrm = true;
+                self.shape.cached_text_transform = Some(CachedTextTransform {
+                    rotation_deg: get_attr_i64(e, b"rot").map(|value| value as f64 / 60_000.0),
+                    ..CachedTextTransform::default()
+                });
             }
             b"xfrm" if self.in_shape && self.shape.in_sp_pr => {
                 self.shape.in_xfrm = true;
@@ -2364,6 +2447,12 @@ impl<'a> SlideXmlParser<'a> {
             b"solidFill" if self.in_end_para_rpr && !self.in_text_line => {
                 self.solid_fill_ctx = SolidFillCtx::EndParaFill;
             }
+            b"highlight" if self.in_rpr => {
+                self.solid_fill_ctx = SolidFillCtx::RunHighlight;
+            }
+            b"highlight" if self.in_end_para_rpr => {
+                self.solid_fill_ctx = SolidFillCtx::EndParaHighlight;
+            }
             b"hlinkClick" if self.in_rpr => {
                 if self.run_marker_style_before_hyperlink.is_none() {
                     self.run_marker_style_before_hyperlink = Some(self.run_style.clone());
@@ -2564,6 +2653,18 @@ impl<'a> SlideXmlParser<'a> {
     fn handle_empty_geometry_and_picture(&mut self, e: &BytesStart<'_>) -> bool {
         let local = e.local_name();
         match local.as_ref() {
+            b"off" if self.shape.in_text_xfrm => {
+                if let Some(transform) = self.shape.cached_text_transform.as_mut() {
+                    transform.x = get_attr_i64(e, b"x").unwrap_or_default();
+                    transform.y = get_attr_i64(e, b"y").unwrap_or_default();
+                }
+            }
+            b"ext" if self.shape.in_text_xfrm => {
+                if let Some(transform) = self.shape.cached_text_transform.as_mut() {
+                    transform.cx = get_attr_i64(e, b"cx").unwrap_or_default();
+                    transform.cy = get_attr_i64(e, b"cy").unwrap_or_default();
+                }
+            }
             b"off" if self.shape.in_xfrm => {
                 self.shape.x = get_attr_i64(e, b"x").unwrap_or(0);
                 self.shape.y = get_attr_i64(e, b"y").unwrap_or(0);
@@ -3066,12 +3167,17 @@ impl<'a> SlideXmlParser<'a> {
                         self.shape.prst_geom = Some(inherited.preset.unwrap_or("rect").to_string());
                     }
                     if !(self.skip_placeholders && self.shape.has_placeholder) {
-                        self.elements.extend(finalize_shape(
+                        let elements = finalize_shape(
                             &mut self.shape,
                             &mut self.paragraphs,
                             self.text_box,
                             &self.ctx,
                             &mut self.warnings,
+                        );
+                        self.elements.extend(apply_cached_text_transform(
+                            elements,
+                            self.shape.cached_text_transform,
+                            self.shape.rotation_deg,
                         ));
                     }
                     self.in_shape = false;
@@ -3085,6 +3191,9 @@ impl<'a> SlideXmlParser<'a> {
             }
             b"xfrm" if self.shape.in_xfrm => {
                 self.shape.in_xfrm = false;
+            }
+            b"txXfrm" if self.shape.in_text_xfrm => {
+                self.shape.in_text_xfrm = false;
             }
             b"ln" if self.shape.in_ln => {
                 self.shape.in_ln = false;
@@ -3211,7 +3320,7 @@ impl<'a> SlideXmlParser<'a> {
     /// arm-order preservation as the `handle_start_*` sub-handlers).
     fn handle_end_fill_and_style_refs(&mut self, local_name: &[u8]) -> bool {
         match local_name {
-            b"solidFill" if self.solid_fill_ctx != SolidFillCtx::None => {
+            b"solidFill" | b"highlight" if self.solid_fill_ctx != SolidFillCtx::None => {
                 self.solid_fill_ctx = SolidFillCtx::None;
             }
             b"lnRef" if self.in_style_ln_ref => {

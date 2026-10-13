@@ -71,6 +71,8 @@ mod lists;
 mod media;
 #[path = "docx_sections.rs"]
 mod sections;
+#[path = "docx_smartart.rs"]
+mod smartart;
 #[path = "docx_styles.rs"]
 mod styles;
 #[path = "docx_tables.rs"]
@@ -328,6 +330,11 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             let metafile_images = build_document_metafile_image_map(&mut archive);
             let ctx = DocxConversionContext {
                 theme_fonts: theme_fonts.clone(),
+                smartart: smartart::SmartArtContext::from_archive(
+                    doc_xml.as_deref(),
+                    theme_xml.as_deref(),
+                    &mut archive,
+                ),
                 notes,
                 wraps,
                 drawing_text_boxes,
@@ -377,6 +384,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             metadata: crate::ir::Metadata::default(),
             ctx: DocxConversionContext {
                 theme_fonts: ThemeFonts::default(),
+                smartart: smartart::SmartArtContext::default(),
                 notes: NoteContext::empty(),
                 wraps: WrapContext::empty(),
                 drawing_text_boxes: DrawingTextBoxContext::from_xml(None),
@@ -441,6 +449,8 @@ impl Parser for DocxParser {
             pair_kerning,
             default_language,
         } = build_zip_preparse_assets(data);
+
+        warnings.append(&mut ctx.smartart.warnings);
 
         if section_alignment
             .iter()
@@ -1137,7 +1147,23 @@ fn extract_run_children_media(
             let wpg_drawing: Option<WpgDrawingInfo> = ctx.drawing_shapes.consume_wpg_drawing();
             let canvas_image_offset: Option<(f64, f64)> =
                 ctx.drawing_shapes.consume_canvas_image_offset();
-            if let Some(wpg_drawing) = wpg_drawing {
+            if let Some(mut group) = ctx.smartart.consume_next() {
+                if let Some(anchor) = group.anchor.as_mut() {
+                    anchor.wrap_mode = ctx.wraps.consume_next();
+                    text_box_blocks.push(Block::DrawingGroup(Box::new(group)));
+                } else {
+                    // Word seats an inline diagram on its paragraph's baseline,
+                    // just like an inline text box, including the paragraph gaps.
+                    inline_text_boxes.push(InlineTextBox {
+                        width: group.width,
+                        height: group.height,
+                        content: vec![Block::DrawingGroup(Box::new(group))],
+                        padding: crate::ir::Insets::default(),
+                        stroke: None,
+                        fill: None,
+                    });
+                }
+            } else if let Some(wpg_drawing) = wpg_drawing {
                 // docx-rs represents only one child from a WPG group. Use the
                 // complete raw-XML group instead to avoid dropping its siblings.
                 text_box_blocks.extend(convert_wpg_drawing_blocks(

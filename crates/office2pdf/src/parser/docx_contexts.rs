@@ -75,6 +75,7 @@ pub(super) struct DocxConversionContext {
     pub(super) wraps: WrapContext,
     pub(super) drawing_text_boxes: DrawingTextBoxContext,
     pub(super) drawing_shapes: DrawingShapeContext,
+    pub(super) smartart: super::smartart::SmartArtContext,
     pub(super) table_headers: TableHeaderContext,
     pub(super) table_styles: TableStyleContext,
     pub(super) vml_text_boxes: VmlTextBoxContext,
@@ -113,6 +114,7 @@ impl DocxConversionContext {
         let story_xml: Option<&str> = Some(story_xml);
         Self {
             theme_fonts,
+            smartart: super::smartart::SmartArtContext::default(),
             notes: NoteContext::empty(),
             wraps: build_wrap_context_from_xml(story_xml),
             drawing_text_boxes: DrawingTextBoxContext::from_xml_with_theme(story_xml, theme_xml),

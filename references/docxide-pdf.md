@@ -5,12 +5,11 @@
 - License: Apache-2.0; fixture and font redistribution rights require separate review.
 - Published comparison: https://sverrejb.github.io/docxide-pdf/
 
-Direct OOXML-to-PDF renderer with a Word-exported reference corpus. Useful
-implementation references: `src/docx/alt_chunk.rs` (HTML/MHTML imports),
+Direct OOXML-to-PDF renderer with Word references. Useful implementations:
+`src/docx/alt_chunk.rs` (HTML/MHTML imports),
 `sections.rs` (page borders, line numbering, vertical alignment), `numbering.rs`
 (restart/override/legal-numbering semantics), and the preset-geometry engine.
 Our Typst backend handles complex-script shaping; reproduce gaps before copying patterns.
-
 Pinned corpus: 393 inputs/391 references; re-run current code against release-only comparisons.
 
 ```sh
@@ -23,8 +22,8 @@ conversion failures/timeouts, source/reference/output hashes, reference metadata
 page counts, and normalized text findings. It never executes fixture generators.
 Token identities are hashed; source-document text stays outside the report.
 The baseline is `tests/compatibility/docxide-pdf/baseline.json`.
-Baseline against main `39bcb289`: 390 comparisons, two missing references,
-one image-decoding failure, 64 page-count differences, and 27 empty text layers.
+Initial main `39bcb289`: 390 comparisons, two missing references, one decoding
+failure, 64 page-count differences, and 27 empty text layers; rerun for current results.
 Custom-XML text is retained. Alternate-prefix body/header/footer runs use
 URI-based parsing backported from [docx-rs#934](https://github.com/bokuweb/docx-rs/pull/934).
 
@@ -44,6 +43,7 @@ restarts, suppression, implicit counters and skipped-level origins. MS-OI29500 2
 confirms Word ignores restart rules inside complete level overrides.
 Marker clearance/suffixes follow `pdf/list_label.rs`. Native probes calibrate
 font/size/tab/wrap differences and inline marker ascent versus body descent/leading.
-Damaged-PNG handling follows `src/pdf/images.rs`: preserve the drawing when
-decoding fails. A direct `png` dependency reuses locked 0.18.1 to recover samples;
-native Word probes check CRC and truncated-media behavior.
+Damaged PNGs follow `src/pdf/images.rs`: preserve drawings when decoding fails.
+Locked `png` 0.18.1 recovers samples; native probes check CRC/truncated media. SmartArt follows
+package relationships into cached DrawingML, including separate text transforms.
+Native outlines stay; compatible others use Annex D; unsupported outlines/path paints warn and fall back.

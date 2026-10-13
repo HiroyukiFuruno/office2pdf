@@ -904,7 +904,10 @@ impl<'a> PptxTableParser<'a> {
             SolidFillCtx::BulletFill => {
                 self.paragraph_bullet_definition.color = color.map(PptxBulletColorSource::Explicit);
             }
-            SolidFillCtx::PicLineFill | SolidFillCtx::None => {}
+            SolidFillCtx::PicLineFill
+            | SolidFillCtx::RunHighlight
+            | SolidFillCtx::EndParaHighlight
+            | SolidFillCtx::None => {}
         }
     }
 }

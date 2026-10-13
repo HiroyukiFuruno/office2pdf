@@ -5732,6 +5732,7 @@ fn generate_block_inner(
             generate_floating_shape(out, fs, ctx);
             Ok(())
         }
+        Block::DrawingGroup(group) => generate_drawing_group(out, group, ctx),
         Block::List(list) => {
             // Grid-snapped line height applies to list items too (Word's
             // document grid covers all body text).
@@ -6036,6 +6037,71 @@ fn generate_floating_shape(out: &mut String, fs: &FloatingShape, ctx: &mut GenCt
     out.push_str("#box(width: 0pt, height: 0pt)[\n");
     generate_floating_shape_overlay(out, fs, ctx);
     out.push_str("]\n");
+}
+
+fn generate_drawing_group(
+    out: &mut String,
+    group: &crate::ir::DrawingGroup,
+    ctx: &mut GenCtx,
+) -> Result<(), ConvertError> {
+    if let Some(anchor) = &group.anchor {
+        out.push_str("#box(width: 0pt, height: 0pt)[#context [\n");
+        let margins = ctx.active_page_margins.unwrap_or_default();
+        let x_origin = if anchor.horizontal_anchor == FrameAnchor::Margin {
+            margins.left
+        } else {
+            0.0
+        };
+        let y_origin = if anchor.vertical_anchor == FrameAnchor::Margin {
+            margins.top
+        } else {
+            0.0
+        };
+        let x = if anchor.horizontal_anchor == FrameAnchor::Text {
+            format!("{}pt", format_f64(anchor.offset_x))
+        } else {
+            format!(
+                "{}pt - here().position().x",
+                format_f64(x_origin + anchor.offset_x)
+            )
+        };
+        let y = if anchor.vertical_anchor == FrameAnchor::Text {
+            format!("{}pt", format_f64(anchor.offset_y))
+        } else {
+            format!(
+                "{}pt - here().position().y",
+                format_f64(y_origin + anchor.offset_y)
+            )
+        };
+        let _ = write!(out, "#place(top + left, dx: {x}, dy: {y}");
+        if matches!(
+            anchor.wrap_mode,
+            crate::ir::WrapMode::TopAndBottom
+                | crate::ir::WrapMode::Square
+                | crate::ir::WrapMode::Tight
+        ) {
+            out.push_str(", float: true");
+        }
+        out.push_str(")[\n");
+    }
+    let _ = writeln!(
+        out,
+        "#block(width: {}pt, height: {}pt, breakable: false, above: 0pt, below: 0pt)[",
+        format_f64(group.width),
+        format_f64(group.height)
+    );
+    // Fixed DrawingML text calls these helpers even inside a flowing document.
+    // Keep their definitions local so ordinary Word paragraphs are unaffected.
+    write_powerpoint_ligature_state(out);
+    write_powerpoint_advance_grid_helpers(out);
+    for element in &group.elements {
+        generate_fixed_element(out, element, group.height, ctx)?;
+    }
+    out.push_str("]\n");
+    if group.anchor.is_some() {
+        out.push_str("]\n]]\n");
+    }
+    Ok(())
 }
 
 fn generate_floating_shape_overlay(out: &mut String, fs: &FloatingShape, ctx: &mut GenCtx) {

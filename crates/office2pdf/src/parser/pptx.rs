@@ -46,6 +46,21 @@ use self::theme::{
 };
 pub(super) use self::theme::{ThemeLineStyle, drawingml_line_join, parse_theme_line_styles};
 
+/// Reuse DrawingML shape, image-fill and text semantics for a diagram part
+/// belonging to another Office format; relationship IDs stay local to it.
+pub(super) fn parse_cached_drawing_part<R: Read + std::io::Seek>(
+    archive: &mut ZipArchive<R>,
+    part: &str,
+    theme_xml: Option<&str>,
+) -> Result<(Vec<FixedElement>, Vec<ConvertWarning>), ConvertError> {
+    let xml = read_zip_entry(archive, part)?;
+    let images = package::load_slide_images(part, archive);
+    let theme = theme_xml.map(parse_theme_xml).unwrap_or_default();
+    slides::parse_cached_drawing(&xml, &theme, &default_color_map(), &images)
+}
+
+#[path = "pptx_cached_presets.rs"]
+mod cached_presets;
 #[path = "pptx_custom_geometry.rs"]
 pub(crate) mod custom_geometry;
 #[path = "pptx_geometry_guides.rs"]
@@ -108,7 +123,7 @@ enum SlideImageSource {
 /// Map from relationship ID → slide image asset.
 type SlideImageMap = HashMap<String, SlideImageAsset>;
 
-/// Context for which element a `<a:solidFill>` belongs to.
+/// Destination for DrawingML fill and text-highlight colors.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SolidFillCtx {
     None,
@@ -120,6 +135,8 @@ enum SolidFillCtx {
     RunFill,
     /// Paragraph end-run color (inside `<a:endParaRPr>`).
     EndParaFill,
+    RunHighlight,
+    EndParaHighlight,
     /// Bullet marker color (inside `<a:buClr>`).
     BulletFill,
     /// Picture border color (inside `<p:pic>/<p:spPr>/<a:ln>`).

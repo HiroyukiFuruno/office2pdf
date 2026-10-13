@@ -68,3 +68,8 @@ tail. Parser and conversion tests require the picture's extent and surrounding
 text to survive damaged media; runtime-generated variants cover bad checksums,
 RGB/alpha/grayscale samples and header/footer pictures. Native Word exports
 remain outside git. Neither package contains third-party content.
+
+`smartart_cached_drawing.docx` is synthetic case60 from the pinned Apache-2.0
+revision above. It contains two cached diagrams with curved panels, rounded
+boxes, arrows, bullets and mixed text styles; no photographs or font binaries.
+Tests require searchable labels, frame extents and renamed-part lookup.

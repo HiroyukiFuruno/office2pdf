@@ -119,6 +119,9 @@ mod image_tests;
 #[path = "docx_image_recovery_tests.rs"]
 mod image_recovery_tests;
 
+#[path = "docx_smartart_tests.rs"]
+mod smartart_tests;
+
 // ----- List parsing tests -----
 
 /// Helper: build a DOCX with numbering definitions and list paragraphs.

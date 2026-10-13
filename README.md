@@ -344,6 +344,10 @@ CLI build, run `scripts/audit_docxide_corpus.py --help` for repeatable conversio
 page-count, and searchable-text triage. Geometry, pixels, fonts, and direct visual
 inspection remain required before calling a document correct.
 
+DOCX SmartArt imports saved drawing caches as vector shapes and searchable
+text, inline or anchored in Word flow. The IR represents them as `DrawingGroup`
+blocks. Unavailable linked caches and unsupported per-path painting produce warnings.
+
 ## Contributing files
 
 Before attaching files to help improve office2pdf, complete a security review

@@ -82,7 +82,16 @@ fn all_runs<'a>(blocks: &'a [&'a Block]) -> Vec<&'a Run> {
 
 fn collect_runs_from_block<'a>(block: &'a Block, out: &mut Vec<&'a Run>) {
     match block {
-        Block::Paragraph(p) => out.extend(p.runs.iter()),
+        Block::Paragraph(p) => {
+            out.extend(p.runs.iter());
+            for run in &p.runs {
+                if let Some(frame) = &run.inline_box {
+                    for block in &frame.content {
+                        collect_runs_from_block(block, out);
+                    }
+                }
+            }
+        }
         // A contents block carries no runs of its own: its entries are
         // resolved from what it points at.
         Block::TableOfContents(_) => {}
@@ -115,6 +124,15 @@ fn collect_runs_from_block<'a>(block: &'a Block, out: &mut Vec<&'a Run>) {
         Block::FloatingTextBox(text_box) => {
             for block in &text_box.content {
                 collect_runs_from_block(block, out);
+            }
+        }
+        Block::DrawingGroup(group) => {
+            for element in &group.elements {
+                if let office2pdf::ir::FixedElementKind::TextBox(text_box) = &element.kind {
+                    for block in &text_box.content {
+                        collect_runs_from_block(block, out);
+                    }
+                }
             }
         }
         Block::Image(_)
@@ -166,6 +184,22 @@ fn block_text(block: &Block) -> String {
             .iter()
             .map(block_text)
             .collect::<Vec<String>>()
+            .join("\n"),
+        Block::DrawingGroup(group) => group
+            .elements
+            .iter()
+            .filter_map(|element| match &element.kind {
+                office2pdf::ir::FixedElementKind::TextBox(text_box) => Some(
+                    text_box
+                        .content
+                        .iter()
+                        .map(block_text)
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                ),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
             .join("\n"),
         Block::Image(_)
         | Block::InlineImages(_)
