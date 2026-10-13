@@ -5992,7 +5992,47 @@ fn collect_formatting_wrappers(run: &Run) -> Vec<String> {
         wrappers.push(format!("#link(\"{href}\")["));
     }
     if let Some(ref highlight) = style.highlight {
-        wrappers.push(format!("#highlight(fill: {})[", rgb(highlight)));
+        let edges: Option<(f64, f64)> = DRAWINGML_HIGHLIGHT
+            .with(std::cell::Cell::get)
+            .then(|| {
+                let family = font_subst::painted_family_for_text(
+                    style
+                        .font_family
+                        .as_deref()
+                        .unwrap_or(crate::defaults::TYPST_DEFAULT_FONT_FAMILY),
+                    style.east_asian_font_family.as_deref(),
+                    &run.text,
+                );
+                let weight = effective_font_weight(style).map(|weight| {
+                    typst::text::FontWeight::from_number(match weight {
+                        "thin" => 100,
+                        "extralight" => 200,
+                        "light" => 300,
+                        "medium" => 500,
+                        "semibold" => 600,
+                        "bold" => 700,
+                        "extrabold" => 800,
+                        "black" => 900,
+                        _ => 400,
+                    })
+                });
+                crate::render::pdf::font_highlight_edges_em(
+                    &family,
+                    weight,
+                    style.italic == Some(true),
+                )
+            })
+            .flatten();
+        if let Some((top, bottom)) = edges {
+            wrappers.push(format!(
+                "#highlight(fill: {}, top-edge: {}em, bottom-edge: -{}em)[",
+                rgb(highlight),
+                format_f64(top),
+                format_f64(bottom)
+            ));
+        } else {
+            wrappers.push(format!("#highlight(fill: {})[", rgb(highlight)));
+        }
     }
     if matches!(style.strikethrough, Some(true)) {
         wrappers.push("#strike[".to_string());
@@ -6325,6 +6365,7 @@ fn tracked_run_states_its_own_kerning(style: &TextStyle) -> bool {
 }
 
 thread_local! {
+    static DRAWINGML_HIGHLIGHT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// Whether the document being generated is one the `kern` feature may not
     /// be switched off in. See [`with_rtl_shaping_exemption`].
     static RTL_SHAPING_EXEMPTION: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -6678,6 +6719,20 @@ fn effective_letter_spacing(style: &TextStyle, kerning_text: KerningText<'_>) ->
         KerningText::Known { shaped, .. } => sheet_advance_grid_tracking_pt(style, shaped),
         KerningText::Unknown => None,
     }
+}
+
+/// Keep natural highlight coverage local to DrawingML text boxes, including
+/// cached diagrams in flowing DOCX documents. Restore it on errors or panics.
+pub(super) fn with_drawingml_highlight<T>(operation: impl FnOnce() -> T) -> T {
+    DRAWINGML_HIGHLIGHT.with(|active| {
+        let previous = active.replace(true);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(operation));
+        active.set(previous);
+        match result {
+            Ok(value) => value,
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
+    })
 }
 
 /// Run `operation` with PowerPoint advance snapping in the requested state,

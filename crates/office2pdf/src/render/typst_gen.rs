@@ -2140,7 +2140,9 @@ fn generate_fixed_element(
     out.push_str(")[\n");
 
     match &elem.kind {
-        FixedElementKind::TextBox(text_box) => generate_fixed_text_box(out, elem, text_box, ctx)?,
+        FixedElementKind::TextBox(text_box) => {
+            text::with_drawingml_highlight(|| generate_fixed_text_box(out, elem, text_box, ctx))?
+        }
         FixedElementKind::Image(img) => {
             if let Some(ref shadow) = img.shadow {
                 let dir_rad = shadow.direction.to_radians();
