@@ -2850,7 +2850,6 @@ fn rewrite_numbering_part(data: &[u8], edit: impl FnOnce(&str) -> String) -> Vec
     rewrite_docx_part(data, "word/numbering.xml", edit)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn rewrite_docx_part(data: &[u8], part: &str, edit: impl FnOnce(&str) -> String) -> Vec<u8> {
     let mut archive = zip::ZipArchive::new(Cursor::new(data)).unwrap();
     let mut output = zip::ZipWriter::new(Cursor::new(Vec::new()));
