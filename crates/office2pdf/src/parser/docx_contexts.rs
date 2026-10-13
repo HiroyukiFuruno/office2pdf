@@ -26,6 +26,8 @@ mod paragraph_cursor;
 mod paragraph_mark;
 #[path = "docx_context_paragraph_shading.rs"]
 mod paragraph_shading;
+#[path = "docx_context_picture.rs"]
+mod picture;
 #[path = "docx_context_small_caps.rs"]
 mod small_caps;
 #[path = "docx_context_table_header.rs"]
@@ -52,8 +54,10 @@ pub(super) use notes::{
 };
 pub(super) use page_borders::scan_page_borders;
 pub(super) use page_numbers::scan_page_numbering;
+pub(super) use paragraph_cursor::is_skipped_subtree;
 pub(super) use paragraph_mark::ParagraphMarkContext;
 pub(super) use paragraph_shading::{ParagraphShadingContext, scan_style_paragraph_shading};
+pub(super) use picture::PictureCropContext;
 pub(super) use small_caps::SmallCapsContext;
 pub(super) use table_header::TableHeaderContext;
 #[cfg(test)]
@@ -73,6 +77,7 @@ pub(super) struct DocxConversionContext {
     pub(super) theme_fonts: ThemeFonts,
     pub(super) notes: NoteContext,
     pub(super) wraps: WrapContext,
+    pub(super) picture_crops: PictureCropContext,
     pub(super) drawing_text_boxes: DrawingTextBoxContext,
     pub(super) drawing_shapes: DrawingShapeContext,
     pub(super) smartart: super::smartart::SmartArtContext,
@@ -117,6 +122,7 @@ impl DocxConversionContext {
             smartart: super::smartart::SmartArtContext::default(),
             notes: NoteContext::empty(),
             wraps: build_wrap_context_from_xml(story_xml),
+            picture_crops: PictureCropContext::from_xml(story_xml),
             drawing_text_boxes: DrawingTextBoxContext::from_xml_with_theme(story_xml, theme_xml),
             drawing_shapes: DrawingShapeContext::from_xml_with_theme(story_xml, theme_xml),
             table_headers: TableHeaderContext::from_xml(story_xml),

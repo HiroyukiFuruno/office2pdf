@@ -5925,7 +5925,8 @@ fn generate_image(out: &mut String, img: &ImageData, ctx: &mut GenCtx) {
 /// Uses `#place()` for absolute positioning. The wrap mode determines how text
 /// interacts with the image:
 /// - Behind/InFront/None: `#place()` with no text wrapping
-/// - Square/Tight/TopAndBottom: `#place()` with `float: true` for best-effort text flow
+/// - Square/Tight: `#place()` with `float: true` for best-effort text flow
+/// - TopAndBottom: a block reserves the image height
 fn generate_floating_image(out: &mut String, fi: &FloatingImage, ctx: &mut GenCtx) {
     generate_floating_image_with_vertical_offset(out, fi, ctx, fi.offset_y);
 }
@@ -6019,6 +6020,11 @@ fn generate_floating_image_content(out: &mut String, image: &ImageData, path: &s
     }
     if let Some(height) = image.height {
         let _ = write!(out, ", height: {}pt", format_f64(height));
+    }
+    // DrawingML's frame can have a different aspect ratio from the asset.
+    // Stretch the retained source into that frame instead of cropping it.
+    if image.width.is_some() && image.height.is_some() {
+        out.push_str(", fit: \"stretch\"");
     }
     out.push(')');
 

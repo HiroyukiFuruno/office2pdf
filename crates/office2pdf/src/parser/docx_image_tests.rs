@@ -578,3 +578,202 @@ fn test_inline_image_inherits_paragraph_center_alignment() {
         .expect("expected an inline image block");
     assert_eq!(image.alignment, Some(Alignment::Center));
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_source_crops_preserve_signed_offsets_in_body_header_and_footer() {
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let mut archive = zip::ZipArchive::new(Cursor::new(fixture)).unwrap();
+    let mut png: Vec<u8> = Vec::new();
+    archive
+        .by_name("word/media/bands.png")
+        .unwrap()
+        .read_to_end(&mut png)
+        .unwrap();
+    let picture_paragraph = || {
+        docx_rs::Paragraph::new().add_run(
+            docx_rs::Run::new().add_image(docx_rs::Pic::new(&png).size(1_714_500, 952_500)),
+        )
+    };
+    let docx = docx_rs::Docx::new()
+        .header(docx_rs::Header::new().add_paragraph(picture_paragraph()))
+        .footer(docx_rs::Footer::new().add_paragraph(picture_paragraph()))
+        .add_paragraph(picture_paragraph());
+    let mut packed = Cursor::new(Vec::new());
+    docx.build().pack(&mut packed).unwrap();
+    let base: Vec<u8> = packed.into_inner();
+    let archive = zip::ZipArchive::new(Cursor::new(&base)).unwrap();
+    let parts: Vec<String> = archive
+        .file_names()
+        .filter(|name| {
+            *name == "word/document.xml"
+                || ((name.starts_with("word/header") || name.starts_with("word/footer"))
+                    && name.ends_with(".xml"))
+        })
+        .map(str::to_owned)
+        .collect();
+    assert_eq!(parts.len(), 3);
+    for (rectangle, expected) in [
+        (
+            r#"<draw:srcRect xmlns:draw="http://schemas.openxmlformats.org/drawingml/2006/main" l="12.5%" r="12500" b="-2.25%"/>"#,
+            Some(ImageCrop {
+                left: 0.125,
+                top: 0.0,
+                right: 0.125,
+                bottom: -0.0225,
+            }),
+        ),
+        (
+            r#"<a:srcRect t="4604" r="1295" b="6879"/>"#,
+            Some(ImageCrop {
+                left: 0.0,
+                top: 0.04604,
+                right: 0.01295,
+                bottom: 0.06879,
+            }),
+        ),
+        (
+            r#"<a:extLst><a:ext uri="urn:unrelated"><a:srcRect l="75000"/></a:ext></a:extLst><a:srcRect l="12500" foreign:l="75000" xmlns:foreign="urn:foreign"/>"#,
+            Some(ImageCrop {
+                left: 0.125,
+                top: 0.0,
+                right: 0.0,
+                bottom: 0.0,
+            }),
+        ),
+        (r#"<a:srcRect l="0" t="0" r="0" b="0"/>"#, None),
+        (
+            r#"<foreign:srcRect xmlns:foreign="urn:foreign" l="75000"/>"#,
+            None,
+        ),
+    ] {
+        let mut data: Vec<u8> = base.clone();
+        for part in &parts {
+            data = rewrite_docx_part(&data, part, |xml| {
+                assert!(xml.contains("<a:srcRect />") || xml.contains("<a:srcRect/>"));
+                xml.replace("<a:srcRect />", rectangle)
+                    .replace("<a:srcRect/>", rectangle)
+            });
+        }
+        let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let images = find_images(&document);
+        assert_eq!(images.len(), 1);
+        assert_eq!(
+            images[0].crop, expected,
+            "body source rectangle {rectangle}"
+        );
+        let Page::Flow(page) = &document.pages[0] else {
+            panic!("flow page")
+        };
+        for story in [page.header.as_ref().unwrap(), page.footer.as_ref().unwrap()] {
+            let image = story
+                .paragraphs
+                .iter()
+                .flat_map(|p| &p.elements)
+                .find_map(|element| match element {
+                    HFInline::Image(image) => Some(image),
+                    _ => None,
+                })
+                .expect("story picture");
+            assert_eq!(
+                image.crop, expected,
+                "header/footer source rectangle {rectangle}"
+            );
+            assert_eq!((image.width, image.height), (Some(135.0), Some(75.0)));
+        }
+    }
+}
+
+#[test]
+fn docx_source_crops_stay_with_shared_pictures_across_story_tables() {
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let mut archive = zip::ZipArchive::new(Cursor::new(fixture)).unwrap();
+    let mut png: Vec<u8> = Vec::new();
+    archive
+        .by_name("word/media/bands.png")
+        .unwrap()
+        .read_to_end(&mut png)
+        .unwrap();
+    let picture = docx_rs::Pic::new(&png).size(1_714_500, 952_500);
+    let paragraph =
+        || docx_rs::Paragraph::new().add_run(docx_rs::Run::new().add_image(picture.clone()));
+    let table = || {
+        docx_rs::Table::new(vec![docx_rs::TableRow::new(vec![
+            docx_rs::TableCell::new().add_paragraph(paragraph()),
+        ])])
+    };
+    let docx = docx_rs::Docx::new()
+        .header(
+            docx_rs::Header::new()
+                .add_paragraph(paragraph())
+                .add_table(table())
+                .add_paragraph(paragraph()),
+        )
+        .footer(
+            docx_rs::Footer::new()
+                .add_paragraph(paragraph())
+                .add_table(table())
+                .add_paragraph(paragraph()),
+        )
+        .add_paragraph(docx_rs::Paragraph::new());
+    let mut packed = Cursor::new(Vec::new());
+    docx.build().pack(&mut packed).unwrap();
+    let mut data: Vec<u8> = packed.into_inner();
+    let archive = zip::ZipArchive::new(Cursor::new(&data)).unwrap();
+    let parts: Vec<String> = archive
+        .file_names()
+        .filter(|name| {
+            (name.starts_with("word/header") || name.starts_with("word/footer"))
+                && name.ends_with(".xml")
+        })
+        .map(str::to_owned)
+        .collect();
+    for part in parts {
+        data = rewrite_docx_part(&data, &part, |xml| {
+            let mut result = xml.replace("<a:srcRect />", "<a:srcRect/>");
+            for left in [12500, 25000, 37500] {
+                result = result.replacen("<a:srcRect/>", &format!("<a:srcRect l=\"{left}\"/>"), 1);
+            }
+            assert!(!result.contains("<a:srcRect/>"));
+            result
+        });
+    }
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let Page::Flow(page) = &document.pages[0] else {
+        panic!("flow page")
+    };
+    for story in [page.header.as_ref().unwrap(), page.footer.as_ref().unwrap()] {
+        let paragraph_crops: Vec<f64> = story
+            .paragraphs
+            .iter()
+            .flat_map(|paragraph| &paragraph.elements)
+            .filter_map(|element| match element {
+                HFInline::Image(image) => Some(image.crop.expect("paragraph crop").left),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(paragraph_crops, vec![0.125, 0.375]);
+        let table = story
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.content {
+                crate::ir::HeaderFooterShapeContent::Table(table) => Some(table),
+                _ => None,
+            })
+            .expect("story table");
+        let table_crop = table
+            .rows
+            .iter()
+            .flat_map(|row| &row.cells)
+            .flat_map(|cell| &cell.content)
+            .find_map(|block| match block {
+                Block::Image(image) => image.crop,
+                Block::InlineImages(images) => images.first().and_then(|image| image.crop),
+                _ => None,
+            })
+            .expect("table crop");
+        assert_eq!(table_crop.left, 0.25);
+    }
+}

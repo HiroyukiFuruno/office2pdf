@@ -60,6 +60,8 @@ impl SmartArtContext {
         let mut context = Self::default();
         let mut reader = NsReader::from_str(xml);
         let mut depth: usize = 0;
+        let mut skipped_depth: Option<usize> = None;
+        let mut skipped_hyperlink: bool = false;
         let mut frames: Vec<(usize, usize, Frame)> = Vec::new();
         loop {
             match reader.read_event() {
@@ -75,6 +77,33 @@ impl SmartArtContext {
                         matches!(&namespace, ResolveResult::Bound(ns) if ns.as_ref() == FRAME);
                     let is_diagram =
                         matches!(&namespace, ResolveResult::Bound(ns) if ns.as_ref() == DIAGRAM);
+                    // Keep cache occurrences aligned with the drawings reached
+                    // by paragraph conversion, including final-view revisions.
+                    let skip: bool = super::contexts::is_skipped_subtree(name.as_ref())
+                        || (is_word
+                            && matches!(name.as_ref(), b"del" | b"moveFrom" | b"hyperlink"));
+                    if skipped_depth.is_some() || skip {
+                        if skipped_hyperlink && is_diagram && name.as_ref() == b"relIds" {
+                            tracing::warn!(
+                                format = "DOCX",
+                                subtree = "hyperlink",
+                                outcome = "skipped",
+                                "SmartArt in an unsupported hyperlink"
+                            );
+                            context.warnings.push(ConvertWarning::ParseSkipped {
+                                format: "DOCX".into(),
+                                reason: "SmartArt inside a hyperlink is not yet rendered".into(),
+                            });
+                        }
+                        if children {
+                            if skipped_depth.is_none() {
+                                skipped_depth = Some(depth);
+                                skipped_hyperlink = is_word && name.as_ref() == b"hyperlink";
+                            }
+                            depth += 1;
+                        }
+                        continue;
+                    }
                     if is_word && name.as_ref() == b"drawing" {
                         let index = context.drawings.len();
                         context.drawings.push(None);
@@ -130,7 +159,8 @@ impl SmartArtContext {
                     }
                 }
                 Ok(Event::Text(text)) => {
-                    if let Some((_, _, frame)) = frames.last_mut()
+                    if skipped_depth.is_none()
+                        && let Some((_, _, frame)) = frames.last_mut()
                         && let Some(anchor) = frame.anchor.as_mut()
                         && let Ok(value) = text.decode()
                         && let Ok(emu) = value.parse::<i64>()
@@ -144,6 +174,13 @@ impl SmartArtContext {
                 }
                 Ok(Event::End(_)) => {
                     depth = depth.saturating_sub(1);
+                    if skipped_depth.is_some() {
+                        if skipped_depth == Some(depth) {
+                            skipped_depth = None;
+                            skipped_hyperlink = false;
+                        }
+                        continue;
+                    }
                     if frames.last().is_some_and(|(start, _, _)| *start == depth) {
                         let (_, index, frame) = frames.pop().unwrap();
                         if frame.data_id.is_some() {

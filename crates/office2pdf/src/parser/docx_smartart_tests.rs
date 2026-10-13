@@ -139,6 +139,150 @@ fn docx_cached_smartart_preserves_drawing_extent_and_vector_content() {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_cached_smartart_ignores_diagrams_in_unrendered_story_branches() {
+    for wrapper in ["deleted", "moved", "fallback"] {
+        let package = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+            let start = xml.find("<w:drawing>").unwrap();
+            let end = xml[start..].find("</w:drawing>").unwrap() + start + "</w:drawing>".len();
+            let drawing = &xml[start..end];
+            let run = format!("<w:r>{drawing}</w:r>");
+            let hidden = match wrapper {
+                "deleted" => format!("<w:del w:id=\"42\" w:author=\"Synthetic\">{run}</w:del>"),
+                "moved" => {
+                    format!("<w:moveFrom w:id=\"43\" w:author=\"Synthetic\">{run}</w:moveFrom>")
+                }
+                "fallback" => format!(
+                    "<mc:AlternateContent><mc:Choice Requires=\"w14\"/><mc:Fallback>{run}</mc:Fallback></mc:AlternateContent>"
+                ),
+                _ => unreachable!(),
+            };
+            xml.replacen("<w:body>", &format!("<w:body><w:p>{hidden}</w:p>"), 1)
+        });
+        let output =
+            crate::convert_bytes(&package, crate::Format::Docx, &ConvertOptions::default())
+                .unwrap();
+        let text = pdf_extract::extract_text_from_mem(&output.pdf).unwrap();
+        for label in ["Foo", "Shmoo", "Lorem", "Ipsum", "Dolor", "Amet"] {
+            assert!(
+                text.contains(label),
+                "{wrapper} displaced visible diagram label {label}"
+            );
+        }
+        assert_eq!(
+            text.matches("Foo").count(),
+            1,
+            "{wrapper} duplicated the first diagram"
+        );
+    }
+}
+
+#[test]
+fn docx_cached_smartart_keeps_a_neighboring_picture_source_crop() {
+    let picture_package: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let mut pictures = zip::ZipArchive::new(Cursor::new(picture_package)).unwrap();
+    let mut picture_xml = String::new();
+    pictures
+        .by_name("word/document.xml")
+        .unwrap()
+        .read_to_string(&mut picture_xml)
+        .unwrap();
+    let drawing_start = picture_xml.match_indices("<w:drawing>").nth(2).unwrap().0;
+    let drawing_end = picture_xml[drawing_start..].find("</w:drawing>").unwrap()
+        + drawing_start
+        + "</w:drawing>".len();
+    let drawing = picture_xml[drawing_start..drawing_end]
+        .replace("r:embed=\"rId1\"", "r:embed=\"rIdCropIntegration\"")
+        .replacen("<w:drawing>", "<w:drawing xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\">", 1);
+    let mut pixels = Vec::new();
+    pictures
+        .by_name("word/media/bands.png")
+        .unwrap()
+        .read_to_end(&mut pixels)
+        .unwrap();
+    let mut package = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+        xml.replacen(
+            "</w:p>",
+            &format!("</w:p><w:p><w:r>{drawing}</w:r></w:p>"),
+            1,
+        )
+    });
+    package = rewrite_part(&package, "word/_rels/document.xml.rels", |xml| {
+        xml.replace("</Relationships>", "<Relationship Id=\"rIdCropIntegration\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/crop-integration.png\"/></Relationships>")
+    });
+    package = rewrite_part(&package, "[Content_Types].xml", |xml| {
+        if xml.contains("Extension=\"png\"") {
+            xml.into()
+        } else {
+            xml.replace(
+                "</Types>",
+                "<Default Extension=\"png\" ContentType=\"image/png\"/></Types>",
+            )
+        }
+    });
+    let mut archive = zip::ZipArchive::new(Cursor::new(&package)).unwrap();
+    let mut output = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for index in 0..archive.len() {
+        let mut part = archive.by_index(index).unwrap();
+        output
+            .start_file(part.name(), zip::write::FileOptions::default())
+            .unwrap();
+        std::io::copy(&mut part, &mut output).unwrap();
+    }
+    output
+        .start_file(
+            "word/media/crop-integration.png",
+            zip::write::FileOptions::default(),
+        )
+        .unwrap();
+    output.write_all(&pixels).unwrap();
+    let package = output.finish().unwrap().into_inner();
+    let (document, _) = DocxParser
+        .parse(&package, &ConvertOptions::default())
+        .unwrap();
+    assert_eq!(drawing_groups(all_blocks(&document)).len(), 2);
+    let pictures: Vec<&crate::ir::ImageData> = all_blocks(&document)
+        .iter()
+        .filter_map(|block| {
+            if let Block::FloatingImage(image) = block {
+                Some(&image.image)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(pictures.len(), 1);
+    let crop = pictures[0]
+        .crop
+        .expect("the picture keeps its own source rectangle after the diagram");
+    assert_eq!(
+        (crop.left, crop.top, crop.right, crop.bottom),
+        (0.25, 0.0, 0.25, 0.0)
+    );
+}
+
+#[test]
+fn docx_cached_smartart_reports_a_diagram_in_an_unsupported_hyperlink() {
+    let package = rewrite_part(SMARTART_REPORT, "word/document.xml", |xml| {
+        let start = xml.find("<w:drawing>").unwrap();
+        let end = xml[start..].find("</w:drawing>").unwrap() + start + "</w:drawing>".len();
+        let drawing = &xml[start..end];
+        xml.replacen("<w:body>", &format!("<w:body><w:p><w:hyperlink w:anchor=\"synthetic\"><w:r>{drawing}</w:r></w:hyperlink></w:p>"), 1)
+    });
+    let (_, warnings) = DocxParser
+        .parse(&package, &ConvertOptions::default())
+        .unwrap();
+    assert!(
+        warnings.iter().any(|warning| matches!(warning,
+            ConvertWarning::ParseSkipped { format, reason }
+                if format == "DOCX" && reason.contains("SmartArt") && reason.contains("hyperlink")
+        )),
+        "unsupported visible diagram must not disappear without a diagnostic"
+    );
+}
+
 #[test]
 fn docx_cached_smartart_text_rectangle_is_independent_of_shape_geometry() {
     for (width, height) in [(153.0, 53.55), (100.0, 40.0)] {

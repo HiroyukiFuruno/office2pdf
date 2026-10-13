@@ -24,6 +24,231 @@ fn make_quadrant_png() -> Vec<u8> {
     encoded.into_inner()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn floating_band_picture(
+    wrap_mode: WrapMode,
+    width: Option<f64>,
+    height: Option<f64>,
+    rotation_deg: Option<f64>,
+    crop: Option<ImageCrop>,
+) -> Document {
+    let mut pixels: image::RgbaImage = image::RgbaImage::new(200, 100);
+    let bands: [[u8; 4]; 4] = [
+        [220, 40, 40, 255],
+        [40, 180, 60, 255],
+        [40, 80, 220, 255],
+        [240, 190, 30, 255],
+    ];
+    for (x, _, pixel) in pixels.enumerate_pixels_mut() {
+        *pixel = image::Rgba(bands[(x / 50) as usize]);
+    }
+    let mut encoded: Cursor<Vec<u8>> = Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(pixels)
+        .write_to(&mut encoded, RasterImageFormat::Png)
+        .unwrap();
+    make_doc(vec![make_flow_page(vec![Block::FloatingImage(
+        FloatingImage {
+            image: ImageData {
+                rotation_deg,
+                flip_h: false,
+                flip_v: false,
+                data: encoded.into_inner(),
+                format: ImageFormat::Png,
+                width,
+                height,
+                crop,
+                fill_rect: None,
+                stroke: None,
+                alignment: None,
+                clip_shape: None,
+                shadow: None,
+                paragraph_spacing: None,
+            },
+            wrap_mode,
+            vertical_anchor: FloatingImageVerticalAnchor::Margin,
+            offset_x: 24.0,
+            offset_y: 36.0,
+        },
+    )])])
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn assert_floating_picture_size(document: &Document, width: f64, height: f64) {
+    let output = generate_typst(document).unwrap();
+    let boxes = crate::render::pdf::compiled_image_boxes(&output.source, &output.images, 0)
+        .expect("the floating picture compiles");
+    let [picture] = boxes.as_slice() else {
+        panic!("expected one painted picture, got {boxes:?}");
+    };
+    let edge_length = |first: (f64, f64), second: (f64, f64)| -> f64 {
+        (second.0 - first.0).hypot(second.1 - first.1)
+    };
+    let actual_width: f64 = edge_length(picture.corners[0], picture.corners[1]);
+    let actual_height: f64 = edge_length(picture.corners[1], picture.corners[2]);
+    // Read the source image's painted extent, not its parent's clipping box:
+    // cover can produce a correctly sized frame while cutting off its artwork.
+    assert!(
+        (actual_width - width).abs() < 0.01 && (actual_height - height).abs() < 0.01,
+        "the full picture must occupy {width} x {height}pt, got {actual_width} x {actual_height}pt"
+    );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn floating_pictures_preserve_declared_dimensions_for_every_wrap_mode() {
+    for wrap_mode in [
+        WrapMode::None,
+        WrapMode::Behind,
+        WrapMode::InFront,
+        WrapMode::Square,
+        WrapMode::Tight,
+        WrapMode::TopAndBottom,
+    ] {
+        for (width, height) in [(120.0, 120.0), (180.0, 45.0)] {
+            let document = floating_band_picture(wrap_mode, Some(width), Some(height), None, None);
+            assert_floating_picture_size(&document, width, height);
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn floating_pictures_preserve_declared_dimensions_after_crop_and_rotation() {
+    for rotation in [0.0, 27.0, 90.0] {
+        let document = floating_band_picture(
+            WrapMode::InFront,
+            Some(135.0),
+            Some(75.0),
+            Some(rotation),
+            Some(ImageCrop {
+                left: 0.25,
+                top: 0.0,
+                right: 0.25,
+                bottom: 0.0,
+            }),
+        );
+        assert_floating_picture_size(&document, 135.0, 75.0);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn floating_vector_pictures_preserve_declared_dimensions() {
+    let mut document =
+        floating_band_picture(WrapMode::InFront, Some(120.0), Some(120.0), None, None);
+    let Page::Flow(page) = &mut document.pages[0] else {
+        unreachable!();
+    };
+    let Block::FloatingImage(picture) = &mut page.content[0] else {
+        unreachable!();
+    };
+    picture.image.format = ImageFormat::Svg;
+    picture.image.data = br##"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><rect width="200" height="100" fill="#dc2828"/><rect x="50" width="50" height="100" fill="#28b43c"/><rect x="100" width="50" height="100" fill="#2850dc"/><rect x="150" width="50" height="100" fill="#f0be1e"/></svg>"##.to_vec();
+    assert_floating_picture_size(&document, 120.0, 120.0);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn floating_pictures_with_one_dimension_keep_the_source_aspect_ratio() {
+    for (width, height, expected_width, expected_height) in [
+        (Some(120.0), None, 120.0, 60.0),
+        (None, Some(40.0), 80.0, 40.0),
+    ] {
+        let document = floating_band_picture(WrapMode::InFront, width, height, None, None);
+        assert_floating_picture_size(&document, expected_width, expected_height);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn floating_pictures_in_an_authored_docx_preserve_their_frame_dimensions() {
+    use crate::parser::{Parser, docx::DocxParser};
+
+    let source: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let (document, _) = DocxParser
+        .parse(source, &crate::config::ConvertOptions::default())
+        .expect("the authored picture document parses");
+    let output = generate_typst(&document).unwrap();
+    let pictures = crate::render::pdf::compiled_image_boxes(&output.source, &output.images, 0)
+        .expect("the authored picture document compiles");
+    assert_eq!(pictures.len(), 4);
+    for (picture, (width, height)) in
+        pictures
+            .iter()
+            .zip([(120.0, 120.0), (180.0, 45.0), (135.0, 75.0), (135.0, 75.0)])
+    {
+        let edge_length = |first: (f64, f64), second: (f64, f64)| -> f64 {
+            (second.0 - first.0).hypot(second.1 - first.1)
+        };
+        let actual_width = edge_length(picture.corners[0], picture.corners[1]);
+        let actual_height = edge_length(picture.corners[1], picture.corners[2]);
+        assert!(
+            (actual_width - width).abs() < 0.01 && (actual_height - height).abs() < 0.01,
+            "the parsed picture must paint {width} x {height}pt, got {actual_width} x {actual_height}pt"
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_picture_source_crops_follow_each_occurrence_of_shared_media() {
+    use crate::parser::{Parser, docx::DocxParser};
+
+    let source: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let (document, _) = DocxParser
+        .parse(source, &crate::config::ConvertOptions::default())
+        .expect("the authored picture document parses");
+    let Page::Flow(page) = &document.pages[0] else {
+        panic!("expected a flowing Word page");
+    };
+    let pictures: Vec<&FloatingImage> = page
+        .content
+        .iter()
+        .filter_map(|block| match block {
+            Block::FloatingImage(picture) => Some(picture),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(pictures.len(), 4);
+    for (index, picture) in pictures.iter().enumerate() {
+        let expected: Option<ImageCrop> = (index == 2).then_some(ImageCrop {
+            left: 0.25,
+            top: 0.0,
+            right: 0.25,
+            bottom: 0.0,
+        });
+        assert_eq!(
+            picture.image.crop, expected,
+            "source selection on picture {index}"
+        );
+    }
+
+    let output = generate_typst(&document).unwrap();
+    let decoded: Vec<image::RgbImage> = output
+        .images
+        .iter()
+        .map(|asset| image::load_from_memory(&asset.data).unwrap().to_rgb8())
+        .collect();
+    assert!(
+        decoded.iter().any(|pixels| {
+            pixels.dimensions() == (100, 100)
+                && pixels.get_pixel(0, 50).0 == [40, 180, 60]
+                && pixels.get_pixel(99, 50).0 == [40, 80, 220]
+        }),
+        "the rendered cropped picture must contain only the selected green/blue half"
+    );
+    assert!(
+        decoded.iter().any(|pixels| {
+            pixels.dimensions() == (200, 100)
+                && pixels.get_pixel(0, 50).0 == [220, 40, 40]
+                && pixels.get_pixel(199, 50).0 == [240, 190, 30]
+        }),
+        "uncropped uses of the same media must retain all four bands"
+    );
+}
+
 fn make_image(format: ImageFormat, width: Option<f64>, height: Option<f64>) -> Block {
     Block::Image(ImageData {
         rotation_deg: None,

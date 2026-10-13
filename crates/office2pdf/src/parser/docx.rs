@@ -24,13 +24,14 @@ use self::contexts::{
     BidiContext, ChartContext, ContextualSpacingContext, DocxConversionContext,
     DrawingShapeContext, DrawingTextBoxContext, DrawingTextBoxInfo, FieldContext, MathContext,
     NoteContent, NoteContext, ParagraphContextualSpacing, ParagraphMarkContext,
-    ParagraphShadingContext, SmallCapsContext, TableHeaderContext, TableStyleContext,
-    VmlTextBoxContext, VmlTextBoxInfo, WordWrapContext, WpgDrawingInfo, WrapContext,
-    build_chart_context_from_xml, build_math_context_from_xml, build_note_context_from_xml,
-    build_wrap_context_from_xml, extract_column_layout_from_section_property,
-    is_note_reference_run, read_zip_text, scan_column_layouts, scan_line_numbering,
-    scan_page_borders, scan_page_numbering, scan_section_alignment, scan_style_paragraph_shading,
-    scan_style_word_wrap, seq_identifier, toc_caption_identifier, toc_heading_depth,
+    ParagraphShadingContext, PictureCropContext, SmallCapsContext, TableHeaderContext,
+    TableStyleContext, VmlTextBoxContext, VmlTextBoxInfo, WordWrapContext, WpgDrawingInfo,
+    WrapContext, build_chart_context_from_xml, build_math_context_from_xml,
+    build_note_context_from_xml, build_wrap_context_from_xml,
+    extract_column_layout_from_section_property, is_note_reference_run, read_zip_text,
+    scan_column_layouts, scan_line_numbering, scan_page_borders, scan_page_numbering,
+    scan_section_alignment, scan_style_paragraph_shading, scan_style_word_wrap, seq_identifier,
+    toc_caption_identifier, toc_heading_depth,
 };
 use self::lists::{
     NumberingMap, TaggedElement, build_numbering_map, extract_num_info, group_into_lists,
@@ -337,6 +338,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 ),
                 notes,
                 wraps,
+                picture_crops: PictureCropContext::from_xml(doc_xml.as_deref()),
                 drawing_text_boxes,
                 drawing_shapes,
                 table_headers,
@@ -387,6 +389,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 smartart: smartart::SmartArtContext::default(),
                 notes: NoteContext::empty(),
                 wraps: WrapContext::empty(),
+                picture_crops: PictureCropContext::default(),
                 drawing_text_boxes: DrawingTextBoxContext::from_xml(None),
                 drawing_shapes: DrawingShapeContext::from_xml(None),
                 table_headers: TableHeaderContext::from_xml(None),
@@ -1147,6 +1150,7 @@ fn extract_run_children_media(
             let wpg_drawing: Option<WpgDrawingInfo> = ctx.drawing_shapes.consume_wpg_drawing();
             let canvas_image_offset: Option<(f64, f64)> =
                 ctx.drawing_shapes.consume_canvas_image_offset();
+            let crop = ctx.picture_crops.next_drawing(false);
             if let Some(mut group) = ctx.smartart.consume_next() {
                 if let Some(anchor) = group.anchor.as_mut() {
                     anchor.wrap_mode = ctx.wraps.consume_next();
@@ -1176,7 +1180,7 @@ fn extract_run_children_media(
                 ));
             } else {
                 if let Some(img_block) =
-                    extract_drawing_image(drawing, images, &ctx.wraps, canvas_image_offset)
+                    extract_drawing_image(drawing, images, &ctx.wraps, canvas_image_offset, crop)
                 {
                     inline_images.push(img_block);
                 }

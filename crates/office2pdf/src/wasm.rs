@@ -607,6 +607,72 @@ mod wasm_tests {
     }
 
     #[wasm_bindgen_test]
+    fn wasm_docx_source_crops_follow_shared_picture_occurrences() {
+        use crate::parser::Parser;
+
+        let data: &[u8] =
+            include_bytes!("../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+        let (document, _) = crate::parser::docx::DocxParser
+            .parse(data, &ConvertOptions::default())
+            .expect("shared-picture fixture should parse in WASM");
+        let crate::ir::Page::Flow(page) = &document.pages[0] else {
+            panic!("flow page");
+        };
+        let images: Vec<&crate::ir::ImageData> = page
+            .content
+            .iter()
+            .filter_map(|block| match block {
+                crate::ir::Block::FloatingImage(image) => Some(&image.image),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(images.len(), 4);
+        assert!(images[0].crop.is_none());
+        assert!(images[1].crop.is_none());
+        assert!(images[3].crop.is_none());
+        let crop = images[2].crop.expect("third occurrence has its own crop");
+        assert_eq!(
+            (crop.left, crop.top, crop.right, crop.bottom),
+            (0.25, 0.0, 0.25, 0.0)
+        );
+        let pdf = convert_docx_to_pdf(data).expect("cropped pictures should convert in WASM");
+        assert!(pdf.starts_with(b"%PDF"));
+    }
+
+    #[wasm_bindgen_test]
+    fn wasm_docx_cached_smartart_reaches_pdf_conversion() {
+        use crate::parser::Parser;
+
+        let data: &[u8] =
+            include_bytes!("../../../tests/fixtures/docx/docxide/smartart_cached_drawing.docx");
+        let (document, _) = crate::parser::docx::DocxParser
+            .parse(data, &ConvertOptions::default())
+            .unwrap();
+        let crate::ir::Page::Flow(page) = &document.pages[0] else {
+            panic!("flow page")
+        };
+        let diagrams: usize = page
+            .content
+            .iter()
+            .filter_map(|block| {
+                if let crate::ir::Block::Paragraph(paragraph) = block {
+                    Some(paragraph)
+                } else {
+                    None
+                }
+            })
+            .flat_map(|paragraph| &paragraph.runs)
+            .filter_map(|run| run.inline_box.as_ref())
+            .flat_map(|frame| &frame.content)
+            .filter(|block| matches!(block, crate::ir::Block::DrawingGroup(_)))
+            .count();
+        assert_eq!(diagrams, 2, "both cached diagrams reach the renderer");
+        let pdf = convert_docx_to_pdf(data)
+            .expect("cached diagrams convert through the exported WASM API");
+        assert!(pdf.starts_with(b"%PDF"));
+    }
+
+    #[wasm_bindgen_test]
     fn wasm_convert_pptx_to_pdf_produces_valid_pdf() {
         let pptx = make_minimal_pptx();
         let result = convert_pptx_to_pdf(&pptx);

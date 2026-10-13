@@ -11,6 +11,7 @@ pub(super) fn extract_drawing_image(
     images: &ImageMap,
     wraps: &WrapContext,
     canvas_image_offset: Option<(f64, f64)>,
+    crop: Option<crate::ir::ImageCrop>,
 ) -> Option<Block> {
     let pic = match &drawing.data {
         Some(docx_rs::DrawingData::Pic(pic)) => pic,
@@ -38,7 +39,7 @@ pub(super) fn extract_drawing_image(
         format: asset.format,
         width,
         height,
-        crop: None,
+        crop,
         stroke: None,
         alignment: None,
         clip_shape: None,

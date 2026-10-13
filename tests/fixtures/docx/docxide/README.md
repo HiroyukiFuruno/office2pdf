@@ -78,3 +78,10 @@ Tests require searchable labels, frame extents and renamed-part lookup.
 that same Apache-2.0 revision. All five photographs are replaced by an authored
 800×600 color-coordinate grid; no photographs or embedded font binaries remain. Tests
 vary signed destination offsets and source crops while preserving the shape frame.
+
+`floating_picture_stretch.docx` is independently authored under this repository's
+Apache-2.0 license, including its four-band PNG. Four margin-relative floating
+pictures vary frame proportions, rotation and an explicit source crop. A default
+compiled-frame regression checks declared dimensions. Native Word packages and
+PDFs remain external; source-crop and placement defects are tracked separately.
+
