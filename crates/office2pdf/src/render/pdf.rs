@@ -1666,7 +1666,6 @@ fn best_face(family: &str) -> Option<typst::text::Font> {
 /// the heavier of the two wins — the composition `write_text_params` already
 /// emits, so the face measured is the face painted. A bold cell in `Segoe UI
 /// Semibold` paints the family's bold member, and so measures it.
-#[cfg(not(target_arch = "wasm32"))]
 fn chain_variant(
     family: &str,
     explicit_weight: Option<typst::text::FontWeight>,
@@ -1971,6 +1970,45 @@ pub(crate) fn font_hhea_ascender_em(family: &str) -> Option<f64> {
     let instance = measured_instance(&font);
     let ttf = instance.ttf();
     Some(f64::from(ttf.tables().hhea.ascender) / f64::from(ttf.units_per_em()).max(1.0))
+}
+
+/// Natural DrawingML highlight edges, independent of paragraph line spacing.
+/// The native Futura highlight height matches hhea ascent plus gap above the
+/// baseline and hhea descent below it, rather than Typst's OS/2 bounds.
+/// Resolve the run's weight/style before reading the face; on macOS retain
+/// the same system-shadow rule as Word's line metrics.
+pub(crate) fn font_highlight_edges_em(
+    family: &str,
+    weight: Option<typst::text::FontWeight>,
+    italic: bool,
+) -> Option<(f64, f64)> {
+    let mut variant: typst::text::FontVariant = chain_variant(family, weight);
+    if italic {
+        variant.style = typst::text::FontStyle::Italic;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let font: Font = {
+        let data = active_font_data();
+        first_face_in_chain(family, variant, |candidate| {
+            let index: usize = select_face_index(&data, candidate, variant)?;
+            line_metric_face_at(
+                &data,
+                super::font_context::default_font_search_paths(),
+                macos_system_font_dirs(),
+                index,
+            )
+        })?
+    };
+    #[cfg(target_arch = "wasm32")]
+    let font: Font = super::font_subst::active_in_memory_font(family, variant)?;
+    let instance = measured_instance(&font);
+    let ttf = instance.ttf();
+    let hhea = ttf.tables().hhea;
+    let upem: f64 = f64::from(ttf.units_per_em()).max(1.0);
+    Some((
+        (f64::from(hhea.ascender) + f64::from(hhea.line_gap)) / upem,
+        -f64::from(hhea.descender) / upem,
+    ))
 }
 
 /// The cap height of the best face for `family`, in em units.

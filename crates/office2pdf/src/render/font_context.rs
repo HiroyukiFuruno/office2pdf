@@ -685,6 +685,34 @@ pub(crate) mod test_faces {
         Font::new(Bytes::new(bytes), 0).expect("the renamed face parses")
     }
 
+    /// A reproducible face whose natural line box differs from its typographic
+    /// bounds, as Futura does in the native cached-diagram highlight reference.
+    pub(crate) fn noto_serif_with_natural_line_box(
+        family: &str,
+        weight_class: u16,
+        italic: bool,
+        ascent: i16,
+        descent: i16,
+        gap: i16,
+    ) -> Font {
+        let mut bytes: Vec<u8> = rewritten_noto_serif_bytes(weight_class, None);
+        rewrite_family_name(&mut bytes, family);
+        let hhea: usize = table_offset(&bytes, b"hhea");
+        for (offset, value) in [(4, ascent), (6, descent), (8, gap)] {
+            bytes[hhea + offset..hhea + offset + 2].copy_from_slice(&value.to_be_bytes());
+        }
+        let os2: usize = table_offset(&bytes, b"OS/2");
+        let selection: usize = os2 + 62;
+        let flags: u16 = u16::from_be_bytes([bytes[selection], bytes[selection + 1]]);
+        let flags: u16 = if italic {
+            (flags | 1) & !64
+        } else {
+            flags & !1
+        };
+        bytes[selection..selection + 2].copy_from_slice(&flags.to_be_bytes());
+        Font::new(Bytes::new(bytes), 0).expect("the natural-line-box face parses")
+    }
+
     /// Overwrite every `name` table family record (ID 1) with `family`.
     ///
     /// Every record is rewritten rather than the first, because Typst reads

@@ -2471,3 +2471,115 @@ fn footnote_inline_text_box_preserves_nested_table_text() {
         );
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn drawingml_highlight_covers_the_selected_faces_natural_line_box() {
+    use crate::render::font_context::test_faces::noto_serif_with_natural_line_box;
+    use crate::render::pdf::{PaintedKind, compiled_paint_sequence};
+
+    let cases = [
+        ("Noto Serif", 400, false, 1200, -300, 80, 29.0),
+        ("Noto Serif", 700, false, 1450, -360, 30, 18.0),
+        ("Noto Serif", 400, true, 1320, -340, 50, 23.0),
+        ("Demo Serif", 400, false, 1100, -260, 120, 12.0),
+    ];
+    let fonts: Vec<_> = cases
+        .iter()
+        .map(|&(family, weight, italic, ascent, descent, gap, _)| {
+            noto_serif_with_natural_line_box(family, weight, italic, ascent, descent, gap)
+        })
+        .collect();
+    let context = crate::render::font_context::resolve_font_search_context_from_fonts(&fonts);
+    crate::render::font_subst::with_font_search_context(Some(&context), || {
+        for &(family, weight, italic, ascent, descent, gap, size) in &cases {
+            for spacing in [0.9, 1.5] {
+                let mut run = Run {
+                    text: "Diagram label".to_string(),
+                    style: TextStyle::default(),
+                    href: None,
+                    footnote: None,
+                    inline_box: None,
+                };
+                run.style = TextStyle {
+                    font_family: Some(family.to_string()),
+                    font_size: Some(size),
+                    bold: Some(weight == 700),
+                    italic: Some(italic),
+                    highlight: Some(Color::new(0, 255, 0)),
+                    ..Default::default()
+                };
+                let mut element = make_text_box(20.0, 20.0, 350.0, 160.0, "");
+                let FixedElementKind::TextBox(ref mut text_box) = element.kind else {
+                    unreachable!()
+                };
+                text_box.content = vec![
+                    Block::Paragraph(Paragraph {
+                        style: ParagraphStyle {
+                            line_spacing: Some(LineSpacing::Proportional(spacing)),
+                            ..Default::default()
+                        },
+                        runs: vec![run.clone()],
+                    });
+                    2
+                ];
+                let document = make_doc(vec![make_flow_page(vec![Block::DrawingGroup(Box::new(
+                    crate::ir::DrawingGroup {
+                        width: 400.0,
+                        height: 200.0,
+                        effect_extent: Insets::default(),
+                        anchor: None,
+                        elements: vec![element],
+                    },
+                ))])]);
+                let output = generate_typst_with_options_and_font_context(
+                    &document,
+                    &ConvertOptions::default(),
+                    Some(&context),
+                )
+                .expect("cached DrawingML labels generate");
+                let source = output.source;
+                let paints = compiled_paint_sequence(&source, &[], 0).expect("the labels compile");
+                let highlights: Vec<_> = paints
+                    .iter()
+                    .filter(|paint| {
+                        paint.rectangle_fill
+                            == Some(typst::visualize::Color::from_u8(0, 255, 0, 255))
+                    })
+                    .collect();
+                assert!(
+                    highlights.len() >= 2,
+                    "both labels retain painted highlights"
+                );
+                let baselines: Vec<f64> = paints
+                    .iter()
+                    .filter(|paint| paint.kind == PaintedKind::Text)
+                    .map(|paint| paint.transform.ty.to_pt())
+                    .collect();
+                for highlight in highlights {
+                    let baseline = baselines
+                        .iter()
+                        .copied()
+                        .min_by(|a, b| {
+                            (a - highlight.bounds.3)
+                                .abs()
+                                .total_cmp(&(b - highlight.bounds.3).abs())
+                        })
+                        .expect("searchable glyphs remain");
+                    let expected_above = f64::from(ascent + gap) / 1000.0 * size;
+                    let expected_below = -f64::from(descent) / 1000.0 * size;
+                    assert!(
+                        (baseline - highlight.bounds.1 - expected_above).abs() < 0.02,
+                        "{family} weight{weight} italic{italic} size{size}: above={} expected={expected_above}",
+                        baseline - highlight.bounds.1
+                    );
+                    assert!(
+                        (highlight.bounds.3 - baseline - expected_below).abs() < 0.02,
+                        "{family} weight{weight} italic{italic} size{size}: below={} expected={expected_below}",
+                        highlight.bounds.3 - baseline
+                    );
+                }
+            }
+        }
+    });
+}
