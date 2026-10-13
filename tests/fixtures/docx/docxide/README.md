@@ -68,3 +68,9 @@ tail. Parser and conversion tests require the picture's extent and surrounding
 text to survive damaged media; runtime-generated variants cover bad checksums,
 RGB/alpha/grayscale samples and header/footer pictures. Native Word exports
 remain outside git. Neither package contains third-party content.
+
+`floating_picture_stretch.docx` is independently authored under this repository's
+Apache-2.0 license, including its four-band PNG. Four margin-relative floating
+pictures vary frame proportions, rotation and an explicit source crop. A default
+compiled-frame regression checks declared dimensions. Native Word packages and
+PDFs remain external; source-crop and placement defects are tracked separately.
