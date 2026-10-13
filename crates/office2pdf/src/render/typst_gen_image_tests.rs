@@ -189,6 +189,65 @@ fn floating_pictures_in_an_authored_docx_preserve_their_frame_dimensions() {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_picture_source_crops_follow_each_occurrence_of_shared_media() {
+    use crate::parser::{Parser, docx::DocxParser};
+
+    let source: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/floating_picture_stretch.docx");
+    let (document, _) = DocxParser
+        .parse(source, &crate::config::ConvertOptions::default())
+        .expect("the authored picture document parses");
+    let Page::Flow(page) = &document.pages[0] else {
+        panic!("expected a flowing Word page");
+    };
+    let pictures: Vec<&FloatingImage> = page
+        .content
+        .iter()
+        .filter_map(|block| match block {
+            Block::FloatingImage(picture) => Some(picture),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(pictures.len(), 4);
+    for (index, picture) in pictures.iter().enumerate() {
+        let expected: Option<ImageCrop> = (index == 2).then_some(ImageCrop {
+            left: 0.25,
+            top: 0.0,
+            right: 0.25,
+            bottom: 0.0,
+        });
+        assert_eq!(
+            picture.image.crop, expected,
+            "source selection on picture {index}"
+        );
+    }
+
+    let output = generate_typst(&document).unwrap();
+    let decoded: Vec<image::RgbImage> = output
+        .images
+        .iter()
+        .map(|asset| image::load_from_memory(&asset.data).unwrap().to_rgb8())
+        .collect();
+    assert!(
+        decoded.iter().any(|pixels| {
+            pixels.dimensions() == (100, 100)
+                && pixels.get_pixel(0, 50).0 == [40, 180, 60]
+                && pixels.get_pixel(99, 50).0 == [40, 80, 220]
+        }),
+        "the rendered cropped picture must contain only the selected green/blue half"
+    );
+    assert!(
+        decoded.iter().any(|pixels| {
+            pixels.dimensions() == (200, 100)
+                && pixels.get_pixel(0, 50).0 == [220, 40, 40]
+                && pixels.get_pixel(199, 50).0 == [240, 190, 30]
+        }),
+        "uncropped uses of the same media must retain all four bands"
+    );
+}
+
 fn make_image(format: ImageFormat, width: Option<f64>, height: Option<f64>) -> Block {
     Block::Image(ImageData {
         rotation_deg: None,
