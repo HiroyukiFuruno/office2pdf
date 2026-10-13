@@ -179,10 +179,9 @@ fn linear_to_srgb_channel(linear: f64) -> f64 {
 }
 
 pub(crate) fn apply_color_transforms(color: Color, transforms: &[ColorTransform]) -> Color {
-    // Tint and shade precede the HSL transforms. Shade uses linear light to
-    // match PowerPoint (issue #667).
-    // TODO(native tint fidelity): The sRGB-byte tint below is too dark in
-    // native Word diagram comparisons; their fills match linear-light tint.
+    // Native Word and PowerPoint tint operate in linear light. Blending
+    // encoded sRGB bytes makes tints too dark; the rectangle probe covers both
+    // theme and direct colors. Native PowerPoint shade uses this curve (#667).
     let mut r: f64 = color.r as f64;
     let mut g: f64 = color.g as f64;
     let mut b: f64 = color.b as f64;
@@ -190,9 +189,9 @@ pub(crate) fn apply_color_transforms(color: Color, transforms: &[ColorTransform]
     for transform in transforms {
         match transform {
             ColorTransform::Tint(t) => {
-                r = 255.0 - (255.0 - r) * t;
-                g = 255.0 - (255.0 - g) * t;
-                b = 255.0 - (255.0 - b) * t;
+                r = linear_to_srgb_channel(1.0 - t + srgb_channel_to_linear(r) * t);
+                g = linear_to_srgb_channel(1.0 - t + srgb_channel_to_linear(g) * t);
+                b = linear_to_srgb_channel(1.0 - t + srgb_channel_to_linear(b) * t);
             }
             ColorTransform::Shade(s) => {
                 r = linear_to_srgb_channel(srgb_channel_to_linear(r) * s);

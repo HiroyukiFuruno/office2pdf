@@ -592,7 +592,7 @@ fn test_no_theme_scheme_color_ignored() {
 
 #[test]
 fn test_scheme_color_tint_blends_toward_white() {
-    // accent3=#A5A5A5 with tint 50% → each channel: 255 - (255-165)*0.5 = 210 = 0xD2
+    // Native PowerPoint renders #A5A5A5 at tint 50% as #D8D8D8.
     let shape_xml = r#"<p:sp><p:nvSpPr><p:cNvPr id="2" name="Shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1000000" cy="1000000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:schemeClr val="accent3"><a:tint val="50000"/></a:schemeClr></a:solidFill></p:spPr></p:sp>"#;
     let slide = make_slide_xml(&[shape_xml.to_string()]);
     let theme_xml = make_theme_xml(&standard_theme_colors(), "Calibri Light", "Calibri");
@@ -603,7 +603,7 @@ fn test_scheme_color_tint_blends_toward_white() {
 
     let page = first_fixed_page(&doc);
     let shape = get_shape(&page.elements[0]);
-    assert_eq!(shape.fill, Some(Color::new(0xD2, 0xD2, 0xD2)));
+    assert_eq!(shape.fill, Some(Color::new(0xD8, 0xD8, 0xD8)));
 }
 
 #[test]

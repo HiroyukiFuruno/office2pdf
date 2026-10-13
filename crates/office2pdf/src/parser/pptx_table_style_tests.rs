@@ -125,11 +125,8 @@ fn test_parse_table_style_with_color_transforms() {
 
     let style: &PptxTableStyleDef = styles.get("tinttest").expect("style not found");
     let band = style.band1_h.as_ref().expect("band1H missing");
-    // accent1 = (68, 114, 196). tint 40%: channel = 255 - (255-ch)*0.4
-    // r = 255 - 187*0.4 = 255 - 74.8 = 180.2 → 180
-    // g = 255 - 141*0.4 = 255 - 56.4 = 198.6 → 199
-    // b = 255 - 59*0.4 = 255 - 23.6 = 231.4 → 231
-    assert_eq!(band.fill, Some(Color::new(180, 199, 231)));
+    // Native PowerPoint renders #4472C4 at tint 40% as #CFD5EA.
+    assert_eq!(band.fill, Some(Color::new(207, 213, 234)));
 }
 
 // ── Unit tests: apply_table_style ──────────────────────────────────────
@@ -677,10 +674,10 @@ fn test_pptx_table_with_style_applies_header_fill_and_text_color() {
     assert_eq!(header_run.style.bold, Some(true));
 
     // Data row 1 (band index 0 → band1H) should get tinted accent1
-    // accent1=(68,114,196) with tint 40%: (180,199,231)
+    // Native PowerPoint: accent1=(68,114,196) with tint 40%: (207,213,234).
     assert_eq!(
         table.rows[1].cells[0].background,
-        Some(Color::new(180, 199, 231))
+        Some(Color::new(207, 213, 234))
     );
 
     // Data row 2 (band index 1 → band2H, not defined) → no fill
