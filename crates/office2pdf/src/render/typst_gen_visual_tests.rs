@@ -2476,7 +2476,7 @@ fn footnote_inline_text_box_preserves_nested_table_text() {
 #[test]
 fn drawingml_highlight_covers_the_selected_faces_natural_line_box() {
     use crate::render::font_context::test_faces::noto_serif_with_natural_line_box;
-    use crate::render::pdf::{PaintedKind, compiled_paint_sequence};
+    use crate::render::pdf::{PaintedKind, compiled_page_paint_sequences_with_fonts};
 
     let cases = [
         ("Noto Serif", 400, false, 1200, -300, 80, 29.0),
@@ -2539,7 +2539,26 @@ fn drawingml_highlight_covers_the_selected_faces_natural_line_box() {
                 )
                 .expect("cached DrawingML labels generate");
                 let source = output.source;
-                let paints = compiled_paint_sequence(&source, &[], 0).expect("the labels compile");
+                let mut pages = compiled_page_paint_sequences_with_fonts(&source, &[], &fonts)
+                    .expect("the labels compile with their controlled faces");
+                assert_eq!(pages.len(), 1);
+                let paints = pages.remove(0);
+                let painted_fonts: Vec<_> = paints
+                    .iter()
+                    .filter_map(|paint| paint.text_font.as_ref())
+                    .collect();
+                assert!(
+                    !painted_fonts.is_empty(),
+                    "the labels paint searchable glyphs"
+                );
+                assert!(
+                    painted_fonts
+                        .iter()
+                        .all(|font| font.family.eq_ignore_ascii_case(family)
+                            && font.variant.weight.to_number() == weight
+                            && (font.variant.style == typst::text::FontStyle::Italic) == italic),
+                    "the paint probe must use the controlled face {family} weight{weight} italic{italic}; painted={painted_fonts:?}"
+                );
                 let highlights: Vec<_> = paints
                     .iter()
                     .filter(|paint| {
