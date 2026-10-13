@@ -56,3 +56,8 @@ start 7 exposes a marker wider than its hanging span. Native probes vary tab
 intervals, custom left/numbering stops, starts, wrapping, marker separators and
 level run properties. Inline-marker geometry tests cover 16pt/22pt labels,
 body-controlled proportional advance and wrapping against native Word exports.
+
+`alternate_namespace_runs.docx` is an authored synthetic report with two Arial
+11pt lines, the first bold, using the `ns0` WordprocessingML prefix. Default
+parser and compiled-layout tests vary prefixes and scoped bindings; fresh Word
+exports verify the prefix-only control. No third-party content is included.

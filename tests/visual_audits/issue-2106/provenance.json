@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "issue": 2106,
+  "fixture": "tests/fixtures/docx/docxide/alternate_namespace_runs.docx",
+  "source_sha256": "49d48e9a1abd2ba22fa65881e4e3dcfaa355740c05420f8ab5e7ddad801cdcd4",
+  "source_kind": "authored synthetic report; no external or classified content",
+  "before_revision": "99574be2dce15d9273194cafb49669087b848c2d",
+  "candidate_dependency_revision": "685c6abf77d0f16f6a0a12bd508650ce8c1c3f51",
+  "native_exports": [
+    {
+      "name": "control",
+      "source_sha256": "eb1d9ec6784de7a0d5c0254d7f3685b038b4c43ce59a14c443a6c85e5e662aa7",
+      "native_pdf_sha256": "c0fd8c2434ebba53a912a444ec188aa0deba66965acab2fef2b58b1fc8d0c464",
+      "before_pdf_sha256": "d2b8018e182a9d2a396ae4dd57a27a34116363c898e0b63c66fd0cf2b999afd3",
+      "native_export": "Word 16.113.4; existing document count before=5, after=6",
+      "xml_semantics_equal_to_control": true
+    },
+    {
+      "name": "alternate-prefix",
+      "source_sha256": "49d48e9a1abd2ba22fa65881e4e3dcfaa355740c05420f8ab5e7ddad801cdcd4",
+      "native_pdf_sha256": "dd106e3af08241dc182fb76a3c9b0ec86a676e80d9f73f8c385a842283476d0d",
+      "before_pdf_sha256": "17ac0174fa9f17f8226306e7230c6772107870965e3cf52d52e7a95692242c01",
+      "native_export": "Word 16.113.4; existing document count before=6, after=7",
+      "xml_semantics_equal_to_control": true
+    }
+  ],
+  "converter": {
+    "office2pdf_base": "99574be2dce15d9273194cafb49669087b848c2d",
+    "docx_rs_revision": "685c6abf77d0f16f6a0a12bd508650ce8c1c3f51",
+    "converter_sha256": "262cce9b069446255806e809c3a7bcfdd76d8fbde8a9a3d4b19e36a6bf4852ba",
+    "alternate_prefix_output_byte_identical_to_canonical_prefix_before": true
+  },
+  "pdf_sha256": {
+    "alternate-prefix-native.pdf": "dd106e3af08241dc182fb76a3c9b0ec86a676e80d9f73f8c385a842283476d0d",
+    "alternate-prefix-before.pdf": "17ac0174fa9f17f8226306e7230c6772107870965e3cf52d52e7a95692242c01",
+    "alternate-prefix-after.pdf": "d2b8018e182a9d2a396ae4dd57a27a34116363c898e0b63c66fd0cf2b999afd3",
+    "control-native.pdf": "c0fd8c2434ebba53a912a444ec188aa0deba66965acab2fef2b58b1fc8d0c464",
+    "control-before.pdf": "d2b8018e182a9d2a396ae4dd57a27a34116363c898e0b63c66fd0cf2b999afd3"
+  },
+  "reports_sha256": {
+    "after-layout.json": "e3a0533eaad8d42ba7b754124f853f11da3b264977454643a2876f56ec00ca4e",
+    "after-text.json": "94540d438247bc479d8e424aa93bc36876903fbc1b6fb77123c260b4281e856a",
+    "after-render.json": "6442ceaa0285243f0325d4d3a2ca6b873e912d7398115e4c0dc5c363eb396d27",
+    "native-control-layout.json": "2dfc4a3264e65111d712cf0ce2f1d3df2543a3e4e36f9cb8323102b3dc2d6efb"
+  },
+  "dpi": 150,
+  "fine_shift_pt": 0.5,
+  "namespace_expanded_xml_control_equal": true,
+  "native_prefix_control_geometry_passed": true,
+  "after_pdf_byte_identical_to_conventional_prefix_before": true,
+  "model_vision_findings": "Root agent inspected the full 150-DPI GT/before/current-output pages, both pixel diffs, the matched full-resolution text-region crop, and the published JPEG assets. Before is blank. Current output restores both black Arial 11pt lines at the native left edge, with a bold first line and regular second line, matching content, size, weight and alignment. Both lines are legible without clipping or overlap. No images, shapes, fills, borders, rules, dashes, underlines, rotation or flips are present. The current diff has only small glyph-edge fragments on the second line; its approximately +0.17pt baseline and pitch drift is sub-material and tracked in #1874. The current census contains no material render clusters, and no fine-shift crops were emitted.",
+  "remaining": [
+    {
+      "issue": 1874,
+      "scope": "primary fixture",
+      "baseline_shift_pt": 0.17,
+      "pitch_drift_pt": 0.17
+    }
+  ],
+  "corpus_scope": "Fresh native exports for 27 affected body/header/footer cases are preserved externally. Corpus text recovery and page counts are triage; full corpus visual fidelity remains a separate audit."
+}

@@ -82,6 +82,9 @@ fn all_blocks(doc: &Document) -> &[Block] {
 #[path = "docx_foundation_tests.rs"]
 mod foundation_tests;
 
+#[path = "docx_namespace_tests.rs"]
+mod namespace_tests;
+
 // ----- Table parsing tests (US-007) -----
 
 /// Helper: build a DOCX with a table using docx-rs builder.
