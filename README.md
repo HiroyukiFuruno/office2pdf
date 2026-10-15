@@ -348,6 +348,11 @@ CLI build, run `scripts/audit_docxide_corpus.py --help` for repeatable conversio
 page-count, and searchable-text triage. Geometry, pixels, fonts, and direct visual
 inspection remain required before calling a document correct.
 
+The render differ labels the raw 5% pixel-difference mask so thin horizontal
+and vertical rules survive the cluster census. Its 20pt² reporting floor does
+not establish materiality: inspect smaller marks and disconnected hairline
+fragments even when no cluster is listed.
+
 Picture outlines in PPTX and cached DOCX drawings retain ellipse, rounded-rectangle
 and custom-path geometry, line opacity, and picture flips/rotation.
 
