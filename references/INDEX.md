@@ -57,6 +57,12 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 | [plotters](https://github.com/plotters-rs/plotters) | Rust | Data visualization (SVG/PNG) | [plotters.md](plotters.md) |
 | [charts-rs](https://github.com/vicanso/charts-rs) | Rust | Chart rendering (more chart types) | [charts-rs.md](charts-rs.md) |
 
+## Visual Audit Tools
+
+| Project | Focus | Detail |
+|---------|-------|--------|
+| [ImageMagick](https://github.com/ImageMagick/ImageMagick) | Raw diff components and thin-rule preservation | [imagemagick-diff-census.md](imagemagick-diff-census.md) |
+
 ## OOXML Specification
 
 | Resource | Type |

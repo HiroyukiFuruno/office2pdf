@@ -12,6 +12,7 @@ under their own names, and a host may have neither.
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
@@ -350,7 +351,7 @@ class DiffClusterParseTest(unittest.TestCase):
         self.assertAlmostEqual(largest.area_pt2, 22130 * 0.48 * 0.48, places=1)
 
     def test_drops_specks_below_the_area_floor(self) -> None:
-        # 25px at 150 DPI is 5.76pt² — glyph antialiasing, not a defect region.
+        # 25px at 150 DPI is 5.76pt², below the census reporting floor.
         areas_px = [region.area_pt2 / (0.48 * 0.48) for region in self.clusters()]
         self.assertNotIn(25, [round(area) for area in areas_px])
 
@@ -374,6 +375,77 @@ class DiffClusterParseTest(unittest.TestCase):
         regions = compare_render.parse_diff_clusters(verbose, dpi=150)
         self.assertEqual(len(regions), 1)
         self.assertEqual(regions[0].region, "center")
+
+
+@unittest.skipUnless(compare_render.has_imagemagick(), "ImageMagick is required")
+class DiffClusterRasterTest(unittest.TestCase):
+    """Exercise actual masks so preprocessing cannot silently erase rules."""
+
+    def census(self, rectangles: list[tuple[int, int, int, int]]) -> list:
+        width = height = 400
+        reference = bytearray([255]) * (width * height)
+        for x, y, w, h in rectangles:
+            for row in range(y, y + h):
+                reference[row * width + x:row * width + x + w] = bytes(w)
+        header = f"P5\n{width} {height}\n255\n".encode()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            gt, output = root / "reference.pgm", root / "output.pgm"
+            gt.write_bytes(header + reference)
+            output.write_bytes(header + bytes([255]) * (width * height))
+            clusters = compare_render.diff_cluster_census(gt, output, root, dpi=150)
+        self.assertIsNotNone(clusters, "the installed ImageMagick must support the census")
+        return clusters
+
+    def test_missing_one_and_two_pixel_rules_remain_dispositionable(self) -> None:
+        for rectangle in [(40, 80, 280, 1), (40, 80, 280, 2),
+                          (80, 40, 1, 280), (80, 40, 2, 280)]:
+            with self.subTest(rectangle=rectangle):
+                clusters = self.census([rectangle])
+                self.assertEqual(len(clusters), 1)
+                x, y, width, height = rectangle
+                cluster = clusters[0]
+                self.assertAlmostEqual(cluster.x_pt, x * 0.48)
+                self.assertAlmostEqual(cluster.y_pt, y * 0.48)
+                self.assertAlmostEqual(cluster.width_pt, width * 0.48)
+                self.assertAlmostEqual(cluster.height_pt, height * 0.48)
+                self.assertAlmostEqual(cluster.area_pt2, width * height * 0.48 ** 2)
+                report = compare_render.build_cluster_audit_report(
+                    clusters, page=1, dpi=150, disposition_document=None, strict=True
+                )
+                self.assertFalse(report["passed"], "an unreviewed missing rule must fail")
+                self.assertEqual(len(report["undispositioned_cluster_ids"]), 1)
+
+    def test_disconnected_thin_dashes_remain_separate_regions(self) -> None:
+        clusters = self.census([(40, 80, 100, 1), (170, 80, 100, 1)])
+        self.assertEqual(len(clusters), 2)
+        self.assertEqual(sorted(round(c.width_pt, 2) for c in clusters), [48.0, 48.0])
+
+    def test_thin_closed_outline_is_not_removed(self) -> None:
+        clusters = self.census([
+            (40, 40, 280, 1), (40, 319, 280, 1),
+            (40, 41, 1, 278), (319, 41, 1, 278),
+        ])
+        self.assertEqual(len(clusters), 1)
+        self.assertAlmostEqual(clusters[0].area_pt2, (280 * 2 + 278 * 2) * 0.48 ** 2)
+
+    def test_identical_pages_and_small_isolated_regions_stay_below_the_floor(self) -> None:
+        self.assertEqual(self.census([]), [])
+        self.assertEqual(self.census([(40, 40, 1, 1), (80, 80, 2, 2)]), [])
+
+    def test_solid_missing_region_keeps_its_full_area(self) -> None:
+        clusters = self.census([(40, 60, 32, 32)])
+        self.assertEqual(len(clusters), 1)
+        self.assertAlmostEqual(clusters[0].area_pt2, 32 * 32 * 0.48 ** 2)
+
+
+class EmptyClusterReadingTest(unittest.TestCase):
+    def test_empty_census_does_not_classify_unreviewed_differences_as_noise(self) -> None:
+        output = StringIO()
+        with redirect_stdout(output):
+            compare_render.report_diff_clusters([])
+        self.assertIn("inspect", output.getvalue().lower())
+        self.assertNotIn("glyph rasterisation and antialiasing", output.getvalue())
 
 
 class StrictClusterDispositionTest(unittest.TestCase):

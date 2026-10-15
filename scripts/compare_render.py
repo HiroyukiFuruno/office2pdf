@@ -73,9 +73,8 @@ HISTOGRAM_BINS = 32
 # Every ImageMagick tool the colour and pixel axes reach for. Named here so the
 # availability check and the call sites cannot drift apart.
 IMAGEMAGICK_TOOLS = ("convert", "identify", "compare")
-# A diff region smaller than this is glyph antialiasing, not a defect: a 20pt²
-# cluster is roughly one 4.5pt-square blob. Everything at or above it is
-# listed for disposition.
+# Census reporting floor, not a materiality or antialiasing verdict. Smaller
+# missing marks and disconnected hairline fragments still need visual review.
 CLUSTER_MIN_AREA_PT2 = 20.0
 CLUSTER_REPORT_LIMIT = 12
 # One contiguous region this large is never rasterisation noise. #1029's
@@ -1014,10 +1013,11 @@ def diff_cluster_census(
 ) -> list[DiffCluster] | None:
     """Label the 5%-fuzz diff mask's contiguous regions, or None if unsupported.
 
-    A single-pixel morphological open drops isolated antialiasing specks first,
-    and 4-connectivity keeps diagonally-touching glyph noise from chaining into
-    one page-spanning blob the way 8-connectivity does. `area-threshold` merges
-    the sub-25px remnants so the verbose listing stays bounded.
+    Keep the raw mask: a morphological open also erases long one- and two-pixel
+    rules, regardless of their area. Four-connectivity avoids chaining diagonal
+    glyph differences; `area-threshold` merges sub-25px components to bound the
+    listing. The point-area reporting floor is applied after component labeling.
+    See references/imagemagick-diff-census.md.
     """
     mask = out_dir / "diff-mask.png"
     # `compare` exits 1 whenever the images differ; only a missing mask is
@@ -1032,7 +1032,6 @@ def diff_cluster_census(
         return None
     census = subprocess.run(
         [*(imagemagick_command("convert") or []), str(mask),
-         "-morphology", "Open", "Square:1",
          "-define", "connected-components:verbose=true",
          "-define", "connected-components:area-threshold=25",
          "-connected-components", "4", "null:"],
@@ -1054,8 +1053,9 @@ def report_diff_clusters(clusters: list[DiffCluster] | None, page: int = 1) -> N
         print("  inspect the diff image by eye and disposition each region.")
         return
     if not clusters:
-        print(f"  none of {CLUSTER_MIN_AREA_PT2:.0f}pt² or more — what differs is")
-        print("  dispersed specks (glyph rasterisation and antialiasing).")
+        print(f"  no contiguous region of {CLUSTER_MIN_AREA_PT2:.0f}pt² or more.")
+        print("  Smaller or disconnected differences can still be material;")
+        print("  inspect the full diff and hairline/glyph crops before classifying them.")
         return
     print("  Disposition every cluster: an accepted rendering difference (glyph")
     print("  rasterisation), verified GT-exporter evidence, or an issue reference.")
