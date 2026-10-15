@@ -50,7 +50,7 @@ Canonical instructions for all coding agents.
 ### PR Merge Procedure
 
 1. Give the PR a clear description of the problem, change, and validation. Cross-reference related issues with `Related: #N`; avoid auto-close keywords unless instructed.
-2. Resolve conflicts with current `main`, then wait for passing CI using `gh pr checks <number> --watch`. Do not merge failing checks.
+2. Complete the final memory/speed pass below for visual changes. Resolve conflicts with current `main`, then wait for passing CI using `gh pr checks <number> --watch`. Do not merge failing checks.
 3. Review `gh pr diff <number>` for correctness, debug code, hardcoded paths, credentials, and unused imports.
 4. Merge with `gh pr merge <number> --merge`; never use `--delete-branch` while its worktree exists.
 5. Sync the main worktree and verify CI on the exact merge commit before cleanup.
@@ -111,6 +111,13 @@ python3 scripts/compare_render.py GT.pdf OUTPUT.pdf --page N --dpi 150 \
 - Settle unclear layout rules with one-factor XML probes using `scripts/probe_harness.py`; read its docstring for the spec and backend options. Require the no-patch re-zip control to match the base; a failed control or differ invalidates the probe.
 - Stage native Office input/output in the **driven app's own container on the internal disk**, never `/Volumes` or another app's container; copy evidence out afterward. See the probe docstring for paths.
 - Generate internal comparison artifacts with `cargo test --locked -p office2pdf --test artifact_generator -- --ignored --nocapture`. Use the generated report to locate pages, then apply the same full-page audit and confidentiality rules.
+
+### Final memory and speed pass
+
+- After the required visual comparison passes, finish a memory/speed optimization pass as the last implementation step before final CI and merge. Keep the task open until its result is recorded in the PR.
+- Measure conversion elapsed time and peak process memory on the reported inputs and representative controls, comparing against the visually accepted pre-optimization build. Record commands, repetitions, build profile, hardware/OS/fonts, cache conditions, and before/after results. Follow `PRD.md`'s performance measurement policy; scoped measurements do not establish product SLAs.
+- Optimize measured bottlenecks with simple, proportionate changes. Avoid speculative abstractions, caches, dependencies, or fixture-specific shortcuts. If no worthwhile low-complexity improvement is supported by measurements, record that conclusion instead of forcing a rewrite.
+- Preserve conversion behavior and visual fidelity. After optimization code changes, rerun the required tests and full visual comparison for affected files; revert regressions. Mark the PR's final performance pass complete only after this revalidation. Changes without conversion runtime impact may record `Not applicable` with a reason.
 
 ## Unattended Issue Loop
 
