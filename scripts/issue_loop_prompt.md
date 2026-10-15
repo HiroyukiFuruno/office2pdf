@@ -30,3 +30,8 @@ replace those documents.
   still visible must already have its own open issue — file the missing ones first.
 - Apply the Materiality rule in `AGENTS.md`: spend effort on what a reader would
   notice, not on sub-point drift; send sub-material findings to #1874.
+- After visual acceptance, complete the final memory and speed pass in `AGENTS.md`
+  before final CI and merge. Record elapsed-time/peak-memory measurements and the
+  optimization or measured reason no simple improvement is worthwhile in the PR's
+  `Final performance pass`. Revalidate tests and the full affected-file visual
+  comparison after optimization changes; a visual pass alone is not completion.

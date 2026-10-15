@@ -107,8 +107,17 @@ by applicable law.
 | Line/paragraph spacing | <!-- status --> |
 | Clipping/overflow | <!-- status --> |
 
+## Final performance pass
+
+<!-- After visual acceptance and before final CI/merge, follow AGENTS.md's final memory and speed pass. Keep Pending until measurements, any worthwhile simple optimization, and revalidation are finished. Not applicable requires a reason showing no conversion runtime impact. -->
+
+- Status: Pending <!-- Complete, or Not applicable: reason -->
+- Measurements: <!-- Input/control IDs, commands, repetitions, profile, hardware/OS/fonts, cache conditions; conversion time and peak process memory before/after optimization. Scoped results are not product SLAs. -->
+- Outcome and revalidation: <!-- Optimization and measured benefit, or measured reason no worthwhile simple change; required tests and fresh full visual comparison after any optimization code changes. -->
+
 ## Checklist
 
 - [ ] Commits include a `Signed-off-by` line
+- [ ] Final memory/speed pass completed after visual acceptance, or no conversion runtime impact is explained
 - [ ] PR scope contains one root cause
 - [ ] Remaining converter or harness deviations each reference an open issue
