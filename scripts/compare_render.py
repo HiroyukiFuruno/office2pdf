@@ -46,7 +46,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from spatial_match import minimum_cost_pairs
+try:
+    from spatial_match import minimum_cost_pairs
+except ModuleNotFoundError:  # Imported as scripts.compare_render in contract tests.
+    from scripts.spatial_match import minimum_cost_pairs
 try:
     from reference_exporter_differences import validate_reference_difference_document
 except ModuleNotFoundError:  # Imported as scripts.compare_render in unit tests.
@@ -166,9 +169,9 @@ def _validated_cluster_dispositions(
     *,
     page: int,
     reference_difference_document: object = None,
-) -> tuple[dict[str, dict[str, str]], list[str], set[str], set[str]]:
+) -> tuple[dict[str, dict[str, object]], list[str], set[str], set[str]]:
     """Validate explicit-ID groups and return dispositions plus schema errors."""
-    dispositions: dict[str, dict[str, str]] = {}
+    dispositions: dict[str, dict[str, object]] = {}
     errors: list[str] = []
     duplicate_ids: set[str] = set()
     reference_differences, reference_errors = validate_reference_difference_document(
@@ -209,6 +212,7 @@ def _validated_cluster_dispositions(
             "kind",
             "class",
             "issue",
+            "issues",
             "difference_id",
             "cluster_ids",
             "note",
@@ -235,7 +239,7 @@ def _validated_cluster_dispositions(
             errors.append(f"cluster disposition group {index} note must be non-empty text")
 
         kind = group.get("kind")
-        disposition: dict[str, str] | None = None
+        disposition: dict[str, object] | None = None
         if kind == "accepted-rendering":
             accepted_class = group.get("class")
             if accepted_class not in ACCEPTED_RENDERING_CLASSES:
@@ -243,18 +247,39 @@ def _validated_cluster_dispositions(
                 errors.append(
                     f"cluster disposition group {index} class must be one of: {allowed}"
                 )
-            elif "issue" in group or "difference_id" in group:
+            elif "issue" in group or "issues" in group or "difference_id" in group:
                 errors.append(
                     f"cluster disposition group {index} accepted-rendering cannot set "
-                    "issue or difference_id"
+                    "issue, issues, or difference_id"
                 )
             else:
                 disposition = {"kind": kind, "class": str(accepted_class)}
         elif kind == "issue":
             issue = group.get("issue")
-            if not isinstance(issue, str) or re.fullmatch(r"#[1-9]\d*", issue) is None:
+            issues = group.get("issues")
+            single = "issue" in group
+            if single == ("issues" in group):
+                errors.append(
+                    f"cluster disposition group {index} must set exactly one of issue or issues"
+                )
+            elif single and (
+                not isinstance(issue, str) or re.fullmatch(r"#[1-9]\d*", issue) is None
+            ):
                 errors.append(
                     f"cluster disposition group {index} issue must be a reference such as #123"
+                )
+            elif not single and (
+                not isinstance(issues, list)
+                or len(issues) < 2
+                or any(
+                    not isinstance(ref, str) or re.fullmatch(r"#[1-9]\d*", ref) is None
+                    for ref in issues
+                )
+                or len(set(issues)) != len(issues)
+            ):
+                errors.append(
+                    f"cluster disposition group {index} issues must enumerate at least "
+                    "two distinct references such as #123 and #456"
                 )
             elif "class" in group or "difference_id" in group:
                 errors.append(
@@ -262,7 +287,10 @@ def _validated_cluster_dispositions(
                     "difference_id"
                 )
             else:
-                disposition = {"kind": kind, "issue": issue}
+                disposition = {
+                    "kind": kind,
+                    **({"issue": issue} if single else {"issues": issues}),
+                }
         elif kind == "reference-exporter-difference":
             difference_id = group.get("difference_id")
             difference = reference_differences.get(difference_id)
@@ -286,10 +314,10 @@ def _validated_cluster_dispositions(
                     f"cluster disposition group {index} must use the exact cluster IDs "
                     f"declared by reference difference {difference_id}"
                 )
-            elif "class" in group or "issue" in group:
+            elif "class" in group or "issue" in group or "issues" in group:
                 errors.append(
                     f"cluster disposition group {index} reference exporter difference "
-                    "cannot set class or issue"
+                    "cannot set class, issue, or issues"
                 )
             else:
                 disposition = {
@@ -1428,7 +1456,7 @@ def main() -> None:
         type=Path,
         help=(
             "JSON groups that explicitly map current cluster IDs to an accepted "
-            "renderer class, verified GT-exporter evidence, or an open issue"
+            "renderer class, verified GT-exporter evidence, or explicit open issues"
         ),
     )
     parser.add_argument(

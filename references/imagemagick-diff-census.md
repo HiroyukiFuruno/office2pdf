@@ -13,6 +13,9 @@ and [morphology](https://usage.imagemagick.org/morphology/).
 - This floor bounds the census, not visual materiality. Diagonally disconnected
   hairlines, small missing punctuation, and other sub-floor details still need
   full-resolution inspection. An empty census is not a fidelity verdict.
+- A connected pixel region need not have one defect cause: overlapping header
+  and body changes can join. Issue dispositions may therefore name multiple
+  independently tracked causes while still enumerating every exact cluster ID.
 - Actual ImageMagick tests cover missing one/two-pixel horizontal and vertical
   rules, separated dashes, closed outlines, solid regions, and empty/small masks.
   CI's visual-contract job already installs ImageMagick and runs these tests.

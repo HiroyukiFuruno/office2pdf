@@ -1661,6 +1661,58 @@ class LayoutAuditTests(unittest.TestCase):
 
 
 class RenderClusterAuditTests(unittest.TestCase):
+    def test_compound_report_round_trip_preserves_remaining_issue_requirements(self):
+        from scripts import compare_render
+
+        cluster = compare_render.DiffCluster(10, 20, 8, 8, 40, "top-left")
+        cluster_id = compare_render.diff_cluster_id(1, cluster)
+        report = compare_render.build_cluster_audit_report(
+            [cluster], page=1, dpi=150, strict=True,
+            disposition_document={"schema_version": 1, "groups": [{
+                "kind": "issue", "issues": ["#328", "#329"],
+                "cluster_ids": [cluster_id],
+            }]},
+        )
+        self.assertTrue(report["passed"], report["errors"])
+        self.assertEqual(validate_cluster_reports(
+            visual_body({"Position/size": "Remaining: #328, #329"}), {1: report}
+        ), [])
+        errors = validate_cluster_reports(
+            visual_body({"Position/size": "Remaining: #328"}), {1: report}
+        )
+        self.assertTrue(any("#329" in error and "Remaining" in error for error in errors))
+
+    def test_compound_issue_disposition_passes_when_every_cause_is_remaining(self):
+        body = visual_body({"Position/size": "Remaining: #328, #329"})
+        report = render_cluster_report(
+            disposition={"kind": "issue", "issues": ["#328", "#329"]}
+        )
+
+        self.assertEqual(validate_cluster_reports(body, {1: report}), [])
+
+    def test_each_compound_issue_must_appear_as_a_remaining_deviation(self):
+        for listed, missing in [("#328", "#329"), ("#329", "#328")]:
+            with self.subTest(listed=listed):
+                body = visual_body({"Position/size": f"Remaining: {listed}"})
+                report = render_cluster_report(
+                    disposition={"kind": "issue", "issues": ["#328", "#329"]}
+                )
+                errors = validate_cluster_reports(body, {1: report})
+                self.assertTrue(any(missing in error and "Remaining" in error for error in errors), errors)
+
+    def test_invalid_compound_issue_dispositions_fail_closed(self):
+        fields_list = [
+            {"issues": "#328,#329"}, {"issues": []}, {"issues": ["#328"]},
+            {"issues": ["#328", "#328"]}, {"issues": ["#328", 329]},
+            {"issues": ["#328", "#0"]}, {"issues": ["#328", "#0329"]},
+            {"issues": ["#328", "#329"], "issue": "#330"},
+        ]
+        body = visual_body({"Position/size": "Remaining: #328, #329, #330"})
+        for fields in fields_list:
+            with self.subTest(fields=fields):
+                report = render_cluster_report(disposition=dict(fields, kind="issue"))
+                self.assertTrue(validate_cluster_reports(body, {1: report}))
+
     def test_strict_dispositioned_report_passes(self):
         self.assertEqual(
             validate_cluster_reports(visual_body(), {1: render_cluster_report()}),
