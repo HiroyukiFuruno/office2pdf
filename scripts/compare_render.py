@@ -46,7 +46,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from spatial_match import minimum_cost_pairs
+try:
+    from spatial_match import minimum_cost_pairs
+except ModuleNotFoundError:  # Imported as scripts.compare_render in contract tests.
+    from scripts.spatial_match import minimum_cost_pairs
 try:
     from reference_exporter_differences import validate_reference_difference_document
 except ModuleNotFoundError:  # Imported as scripts.compare_render in unit tests.
