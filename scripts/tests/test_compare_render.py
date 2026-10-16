@@ -541,6 +541,98 @@ class StrictClusterDispositionTest(unittest.TestCase):
             [compare_render.diff_cluster_id(1, cluster)],
         )
 
+    def test_overlapping_defects_keep_all_issue_references_on_one_cluster(self) -> None:
+        cluster = self.cluster(area=800.0)
+        cluster_id = compare_render.diff_cluster_id(1, cluster)
+        disposition = {
+            "kind": "issue",
+            "issues": ["#328", "#329"],
+            "note": "The misplaced label overlaps an incorrectly repeated header.",
+        }
+        report = compare_render.build_cluster_audit_report(
+            [cluster], page=1, dpi=150, strict=True,
+            disposition_document={"schema_version": 1, "groups": [
+                dict(disposition, cluster_ids=[cluster_id])
+            ]},
+        )
+
+        self.assertTrue(report["passed"], report["errors"])
+        self.assertEqual(report["clusters"][0]["disposition"], disposition)
+        self.assertEqual(report["summary"]["dispositioned"], 1)
+
+    def test_compound_issue_disposition_cannot_cover_a_new_cluster(self) -> None:
+        reviewed, new = self.cluster(), self.cluster(x=100.0)
+        report = compare_render.build_cluster_audit_report(
+            [reviewed, new], page=1, dpi=150, strict=True,
+            disposition_document={"schema_version": 1, "groups": [{
+                "kind": "issue", "issues": ["#328", "#329"],
+                "cluster_ids": [compare_render.diff_cluster_id(1, reviewed)],
+            }]},
+        )
+
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["undispositioned_cluster_ids"],
+                         [compare_render.diff_cluster_id(1, new)])
+
+    def test_compound_issue_references_are_explicit_distinct_and_exclusive(self) -> None:
+        cluster = self.cluster()
+        invalid = [
+            {"issues": "#328,#329"}, {"issues": []}, {"issues": ["#328"]},
+            {"issues": ["#328", "#328"]}, {"issues": ["#328", 329]},
+            {"issues": ["#328", "#0"]}, {"issues": ["#328", "#0329"]},
+            {"issues": ["#328", "#329"], "issue": "#330"},
+            {"issues": ["#328", "#329"], "class": "glyph-edge-rasterization"},
+            {"issues": ["#328", "#329"], "difference_id": "reference-title"},
+        ]
+        for fields in invalid:
+            with self.subTest(fields=fields):
+                report = compare_render.build_cluster_audit_report(
+                    [cluster], page=1, dpi=150, strict=True,
+                    disposition_document={"schema_version": 1, "groups": [dict(
+                        fields, kind="issue", cluster_ids=[compare_render.diff_cluster_id(1, cluster)]
+                    )]},
+                )
+                self.assertFalse(report["passed"])
+                self.assertTrue(report["errors"])
+
+    def test_renderer_waiver_cannot_carry_compound_issues(self) -> None:
+        cluster = self.cluster()
+        document = self.disposition_document(
+            [compare_render.diff_cluster_id(1, cluster)], "glyph-edge-rasterization"
+        )
+        document["groups"][0]["issues"] = ["#328", "#329"]
+        report = compare_render.build_cluster_audit_report(
+            [cluster], page=1, dpi=150, strict=True, disposition_document=document
+        )
+        self.assertFalse(report["passed"])
+
+    def test_compound_and_single_issue_groups_cannot_duplicate_a_cluster(self) -> None:
+        cluster = self.cluster()
+        cluster_id = compare_render.diff_cluster_id(1, cluster)
+        report = compare_render.build_cluster_audit_report(
+            [cluster], page=1, dpi=150, strict=True,
+            disposition_document={"schema_version": 1, "groups": [
+                {"kind": "issue", "issues": ["#328", "#329"], "cluster_ids": [cluster_id]},
+                {"kind": "issue", "issue": "#330", "cluster_ids": [cluster_id]},
+            ]},
+        )
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["duplicate_disposition_cluster_ids"], [cluster_id])
+
+    def test_exporter_waiver_cannot_carry_compound_issues(self) -> None:
+        cluster = self.cluster()
+        cluster_id = compare_render.diff_cluster_id(9, cluster)
+        report = compare_render.build_cluster_audit_report(
+            [cluster], page=9, dpi=150, strict=True,
+            reference_difference_document=self.reference_difference_document([cluster_id]),
+            disposition_document={"schema_version": 1, "groups": [{
+                "kind": "reference-exporter-difference",
+                "difference_id": "page-9-title-native-match",
+                "issues": ["#328", "#329"], "cluster_ids": [cluster_id],
+            }]},
+        )
+        self.assertFalse(report["passed"])
+
     def test_accepted_glyph_edge_passes_strict_audit(self) -> None:
         cluster = self.cluster()
         cluster_id = compare_render.diff_cluster_id(1, cluster)

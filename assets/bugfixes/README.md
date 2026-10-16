@@ -293,6 +293,14 @@ For every audit, derive dispositions again from the current crops; a matching
 stable ID or bounding box does not carry an earlier explanation forward. If the
 cluster is absent, it has no current disposition. Keep prior PR reports frozen
 and record re-audits separately.
+
+One connected component can contain overlapping independent defects. For that
+component, use `"kind": "issue", "issues": ["#123", "#456"]` instead of `issue`.
+The array must contain at least two distinct valid issue references; never set
+both fields. Enumerate exact `cluster_ids` as usual and explain the causes in
+`note`. Every referenced issue must appear in a `Remaining:` deviation row and
+be open. This records unresolved defects, not a renderer or exporter waiver.
+
 Rerun each page in strict mode and commit its passing report:
 
 ```sh

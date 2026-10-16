@@ -1386,17 +1386,26 @@ def _validate_render_cluster_report(
                 )
                 continue
         elif disposition.get("kind") == "issue":
-            if set(disposition) - {"kind", "issue", "note"}:
+            if set(disposition) - {"kind", "issue", "issues", "note"}:
                 errors.append(
                     f"{path}: {cluster_id} issue disposition has unsupported fields."
                 )
                 continue
-            issue = disposition.get("issue")
-            issue_match = re.fullmatch(r"#([1-9]\d*)", issue or "")
-            if issue_match is None:
+            single = "issue" in disposition
+            issues = [disposition["issue"]] if single else disposition.get("issues")
+            if (
+                single == ("issues" in disposition)
+                or not isinstance(issues, list)
+                or len(issues) < (1 if single else 2)
+                or any(
+                    not isinstance(ref, str) or re.fullmatch(r"#[1-9]\d*", ref) is None
+                    for ref in issues
+                )
+                or len(set(issues)) != len(issues)
+            ):
                 errors.append(f"{path}: {cluster_id} has an invalid issue disposition.")
                 continue
-            issue_dispositions.add(int(issue_match.group(1)))
+            issue_dispositions.update(int(ref[1:]) for ref in issues)
         elif disposition.get("kind") == "reference-exporter-difference":
             if set(disposition) - {"kind", "difference_id", "note"}:
                 errors.append(
