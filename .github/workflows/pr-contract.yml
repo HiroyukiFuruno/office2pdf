@@ -53,6 +53,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_issue_loop_watch.py'
       - name: Test issue-loop usage-limit detector
         run: python3 -m unittest discover -s scripts/tests -p 'test_issue_loop.py'
+      - name: Test issue-loop experience store
+        run: python3 -m unittest discover -s scripts/tests -p 'test_issue_loop_history.py'
       - name: Check issue-loop script syntax
         run: bash -n scripts/issue_loop.sh
       - name: Validate visual PR contract
