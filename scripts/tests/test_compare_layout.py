@@ -110,6 +110,29 @@ def rect_op(
     )
 
 
+def stroke_line_op(
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    color: str = ".8 .8 .8",
+    width: float = 1.0,
+    scale: float = 1.0,
+    linecap: str = "0,0,0",
+    dash: str | None = None,
+) -> str:
+    """Stroke one top-down segment; ``scale`` maps user units to points."""
+    dash_attrs = f' dash_phase="0" dash="{dash}"' if dash is not None else ""
+    return (
+        f'<stroke_path linewidth="{width}" miterlimit="4" linecap="{linecap}" '
+        f'linejoin="0"{dash_attrs} colorspace="DeviceRGB" color="{color}" '
+        f'ri="1" bp="1" op="0" opm="0" transform="{scale} 0 0 {-scale} 0 841.92">\n'
+        f'<moveto x="{x0 / scale}" y="{(841.92 - y0) / scale}"/>\n'
+        f'<lineto x="{x1 / scale}" y="{(841.92 - y1) / scale}"/>\n'
+        "</stroke_path>"
+    )
+
+
 def line_op(
     x0: float,
     y0: float,
@@ -1312,6 +1335,69 @@ class MatchAndDiffTest(unittest.TestCase):
                 vector = self.diff(prefix + gt, prefix + out, fine_shift=0.5)
                 self.assertGreater(vector["rects"]["coverage_unmodeled_count"], 0)
                 self.assertGreater(vector["rects"]["geometry_mismatch_count"], 0)
+
+    def stroked_border_probe(self, **stroke: str | float) -> tuple[str, str]:
+        # Excel extends a full-width band under the print-area clip and paints
+        # its gridlines as 1pt fills; the output seats the band on the clip and
+        # strokes the same gridlines (issue #1769).
+        navy, grid = ".12 .15 .38", ".73 .75 .82"
+        clip = rect_op(55, 73, 511, 250).replace("fill_path", "clip_path")
+        gt = "\n".join([
+            clip, rect_op(54, 109, 511, 133, color=navy), "<pop_clip/>",
+            rect_op(54, 109, 55, 133, color=grid),
+            rect_op(108, 110, 109, 132, color=grid),
+            rect_op(55, 109, 511, 110, color=grid),
+            rect_op(55, 132, 511, 133, color=grid),
+        ])
+        stroke.setdefault("color", grid)
+        out = "\n".join([
+            rect_op(55, 109, 109, 133, color=navy),
+            rect_op(108, 109, 511, 133, color=navy),
+            stroke_line_op(54.5, 109, 54.5, 133, **stroke),
+            stroke_line_op(108.5, 110, 108.5, 132, **stroke),
+            stroke_line_op(55, 109.5, 511, 109.5, **stroke),
+            stroke_line_op(55, 132.5, 511, 132.5, **stroke),
+        ])
+        return gt, out
+
+    def test_stroked_borders_complete_a_clipped_band_coverage(self) -> None:
+        for stroke in [{}, {"width": 2, "scale": 0.5}]:
+            with self.subTest(stroke=stroke):
+                gt, out = self.stroked_border_probe(**stroke)
+                vector = self.diff(gt, out, fine_shift=0.5, noise_floor=0.5)
+                rects = vector["rects"]
+                self.assertEqual(rects["raw_geometry_mismatch_count"], 1)
+                self.assertEqual(rects["coverage_equivalent_count"], 1)
+                self.assertEqual(rects["geometry_mismatch_count"], 0)
+                self.assertEqual(compare_layout.audit_failures([vector]), 0)
+
+    def test_stroked_borders_that_paint_differently_keep_the_band_finding(self) -> None:
+        # A different colour or thinner rule, a dash, or a round cap whose
+        # ink is not a rectangle cannot prove the native gridline coverage.
+        for stroke in [{"color": "0 0 0"}, {"width": 0.5}, {"dash": "2 1"},
+                       {"linecap": "1,1,1"}]:
+            with self.subTest(stroke=stroke):
+                gt, out = self.stroked_border_probe(**stroke)
+                vector = self.diff(gt, out, fine_shift=0.5, noise_floor=0.5)
+                rects = vector["rects"]
+                self.assertEqual(rects["coverage_equivalent_count"], 0)
+                self.assertEqual(rects["geometry_mismatch_count"], 1)
+                self.assertEqual(rects["geometry_mismatch_samples"][0]
+                                 ["visible_coverage"]["status"], "different")
+
+    def test_square_stroke_caps_extend_coverage_past_the_endpoints(self) -> None:
+        blue, grid = ".2 .3 .8", ".73 .75 .82"
+        clip = rect_op(51, 0, 200, 200).replace("fill_path", "clip_path")
+        gt = "\n".join([clip, rect_op(50, 54, 150, 94, color=blue), "<pop_clip/>",
+                        rect_op(51, 54, 150, 55, color=grid)])
+        for linecap, equivalent in [("2,2,2", 1), ("0,0,0", 0)]:
+            with self.subTest(linecap=linecap):
+                out = "\n".join([
+                    rect_op(51, 54, 150, 94, color=blue),
+                    stroke_line_op(51.5, 54.5, 149.5, 54.5, color=grid, linecap=linecap),
+                ])
+                vector = self.diff(gt, out, fine_shift=0.5)
+                self.assertEqual(vector["rects"]["coverage_equivalent_count"], equivalent)
 
     def test_coverage_epsilon_never_overrides_a_finer_geometry_gate(self) -> None:
         vector = self.diff(rect_op(50, 54, 150, 94), rect_op(50.005, 54, 150.005, 94),

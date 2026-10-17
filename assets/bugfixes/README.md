@@ -93,7 +93,10 @@ Images, shading, nonrectangular paths/clips, translucent paint, soft masks, and
 non-normal groups cannot establish flat-fill equivalence. A mask or tile marks
 the page's fill coverage unmodeled because its later graphics-state effect is
 not reconstructed. Later opaque fills may cover unknown image/path paint. Comparisons exceeding 100,000 partition cells also
-remain unmodeled. Text and strokes have their own audits; this fill-layer proof
+remain unmodeled. An opaque, solid, axis-aligned stroke with butt or square
+caps joins the composition as the rectangle it paints, because Excel fills the
+worksheet gridlines that office2pdf strokes (#1769). Other strokes stay outside
+the proof, and text and strokes keep their own audits; this fill-layer proof
 does not replace pixel inspection. Raw findings and unknown regions remain in
 the JSON report even when other edges match.
 

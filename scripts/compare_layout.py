@@ -32,7 +32,9 @@ visible ink. It then matches lines by their text and reports typed deviations:
   axis-aligned rectangles and straight lines. Touching same-paint operation
   splits are merged before matching. Raw fill geometry findings become
   informational only when composed opaque flat-fill coverage is equivalent;
-  differing or unmodeled coverage retains the finding and names the affected
+  that layer includes opaque solid axis-aligned butt- or square-capped rules,
+  because one exporter fills the gridlines another strokes. Differing or
+  unmodeled coverage retains the finding and names the affected
   regions. Matching raw bounds also undergo coverage comparison at the active
   geometry tolerance. Raw dimensions and per-edge coverage remain available.
 
@@ -432,6 +434,42 @@ def axis_aligned_line_bbox(
     if (len(xs) == 1) == (len(ys) == 1):
         return None
     return transformed_bbox((1, 0, 0, 1, 0, 0), list(transformed))
+
+
+def stroke_rule_bbox(
+    attrs: str, body: str
+) -> tuple[float, float, float, float] | None:
+    """Return the ink box of one solid, axis-aligned, butt- or square-capped rule.
+
+    Excel paints worksheet gridlines as thin fills where office2pdf strokes
+    them, so fill coverage must see both to compare a band under them (issue
+    #1769). Dashes, round or triangular caps, closed or zero-width paths, and
+    rotated or skewed transforms do not paint a known rectangle; they return
+    None and stay outside the coverage proof.
+    """
+    line = axis_aligned_line_bbox(attrs, body)
+    width_match = re.search(r'\blinewidth="([-0-9.e]+)"', attrs)
+    cap_match = re.search(r'\blinecap="(\d+),\d+,(\d+)"', attrs)
+    caps = set(cap_match.groups()) if cap_match else {"0"}
+    a, b, c, d, _, _ = parse_transform(attrs) or (1, 0, 0, 1, 0, 0)
+    if (
+        line is None
+        or width_match is None
+        or float(width_match.group(1)) <= 0
+        or caps not in ({"0"}, {"2"})
+        or re.search(r'\bdash="', attrs)
+        or "<closepath" in body
+        or abs(b) > 1e-9
+        or abs(c) > 1e-9
+    ):
+        return None
+    width = float(width_match.group(1))
+    half_x, half_y = width * abs(a) / 2, width * abs(d) / 2
+    cap_x, cap_y = (half_x, half_y) if caps == {"2"} else (0.0, 0.0)
+    x0, y0, x1, y1 = line
+    if y0 == y1:
+        return x0 - cap_x, y0 - half_y, x1 + cap_x, y1 + half_y
+    return x0 - half_x, y0 - cap_y, x1 + half_x, y1 + cap_y
 
 
 def intersect_bboxes(
@@ -923,8 +961,10 @@ def collect_fill_coverage(
 ) -> list[CoveragePaint]:
     """Collect the composed fill layer with conservative clip/opacity handling.
 
-    Text and strokes have separate audits and are not background fills. Images,
-    shading, nonrectangular paths, soft masks, and nonopaque paint cannot prove
+    Text has a separate audit and is not a background fill. An opaque stroke
+    joins the layer only as the rectangle ``stroke_rule_bbox`` proves; other
+    strokes are skipped and left to the stroke audit. Images, shading,
+    nonrectangular paths, soft masks, and nonopaque paint cannot prove
     flat-fill equivalence. Unknown paint remains bounded conservatively and
     may itself be hidden by a later, fully known opaque rectangle.
     """
@@ -972,14 +1012,22 @@ def collect_fill_coverage(
             if bbox is not None:
                 clip = bbox if clip is None else intersect_bboxes(clip, bbox)
             continue
-        if tag in {"fill_text", "ignore_text", "stroke_path"}:
+        if tag in {"fill_text", "ignore_text"}:
             continue
         if parse_alpha(attrs) == 0.0:
             continue
         bbox = None
         color = None
         known = False
-        if tag == "fill_path":
+        if tag == "stroke_path":
+            matched = PATH_RE.fullmatch(operation)
+            assert matched is not None
+            bbox = stroke_rule_bbox(matched.group(2), matched.group(3))
+            color = parse_rgb(attrs)
+            if bbox is None or color is None or parse_alpha(attrs) != 1.0:
+                continue
+            known = True
+        elif tag == "fill_path":
             matched = PATH_RE.fullmatch(operation)
             assert matched is not None
             _, path_attrs, path_body = matched.groups()
