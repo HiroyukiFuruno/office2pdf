@@ -35,14 +35,14 @@ fn a_chartsheet_asking_for_portrait_gets_it() {
     let setup = parse_chartsheet_print_setup(&chartsheet_xml(
         r#"<pageSetup paperSize="9" orientation="portrait"/>"#,
     ));
-    assert_eq!((setup.size.width, setup.size.height), (595.28, 841.89));
+    assert_eq!((setup.size.width, setup.size.height), (595.0, 842.0));
 }
 
 #[test]
 fn a_declared_paper_size_turns_on_its_side_with_the_chartsheet() {
-    // A5 (code 11) is 419.53 x 595.28 upright.
+    // A5 (code 11) is 420 x 595 upright.
     let setup = parse_chartsheet_print_setup(&chartsheet_xml(r#"<pageSetup paperSize="11"/>"#));
-    assert_eq!((setup.size.width, setup.size.height), (595.28, 419.53));
+    assert_eq!((setup.size.width, setup.size.height), (595.0, 420.0));
 }
 
 #[test]

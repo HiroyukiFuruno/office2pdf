@@ -133,9 +133,10 @@ fn test_parse_streaming_multi_sheet() {
 }
 
 /// Streaming preserves the same pristine-paper provenance as batch parsing;
-/// every chunk of the reported workbook stays on A4 (issue #1382).
+/// every chunk of the reported workbook stays on Excel's A4 (issues #1382,
+/// #1730).
 #[test]
-fn test_parse_streaming_pristine_worksheet_uses_the_converter_a4_default() {
+fn test_parse_streaming_pristine_worksheet_uses_excels_a4_page_box() {
     let data = include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/fixtures/xlsx/100-customers.xlsx"
@@ -154,8 +155,7 @@ fn test_parse_streaming_pristine_worksheet_uses_the_converter_a4_default() {
                 panic!("an XLSX page should be a sheet page");
             };
             assert!(
-                (sheet.size.width - 595.28).abs() < 0.01
-                    && (sheet.size.height - 841.89).abs() < 0.01,
+                (sheet.size.width, sheet.size.height) == (595.0, 842.0),
                 "expected A4, got {:?}",
                 sheet.size
             );
