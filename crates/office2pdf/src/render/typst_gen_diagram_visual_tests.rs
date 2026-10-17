@@ -6455,6 +6455,89 @@ fn gift_budget_compiled_columns_land_on_native_whole_sheet_points() {
     }
 }
 
+/// The same whole-point columns on the unscaled control: the public workbook
+/// with only `xl/worksheets/sheet2.xml`'s `pageSetUpPr/@fitToPage` set to
+/// `false`. Excel for Mac 16.112 prints its first chart tile (page 2) with the
+/// frame at 344.9874pt, the plot from 380.109pt and every column edge on a
+/// whole page point. The rounding is only right on that origin: the July
+/// column's continuous left edge is 889.28pt, so the 0.275pt-right fractional
+/// centre the converter once printed rounded it to 890pt, one point narrower
+/// than native (#1735).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn gift_budget_unscaled_columns_land_on_native_whole_page_points() {
+    let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1603_gift_budget.xlsx");
+    let unscaled: Vec<u8> = repackaged_with_part(data, "xl/worksheets/sheet2.xml", |xml| {
+        xml.replace(
+            "<pageSetUpPr fitToPage=\"true\"/>",
+            "<pageSetUpPr fitToPage=\"false\"/>",
+        )
+    });
+    let (doc, _) = crate::parser::Parser::parse(
+        &crate::parser::xlsx::XlsxParser,
+        &unscaled,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the unscaled gift-budget control parses");
+    let output = generate_typst(&doc).unwrap();
+    let pages = crate::render::pdf::compiled_page_paint_sequences(&output.source, &output.images)
+        .expect("the unscaled gift-budget control compiles");
+    assert_eq!(pages.len(), 3, "native prints the control on three pages");
+    let tile = &pages[1];
+
+    let series_paints = [
+        typst::visualize::Color::from_u8(0x3D, 0x2B, 0x2D, 255),
+        typst::visualize::Color::from_u8(0x7A, 0x63, 0x69, 255),
+        typst::visualize::Color::from_u8(0x5D, 0x37, 0x54, 255),
+    ];
+    let mut columns: Vec<(f64, f64)> = tile
+        .iter()
+        .filter(|paint| {
+            let (left, top, right, bottom) = paint.bounds;
+            paint
+                .rectangle_fill
+                .as_ref()
+                .is_some_and(|fill| series_paints.contains(fill))
+                && left > 370.0
+                && right < 1191.0
+                && top > 140.0
+                && bottom < 395.0
+                && bottom - top > 1.0
+        })
+        .map(|paint| (paint.bounds.0, paint.bounds.2))
+        .collect();
+    columns.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+    // January, April, June's two stacked series and July.
+    let native: [(f64, f64); 5] = [
+        (404.0, 437.0),
+        (647.0, 679.0),
+        (808.0, 841.0),
+        (808.0, 841.0),
+        (889.0, 922.0),
+    ];
+    assert_eq!(columns.len(), native.len(), "painted columns {columns:?}");
+    for (index, ((left, right), (native_left, native_right))) in
+        columns.iter().zip(native).enumerate()
+    {
+        assert!(
+            (left - native_left).abs() <= 0.01 && (right - native_right).abs() <= 0.01,
+            "column {index}: native {native_left}..{native_right}pt, got {left:.4}..{right:.4}pt"
+        );
+    }
+    let plot_left: f64 = tile
+        .iter()
+        .filter(|paint| {
+            let (left, top, right, bottom) = paint.bounds;
+            paint.stroke.is_some() && right - left > 900.0 && bottom - top < 1.0
+        })
+        .map(|paint| paint.bounds.0)
+        .fold(f64::INFINITY, f64::min);
+    assert!(
+        (plot_left - 380.109).abs() <= 0.02,
+        "the plot's gridlines start at {plot_left}pt, native 380.109pt"
+    );
+}
+
 /// The whole-point rule is a property of anchored worksheet columns, not of
 /// the gift workbook's data: at every gap width the generator's column widths
 /// and the spacing between column starts are whole sheet points, while a
