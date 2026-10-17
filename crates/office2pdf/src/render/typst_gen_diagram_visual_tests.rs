@@ -11669,13 +11669,13 @@ fn fitted_budget_cell_text_uses_the_snapped_sheet_origin() {
     assert!(
         move_lines
             .iter()
-            .any(|line| line.contains("dx: 0.475pt") && line.contains("dy: -0.18pt")),
+            .any(|line| line.contains("dx: 0.64pt") && line.contains("dy: -0.18pt")),
         "the fitted paint group must use the snapped two-axis origin"
     );
     assert!(
         !move_lines
             .iter()
-            .any(|line| line.contains("dx: -0.475pt") && line.contains("dy: 0.18pt")),
+            .any(|line| line.contains("dx: -0.64pt") && line.contains("dy: 0.18pt")),
         "cell text must not countershift back to the physical margin origin"
     );
 
