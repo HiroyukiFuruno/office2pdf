@@ -6538,6 +6538,68 @@ fn gift_budget_unscaled_columns_land_on_native_whole_page_points() {
     );
 }
 
+/// The unscaled control's second page-column (page 3: columns P..R, 245pt)
+/// takes its own whole-point seat. Each tile centres its own columns, so the
+/// fractional 1,190.55pt A3 page left the two tiles different remainders,
+/// 0.275pt on page 2 and 0.775pt here (#1746). On Excel's 1,191pt page this
+/// tile's exact centre is 473pt and `floor(centre) - 1` puts its grid at
+/// 472pt. Excel for Mac 16.112 prints the title bands' raw fills at
+/// 472..708pt and clips the tile's first column one point in (#1605), so they
+/// paint 473..708pt. The chart frame, anchored 784.0126pt left of column P,
+/// starts at -312.0126pt. Both values come from the native trace recorded in
+/// `assets/bugfixes/issue-1607/layout-audit.json`.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn gift_budget_unscaled_continuation_tile_seats_on_its_own_whole_point() {
+    let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1603_gift_budget.xlsx");
+    let unscaled: Vec<u8> = repackaged_with_part(data, "xl/worksheets/sheet2.xml", |xml| {
+        xml.replace(
+            "<pageSetUpPr fitToPage=\"true\"/>",
+            "<pageSetUpPr fitToPage=\"false\"/>",
+        )
+    });
+    let (doc, _) = crate::parser::Parser::parse(
+        &crate::parser::xlsx::XlsxParser,
+        &unscaled,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the unscaled gift-budget control parses");
+    let output = generate_typst(&doc).unwrap();
+    let pages = crate::render::pdf::compiled_page_paint_sequences(&output.source, &output.images)
+        .expect("the unscaled gift-budget control compiles");
+    assert_eq!(pages.len(), 3, "native prints the control on three pages");
+    let tile = &pages[2];
+
+    let title_band = typst::visualize::Color::from_u8(0xDA, 0xB6, 0xBA, 255);
+    let bands: Vec<(f64, f64)> = tile
+        .iter()
+        .filter(|paint| paint.rectangle_fill.as_ref() == Some(&title_band))
+        .map(|paint| (paint.bounds.0, paint.bounds.2))
+        .collect();
+    assert_eq!(bands.len(), 2, "the F2:Q2 and F5:Q5 bands: {bands:?}");
+    for (left, right) in bands {
+        assert!(
+            (left - 473.0).abs() <= 0.01 && (right - 708.0).abs() <= 0.01,
+            "a title band paints {left:.4}..{right:.4}pt, native 473..708pt"
+        );
+    }
+
+    let white = typst::visualize::Color::from_u8(0xFF, 0xFF, 0xFF, 255);
+    let frame_left: f64 = tile
+        .iter()
+        .filter(|paint| {
+            let (left, _, right, _) = paint.bounds;
+            paint.rectangle_fill.as_ref() == Some(&white) && right - left > 1000.0
+        })
+        .map(|paint| paint.bounds.0)
+        .next()
+        .expect("the chart frame continues onto page 3");
+    assert!(
+        (frame_left - -312.0126).abs() <= 0.01,
+        "the chart frame starts at {frame_left:.4}pt, native -312.0126pt"
+    );
+}
+
 /// The whole-point rule is a property of anchored worksheet columns, not of
 /// the gift workbook's data: at every gap width the generator's column widths
 /// and the spacing between column starts are whole sheet points, while a
