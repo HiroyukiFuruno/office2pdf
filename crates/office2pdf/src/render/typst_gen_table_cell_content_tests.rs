@@ -6049,6 +6049,51 @@ fn issue_1721_bottom_aligned_cells_match_native_baselines() {
     assert!(differences.is_empty(), "{}", differences.join("\n"));
 }
 
+/// The fitted budget sheet's row-1 title (Cambria Bold 42pt, bottom-aligned,
+/// `ht="61.9" customHeight="1"`) rests its rounded face descent above row 1's
+/// printed boundary. Excel for Mac 16.112 prints the title's baseline at
+/// 95.160pt on page 2 (the native trace kept in
+/// `assets/bugfixes/issue-1623/layout-audit.json`); Cambria's `hhea` descent
+/// of 455/2048em rounds to 9 sheet points at 42pt, so the boundary is
+/// 95.160 + 9 x 0.78 = 102.18pt. That boundary needs both the row's 62pt
+/// track (#1632) and the snapped fitted origin (#1719); the report measured
+/// the title 0.6pt high before them (#1767). The seat is checked against the
+/// face this machine resolves, whose rounded descent can differ from
+/// Cambria's; when it is Cambria's, the expected baseline is the native one.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn fitted_budget_title_rests_its_rounded_descent_on_the_native_row_boundary() {
+    const NATIVE_ROW_1_BOTTOM_PT: f64 = 102.18;
+    const PRINT_SCALE: f64 = 0.78;
+    let Some((_, descent_em, _)) = crate::render::pdf::font_line_metrics_em("Cambria") else {
+        return;
+    };
+    let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
+    let (document, _) = crate::parser::Parser::parse(
+        &crate::parser::xlsx::XlsxParser,
+        data,
+        &ConvertOptions::default(),
+    )
+    .unwrap();
+    let generated = generate_typst(&document).unwrap();
+    let runs =
+        crate::render::pdf::compiled_text_runs_with_images(&generated.source, &generated.images, 1)
+            .expect("the fitted budget sheet compiles");
+    let titles: Vec<_> = runs
+        .iter()
+        .filter(|run| run.text == "Monthly college budget")
+        .collect();
+    assert_eq!(titles.len(), 1, "expected one title run on page 2");
+
+    let seat_sheet_pt: f64 = (descent_em * 42.0).round();
+    let expected_pt: f64 = NATIVE_ROW_1_BOTTOM_PT - seat_sheet_pt * PRINT_SCALE;
+    assert!(
+        (titles[0].baseline_pt - expected_pt).abs() < 0.01,
+        "title baseline {}pt, expected {expected_pt}pt ({seat_sheet_pt} sheet points above the native boundary)",
+        titles[0].baseline_pt
+    );
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn tight_merged_expense_labels_keep_native_baselines() {
