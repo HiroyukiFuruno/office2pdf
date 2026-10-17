@@ -1,4 +1,4 @@
-"""Tests for the unattended issue loop's usage-limit detector.
+"""Tests for the unattended issue loop's usage-limit detector and its prompt.
 
 A false positive here is expensive in a way only a test cheaply guards: the loop
 discards the run it just finished and sleeps an hour before retrying, so one
@@ -13,6 +13,7 @@ the loop itself calls, so these tests survive a rewrite of how it is implemented
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -146,6 +147,46 @@ class UsageLimitReasonTest(unittest.TestCase):
         # The loop must not die on a run that never opened its log file.
         with tempfile.TemporaryDirectory() as tmp:
             self.assertNoLimit(self.run_detector(str(Path(tmp) / "absent.json")))
+
+
+class HostNoteTest(unittest.TestCase):
+    """The prompt says when the host cannot export a native Office PDF.
+
+    Seven runs on 2026-10-17/18 (#1723, #1728, #1731, #1736, #1738, #1748,
+    #1761) each spent turns rediscovering that a Linux host has no native
+    export: disk-wide `find` for PDFs, precedent drafts, advisor calls. A Mac
+    can export one, so the note must depend on the host, not the prompt file.
+    """
+
+    NOTE = "cannot run Microsoft Office"
+
+    def prompt_on(self, system: str) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            uname = bin_dir / "uname"
+            uname.write_text("#!/bin/sh\necho %s\n" % system, encoding="utf-8")
+            uname.chmod(0o755)
+            env = dict(os.environ, PATH="%s%s%s" % (bin_dir, os.pathsep, os.environ["PATH"]))
+            done = subprocess.run(
+                ["bash", str(SCRIPT), "--log-dir", str(Path(tmp) / "logs"), "--print-prompt", "1723"],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return done.stdout
+
+    def test_a_linux_host_is_told_it_has_no_native_office(self):
+        prompt = self.prompt_on("Linux")
+        self.assertIn(self.NOTE, prompt)
+        self.assertIn("runs Linux", prompt)
+
+    def test_any_host_but_macos_is_told_it_has_no_native_office(self):
+        self.assertIn("runs FreeBSD", self.prompt_on("FreeBSD"))
+
+    def test_a_macos_host_is_not_told_it_lacks_office(self):
+        self.assertNotIn(self.NOTE, self.prompt_on("Darwin"))
 
 
 if __name__ == "__main__":
