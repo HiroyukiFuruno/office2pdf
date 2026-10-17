@@ -4,6 +4,13 @@ replace those documents.
 
 - Work in a git worktree on a `<type>/<short-description>` branch created from current
   `main`. Never `git checkout` in the main working tree — other sessions use it.
+- When `CARGO_TARGET_DIR` is set, every worktree builds into that one directory, so a
+  baseline built from `main` there can silently be your branch's binary. Build a
+  before/after baseline in its own scratch target directory and `cmp` the binaries.
+  A scratch target or a worktree-local `target/` held 1.5–12 GB in past runs, and the
+  loop stops once free disk drops below its floor: before you end your turn, delete
+  every build directory you created, including when the worktree stays behind a draft
+  pull request.
 - Test-driven: write the failing test first, then the minimal fix, then refactor. The
   test must pin the general rule, not the one input from the issue.
 - Sign off every commit (`git commit -s`) with the repository's configured identity.
