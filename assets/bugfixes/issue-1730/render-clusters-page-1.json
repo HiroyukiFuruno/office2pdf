@@ -1,0 +1,743 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 133.8624,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 16.32,
+        "x": 156.48,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-6e9e74a4e139",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 88.704,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 9.12,
+        "x": 57.6,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-6d7afcdf8266",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 88.704,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 9.12,
+        "x": 287.52,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-f62282bd8b58",
+      "region": "top"
+    },
+    {
+      "area_pt2": 76.4928,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 9.12,
+        "x": 219.84,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-d7e54d4eb164",
+      "region": "top"
+    },
+    {
+      "area_pt2": 72.1152,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 7.2,
+        "x": 372.96,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-a04999945497",
+      "region": "top"
+    },
+    {
+      "area_pt2": 71.8848,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 7.2,
+        "x": 389.28,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-b0f8a04a7c6a",
+      "region": "top"
+    },
+    {
+      "area_pt2": 64.512,
+      "bbox_pt": {
+        "height": 12.48,
+        "width": 7.68,
+        "x": 143.52,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-1ec5064c5461",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 64.0512,
+      "bbox_pt": {
+        "height": 12.48,
+        "width": 7.2,
+        "x": 397.44,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-c47212122834",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 63.5904,
+      "bbox_pt": {
+        "height": 12.48,
+        "width": 7.68,
+        "x": 237.6,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-23a0601e3185",
+      "region": "top"
+    },
+    {
+      "area_pt2": 61.2864,
+      "bbox_pt": {
+        "height": 12.48,
+        "width": 7.2,
+        "x": 173.76,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-496a8ed0f4ae",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 60.8256,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 105.12,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-f45ff1520453",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 60.5952,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 76.32,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-7080a7dd35ed",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 60.5952,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 113.28,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-19f9bbe210a1",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 58.9824,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 199.2,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-f963412970d3",
+      "region": "top"
+    },
+    {
+      "area_pt2": 57.6,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 246.24,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-a1a8b275dd8d",
+      "region": "top"
+    },
+    {
+      "area_pt2": 55.296,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 96.96,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-6500ea8880a9",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 55.296,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 181.92,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-8e8c64006532",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 55.296,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 228.96,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-7619f9d9d996",
+      "region": "top"
+    },
+    {
+      "area_pt2": 55.296,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 360.96,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-250035edfba1",
+      "region": "top"
+    },
+    {
+      "area_pt2": 55.0656,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 297.12,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-bd2a721dcbb0",
+      "region": "top"
+    },
+    {
+      "area_pt2": 53.6832,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 207.36,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-43dd1d519d4f",
+      "region": "top"
+    },
+    {
+      "area_pt2": 40.7808,
+      "bbox_pt": {
+        "height": 12.48,
+        "width": 6.72,
+        "x": 335.04,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-07d7f5b550a4",
+      "region": "top"
+    },
+    {
+      "area_pt2": 38.7072,
+      "bbox_pt": {
+        "height": 11.04,
+        "width": 8.64,
+        "x": 255.84,
+        "y": 80.64
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-31e977031d8d",
+      "region": "top"
+    },
+    {
+      "area_pt2": 32.0256,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 7.2,
+        "x": 190.56,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-805e2da82fac",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 31.5648,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 7.2,
+        "x": 88.8,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-d6bf712b35cc",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 31.5648,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 7.2,
+        "x": 318.72,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-828024fd15c5",
+      "region": "top"
+    },
+    {
+      "area_pt2": 31.5648,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 7.2,
+        "x": 352.8,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-af1ee6e9fbaf",
+      "region": "top"
+    },
+    {
+      "area_pt2": 30.8736,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 67.68,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-127b80996cb5",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 30.8736,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.2,
+        "x": 343.68,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-dea825b85749",
+      "region": "top"
+    },
+    {
+      "area_pt2": 29.7216,
+      "bbox_pt": {
+        "height": 3.84,
+        "width": 8.64,
+        "x": 124.8,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-e9291fe99590",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 28.5696,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 7.2,
+        "x": 381.12,
+        "y": 79.68
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-8ca84a0dda08",
+      "region": "top"
+    },
+    {
+      "area_pt2": 27.648,
+      "bbox_pt": {
+        "height": 1.92,
+        "width": 14.4,
+        "x": 268.8,
+        "y": 84.96
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-492995774193",
+      "region": "top"
+    },
+    {
+      "area_pt2": 27.648,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 7.2,
+        "x": 247.2,
+        "y": 206.88
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-4043b900f42a",
+      "region": "top"
+    },
+    {
+      "area_pt2": 27.4176,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 2.88,
+        "x": 84.48,
+        "y": 81.6
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-567b6d1b5bfb",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 24.6528,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 4.8,
+        "x": 305.76,
+        "y": 82.08
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-575c1dbd4092",
+      "region": "top"
+    },
+    {
+      "area_pt2": 24.192,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 5.28,
+        "x": 228.0,
+        "y": 192.96
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-f5bf2440b20c",
+      "region": "top"
+    },
+    {
+      "area_pt2": 23.5008,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 5.28,
+        "x": 357.12,
+        "y": 235.2
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-b46cb07587ea",
+      "region": "top"
+    },
+    {
+      "area_pt2": 23.2704,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 7.2,
+        "x": 381.12,
+        "y": 86.4
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-586c8cb93814",
+      "region": "top"
+    },
+    {
+      "area_pt2": 23.04,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 5.76,
+        "x": 423.84,
+        "y": 135.36
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-872f88787d73",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 23.04,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 5.76,
+        "x": 423.84,
+        "y": 205.44
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-f324bc2c4535",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 23.04,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 5.76,
+        "x": 423.84,
+        "y": 233.76
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-ba36baa52e32",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 22.1184,
+      "bbox_pt": {
+        "height": 6.24,
+        "width": 5.76,
+        "x": 362.88,
+        "y": 235.2
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-e440561516a7",
+      "region": "top"
+    },
+    {
+      "area_pt2": 21.4272,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 5.28,
+        "x": 264.96,
+        "y": 163.68
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-287c011abcad",
+      "region": "top"
+    },
+    {
+      "area_pt2": 20.736,
+      "bbox_pt": {
+        "height": 1.44,
+        "width": 14.4,
+        "x": 268.8,
+        "y": 87.36
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "Inspected the full-page pair, 5% diff, and the full-resolution title crop. Every cluster is a glyph of the 14pt bold title, which prints 2.00pt high (layout audit dy -2.00, dx 0.00) with the same text, weight, and colour; the shift predates this change and is unchanged by it. Recorded as a sub-material residual under #1874."
+      },
+      "id": "p1-18ebba2a594a",
+      "region": "top"
+    },
+    {
+      "area_pt2": 20.5056,
+      "bbox_pt": {
+        "height": 6.24,
+        "width": 5.76,
+        "x": 234.72,
+        "y": 135.36
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Inspected the full-resolution body crop. Each cluster is a single body glyph whose trace origin matches native (all ten table lines matched, dx and dy 0.00). The GT embeds ArialMT and Arial-BoldMT; this machine substitutes metric-compatible Liberation Sans, so glyph edges, and the narrower U+2192 arrow, rasterise differently."
+      },
+      "id": "p1-0cba05da2e6e",
+      "region": "top"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 45,
+    "duplicate": 0,
+    "total": 45,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}

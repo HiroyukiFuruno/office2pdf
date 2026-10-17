@@ -5281,7 +5281,11 @@ fn an_explicit_header_footer_x_offset_does_not_take_the_writer_aligned_seat() {
 fn centered_sheet_page(centers: bool, column_widths: Vec<f64>) -> Page {
     Page::Sheet(SheetPage {
         name: "Sheet1".to_string(),
-        size: PageSize::default(),
+        // Excel's whole-point A4, as the XLSX parser emits it (issue #1730).
+        size: PageSize {
+            width: 595.0,
+            height: 842.0,
+        },
         margins: Margins {
             top: 54.0,
             bottom: 54.0,
@@ -5322,12 +5326,13 @@ fn test_horizontally_centered_sheet_insets_the_grid_from_the_left_margin() {
     let inset_pt: f64 = sheet_centering_inset_pt(&source)
         .unwrap_or_else(|| panic!("a centred sheet must inset its grid: {source}"));
 
-    // 595.28pt page, 50pt margins, 300pt grid: the exact centre is 147.64pt
-    // from the page edge and Excel prints the grid at 146pt (issue #1110).
+    // 595pt page, 50pt margins, 300pt grid: the exact centre is 147.5pt from
+    // the page edge and Excel prints the grid at floor(147.5) - 1 = 146pt
+    // (issue #1110).
     let grid_left_pt: f64 = 50.0 + inset_pt;
     assert!(
-        (grid_left_pt - 146.0).abs() < 1.0,
-        "grid left edge {grid_left_pt}pt must land within 1pt of Excel's 146pt: {source}"
+        (grid_left_pt - 146.0).abs() < 1e-9,
+        "grid left edge {grid_left_pt}pt must land on Excel's 146pt: {source}"
     );
 }
 
@@ -5358,20 +5363,20 @@ fn test_centered_sheet_wider_than_the_printable_width_is_not_inset() {
 }
 
 /// The fit-to-page A3 sheet attached to issue #1538 has a 1,078.30pt printed
-/// grid centred on a 1,190.55pt page with 50pt side and 54pt top margins. Excel
-/// lays the paper box out in sheet space before applying the 0.82 print scale.
-/// Its resulting origin is (-0.185, -0.70)pt from the converter's table
-/// origin. The grid and cell text share this translation. The first painted
-/// boundary lands at 55.125 - 0.185 + 8.20 = 63.14pt, matching the pinned
-/// native trace rather than the old 63.325pt.
+/// grid centred on Excel's whole-point 1,191pt landscape page (issue #1730)
+/// with 50pt side and 54pt top margins. Excel lays the paper box out in sheet
+/// space before applying the 0.82 print scale. Its resulting origin is
+/// (-0.06, -0.70)pt from the converter's table origin. The grid and cell text
+/// share this translation. The first painted boundary lands at
+/// 55 - 0.06 + 8.20 = 63.14pt, matching the pinned native trace.
 #[test]
 fn a_fit_scaled_a3_sheet_uses_its_scaled_paper_space_body_seat() {
     let Page::Sheet(mut sheet) = centered_sheet_page(true, vec![1_078.3]) else {
         unreachable!("centered_sheet_page builds a sheet page")
     };
     sheet.size = PageSize {
-        width: 1_190.55,
-        height: 841.89,
+        width: 1_191.0,
+        height: 842.0,
     };
     sheet.table.print_scale = Some(0.82);
 
@@ -5379,16 +5384,44 @@ fn a_fit_scaled_a3_sheet_uses_its_scaled_paper_space_body_seat() {
         .unwrap()
         .source;
     assert!(
-        source.contains("#move(dx: -0.185pt, dy: -0.7pt)["),
+        source.contains("#move(dx: -0.06pt, dy: -0.7pt)["),
         "the scaled paint must start from Excel's sheet-space paper origin: {source}"
     );
     assert!(
-        !source.contains("#move(dx: 0.185pt, dy: 0.7pt)["),
+        !source.contains("#move(dx: 0.06pt, dy: 0.7pt)["),
         "cell text must inherit the grid's snapped origin: {source}"
     );
     let inset_pt = sheet_centering_inset_pt(&source)
         .unwrap_or_else(|| panic!("the centred sheet needs its physical inset: {source}"));
-    assert!((inset_pt - 5.125).abs() < 1e-9, "got {inset_pt}pt");
+    assert!((inset_pt - 5.0).abs() < 1e-9, "got {inset_pt}pt");
+}
+
+/// Triangulates the #1538 paper box on the #1719 budget page's geometry: an A3
+/// portrait 842pt page, 18pt side and 54pt top margins, fitted at 0.78. Its
+/// sheet-space printable width is `ceil(806 / .78) = 1,034` points from the
+/// snapped `floor(18 / .78) * .78 = 17.94pt` left edge, so a 600pt grid
+/// centres at `17.94 + (806.52 - 600) / 2 - .78 = 120.42pt` against the
+/// physical `18 + (806 - 600) / 2 - 1 = 120pt`.
+#[test]
+fn a_fit_scaled_a3_portrait_sheet_snaps_its_printable_width_up() {
+    let Page::Sheet(mut sheet) = centered_sheet_page(true, vec![600.0]) else {
+        unreachable!("centered_sheet_page builds a sheet page")
+    };
+    sheet.size = PageSize {
+        width: 842.0,
+        height: 1_191.0,
+    };
+    sheet.margins.left = 18.0;
+    sheet.margins.right = 18.0;
+    sheet.table.print_scale = Some(0.78);
+
+    let source = generate_typst(&make_doc(vec![Page::Sheet(sheet)]))
+        .unwrap()
+        .source;
+    assert!(
+        source.contains("#move(dx: 0.42pt, dy: -0.18pt)["),
+        "the scaled paint must start from Excel's sheet-space paper origin: {source}"
+    );
 }
 
 /// One-factor control for issue #1538: the same paper, margins and grid without
@@ -5399,20 +5432,20 @@ fn an_unscaled_a3_sheet_does_not_take_the_scaled_body_seat() {
         unreachable!("centered_sheet_page builds a sheet page")
     };
     sheet.size = PageSize {
-        width: 1_190.55,
-        height: 841.89,
+        width: 1_191.0,
+        height: 842.0,
     };
 
     let source = generate_typst(&make_doc(vec![Page::Sheet(sheet)]))
         .unwrap()
         .source;
     assert!(
-        !source.contains("#move(dx: -0.185pt, dy: -0.7pt)["),
+        !source.contains("#move(dx: -0.06pt, dy: -0.7pt)["),
         "an unscaled sheet must keep its existing body origin: {source}"
     );
     let inset_pt = sheet_centering_inset_pt(&source)
         .unwrap_or_else(|| panic!("the unscaled centred sheet needs its normal inset: {source}"));
-    assert!((inset_pt - 5.125).abs() < 1e-9, "got {inset_pt}pt");
+    assert!((inset_pt - 5.0).abs() < 1e-9, "got {inset_pt}pt");
 }
 
 #[test]
@@ -5739,9 +5772,10 @@ fn gift_drawing_origin_probe_with_chart(
     configure: impl FnOnce(&mut Chart),
 ) -> Vec<crate::render::pdf::PaintedPrimitive> {
     let mut sheet = sheet_page_with_chart_print_scale(scale);
+    // Excel's whole-point A3 landscape box (issue #1730).
     sheet.size = PageSize {
-        width: 1_190.55,
-        height: 841.89,
+        width: 1_191.0,
+        height: 842.0,
     };
     sheet.margins = Margins {
         top: 54.0,
@@ -5860,15 +5894,18 @@ fn fitted_drawing_frames_use_the_native_sheet_origin() {
     );
 }
 
-/// Freeze the existing 100% control. Its 0.275pt horizontal native difference
-/// is below the visual gate and is independent of the fitted-origin defect.
+/// The 100% control's chart frame matches the native trace
+/// (344.9874..1360.965pt): on Excel's whole-point 1,191pt page the centred
+/// grid lands on `floor(50 + (1091 - 1070) / 2) - 1 = 59pt` (issues #1110,
+/// #1730). The fractional page left it 0.275pt right. The anchored image
+/// moves with the grid.
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn unscaled_drawing_frames_keep_their_existing_origin() {
     assert_gift_drawing_bounds(
         1.0,
-        (345.2624, 132.0126, 1_361.240_8, 439.9858),
-        (70.210437, 521.40316, 305.158467, 692.45356),
+        (344.9874, 132.0126, 1_360.965_8, 439.9858),
+        (69.935437, 521.40316, 304.883467, 692.45356),
     );
 }
 

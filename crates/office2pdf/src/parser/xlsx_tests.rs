@@ -1044,14 +1044,15 @@ fn test_column_overflow_splits_to_second_page_like_excel() {
 
 // ----- Page size and margins defaults -----
 
-/// A worksheet with no print metadata follows the converter's A4 default.
+/// A worksheet with no print metadata prints on Excel's application A4.
 ///
 /// The customer fixture carries neither `<pageSetup>` nor `<pageMargins>`.
 /// Excel-for-Mac therefore uses its current paper selection, A4 on the
 /// reference machine, instead of applying the OOXML default that belongs to
-/// an initialised but silent `<pageSetup>` (issue #1382).
+/// an initialised but silent `<pageSetup>` (issue #1382). That A4 is Excel's
+/// whole-point 595 x 842pt box, like a declared one (issue #1730).
 #[test]
-fn test_pristine_worksheet_uses_the_converter_a4_default() {
+fn test_pristine_worksheet_uses_excels_a4_page_box() {
     let data = include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/fixtures/xlsx/100-customers.xlsx"
@@ -1066,7 +1067,7 @@ fn test_pristine_worksheet_uses_the_converter_a4_default() {
             panic!("an XLSX page should be a sheet page");
         };
         assert!(
-            (sheet.size.width - 595.28).abs() < 0.01 && (sheet.size.height - 841.89).abs() < 0.01,
+            (sheet.size.width, sheet.size.height) == (595.0, 842.0),
             "expected A4, got {:?}",
             sheet.size
         );
@@ -1162,10 +1163,50 @@ fn test_declared_a4_paper_size_survives_the_letter_default() {
 
     let page = get_sheet_page(&doc, 0);
     assert!(
-        (page.size.width - 595.28).abs() < 0.01 && (page.size.height - 841.89).abs() < 0.01,
+        (page.size.width, page.size.height) == (595.0, 842.0),
         "expected A4, got {:?}",
         page.size
     );
+}
+
+/// Excel prints ISO paper on a whole-point page box: its native exports carry
+/// A3 as 842 x 1191pt and A4 as 595 x 842pt, not the exact 841.89 x 1190.55pt
+/// and 595.28 x 841.89pt. Anything measured from the bottom or right edge of
+/// the page, a footer included, is placed on that box (issue #1730).
+#[test]
+fn test_iso_paper_sizes_use_excels_whole_point_page_box() {
+    use umya_spreadsheet::structs::OrientationValues::{Landscape, Portrait};
+    // (paperSize, orientation, expected width x height)
+    let cases = [
+        (8, Portrait, (842.0, 1191.0)),  // A3
+        (8, Landscape, (1191.0, 842.0)), // A3, turned
+        (9, Portrait, (595.0, 842.0)),   // A4
+        (10, Portrait, (595.0, 842.0)),  // A4 Small
+        (11, Portrait, (420.0, 595.0)),  // A5
+    ];
+    for (paper_size, orientation, expected) in cases {
+        let mut book = umya_spreadsheet::new_file();
+        {
+            let sheet = book.get_sheet_mut(&0).unwrap();
+            sheet.get_cell_mut("A1").set_value("Test");
+            let page_setup = sheet.get_page_setup_mut();
+            page_setup.set_paper_size(paper_size);
+            page_setup.set_orientation(orientation.clone());
+        }
+        let mut cursor = Cursor::new(Vec::new());
+        umya_spreadsheet::writer::xlsx::write_writer(&book, &mut cursor).unwrap();
+
+        let (doc, _warnings) = XlsxParser
+            .parse(&cursor.into_inner(), &ConvertOptions::default())
+            .unwrap();
+
+        let page = get_sheet_page(&doc, 0);
+        assert_eq!(
+            (page.size.width, page.size.height),
+            expected,
+            "paperSize {paper_size} {orientation:?}"
+        );
+    }
 }
 
 /// The defaulted paper still rotates with `orientation="landscape"`, so the

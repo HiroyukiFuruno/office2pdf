@@ -206,20 +206,27 @@ fn sheet_print_footer(
 /// An unrecognised *positive* code is a different case: the file names a paper
 /// this table does not model, and nothing in the schema says what to
 /// substitute, so those keep the renderer's A4 default.
+///
+/// Excel prints ISO A-series paper on a whole-point page box — its native
+/// exports carry A3 as 842 x 1191pt and A4 as 595 x 842pt — so those rows are
+/// rounded rather than the exact millimetre conversion; a fractional box
+/// seated every bottom- or right-anchored mark, the footer included, up to
+/// 0.45pt off (issue #1730). The JIS B rows have no native export to confirm
+/// the same rounding and keep their exact sizes.
 fn worksheet_paper_size(code: u32) -> PageSize {
     let (width, height) = match code {
-        0 => (612.0, 792.0),        // `paperSize` omitted — schema default
-        1 | 2 => (612.0, 792.0),    // Letter / Letter Small
-        3 => (792.0, 1224.0),       // Tabloid
-        4 => (1224.0, 792.0),       // Ledger
-        5 => (612.0, 1008.0),       // Legal
-        6 => (396.0, 612.0),        // Statement
-        7 => (522.0, 756.0),        // Executive
-        8 => (841.89, 1190.55),     // A3
-        9 | 10 => (595.28, 841.89), // A4 / A4 Small
-        11 => (419.53, 595.28),     // A5
-        12 => (728.50, 1031.81),    // B4 (JIS)
-        13 => (515.91, 728.50),     // B5 (JIS)
+        0 => (612.0, 792.0),      // `paperSize` omitted — schema default
+        1 | 2 => (612.0, 792.0),  // Letter / Letter Small
+        3 => (792.0, 1224.0),     // Tabloid
+        4 => (1224.0, 792.0),     // Ledger
+        5 => (612.0, 1008.0),     // Legal
+        6 => (396.0, 612.0),      // Statement
+        7 => (522.0, 756.0),      // Executive
+        8 => (842.0, 1191.0),     // A3
+        9 | 10 => (595.0, 842.0), // A4 / A4 Small
+        11 => (420.0, 595.0),     // A5
+        12 => (728.50, 1031.81),  // B4 (JIS)
+        13 => (515.91, 728.50),   // B5 (JIS)
         _ => return PageSize::default(),
     };
     PageSize { width, height }
@@ -377,14 +384,15 @@ fn empty_workbook_page(
 }
 
 /// Preserve a worksheet's paper size and landscape orientation in the IR.
-fn sheet_page_size(
-    sheet: &umya_spreadsheet::Worksheet,
-    uses_converter_paper_default: bool,
-) -> PageSize {
+///
+/// A sheet with no paper state follows Excel's application paper, A4 on the
+/// reference machine (issue #1382), which Excel prints on the same whole-point
+/// box as a declared A4.
+fn sheet_page_size(sheet: &umya_spreadsheet::Worksheet, uses_application_paper: bool) -> PageSize {
     let page_setup = sheet.get_page_setup();
     let paper_size_code: u32 = *page_setup.get_paper_size();
-    let size: PageSize = if paper_size_code == 0 && uses_converter_paper_default {
-        PageSize::default()
+    let size: PageSize = if paper_size_code == 0 && uses_application_paper {
+        worksheet_paper_size(9)
     } else {
         worksheet_paper_size(paper_size_code)
     };

@@ -1679,13 +1679,19 @@ fn generate_table_page(
 /// Translation from the converter's physical table origin to Excel's fitted
 /// sheet-space paint origin.
 ///
-/// On issue #1538's A3 page, the converter centres the 1,078.30pt grid at
-/// `50 + 5.125 = 55.125pt`. Excel first snaps the paper box in sheet space:
-/// its left edge is `floor(50 / .82) * .82 = 49.20pt`, its right edge is
-/// `ceil((1190.55 - 50) / .82) * .82 = 1140.62pt`, and its scaled 1pt
-/// centring bias leaves a 5.74pt inset. The fitted paint origin is therefore
-/// 54.94pt, or -0.185pt from the converter's. The top origin similarly moves
-/// from 54pt to `floor(54 / .82) * .82 = 53.30pt`.
+/// On issue #1538's 1,191pt-wide A3 page, the converter centres the 1,078.30pt
+/// grid at `floor(50 + (1091 - 1078.3) / 2) - 1 = 55pt`. Excel first snaps the
+/// paper box in sheet space: its left edge is `floor(50 / .82) * .82 = 49.20pt`,
+/// and its printable width rounds up from there to
+/// `ceil((1191 - 100) / .82) * .82 = 1091.42pt`, a right edge of 1140.62pt. Its
+/// scaled 1pt centring bias leaves a 5.74pt inset, so the fitted paint origin
+/// is 54.94pt, or -0.06pt from the converter's. The top origin similarly moves from 54pt to
+/// `floor(54 / .82) * .82 = 53.30pt`.
+///
+/// Snapping the printable width rather than the right edge is a two-page fit:
+/// it is the rule that reproduces both this native origin and the #1719 A3
+/// portrait page at 0.78 on Excel's whole-point paper (issue #1730), where
+/// `ceil((1191 - 50) / .82)` overshoots #1538 by one sheet point.
 fn scaled_sheet_paint_offset_pt(
     page: &SheetPage,
     size: &PageSize,
@@ -1697,7 +1703,8 @@ fn scaled_sheet_paint_offset_pt(
         .filter(|scale| *scale > 0.0 && *scale < 1.0)?;
     let thousandth = |points: f64| -> f64 { (points * 1000.0).round() / 1000.0 };
     let left_pt: f64 = (page.margins.left / scale).floor() * scale;
-    let right_pt: f64 = ((size.width - page.margins.right) / scale).ceil() * scale;
+    let printable_width_pt: f64 = size.width - page.margins.left - page.margins.right;
+    let right_pt: f64 = left_pt + (printable_width_pt / scale).ceil() * scale;
     let top_pt: f64 = (page.margins.top / scale).floor() * scale;
     let grid_width_pt: f64 = page.table.column_widths.iter().sum();
     let scaled_centering_inset_pt: f64 = if page.table.centers_between_print_margins {
@@ -1712,8 +1719,8 @@ fn scaled_sheet_paint_offset_pt(
     ))
 }
 
-/// Points Excel prints a horizontally centred sheet left of the exact centre
-/// of its printable width.
+/// Points Excel prints a horizontally centred sheet left of the whole point
+/// the exact centre of its printable width floors to.
 ///
 /// Measured on fourteen native Excel-for-Mac exports of one-factor probe
 /// workbooks (issue #1110). Each fills its whole print range solid, so the
@@ -1748,13 +1755,10 @@ fn scaled_sheet_paint_offset_pt(
 /// between the *margins*, not on the page; the fit-to-page probe centres the
 /// width the scale leaves; and a sheet split into column groups centres each
 /// page by the columns on it. Excel's own whole-point page and margin geometry
-/// is what makes the result an integer. The margins now reach the page on that
-/// whole point (issue #1127), but this converter's page is still 595.28pt wide
-/// where Excel's A4 is 595, so the flooring is not reproduced end to end and
-/// only the measured 1pt is taken off; the residual stays under 0.7pt on every
-/// probe above. A centred grid's left edge is `(page + left − right − grid)/2`,
-/// so snapping both side margins by the same fraction leaves every reading in
-/// the table exactly where it was.
+/// is what makes the result an integer. With the margins (issue #1127) and the
+/// ISO page box (issue #1730) both on that whole point, the converter floors
+/// the exact centre too; on the fractional 1,190.55pt A3 page the gift budget's
+/// 100% control printed 0.275pt right of the native chart frame.
 const HORIZONTAL_CENTERING_BIAS_PT: f64 = 1.0;
 
 /// Points to inset the printed sheet from its left margin, or `None` when the
@@ -1765,7 +1769,11 @@ fn horizontal_centering_inset_pt(page: &SheetPage, size: &PageSize) -> Option<f6
     }
     let printable_width_pt: f64 = size.width - page.margins.left - page.margins.right;
     let grid_width_pt: f64 = page.table.column_widths.iter().sum();
-    let inset_pt: f64 = (printable_width_pt - grid_width_pt) / 2.0 - HORIZONTAL_CENTERING_BIAS_PT;
+    let centre_pt: f64 = page.margins.left + (printable_width_pt - grid_width_pt) / 2.0;
+    // The epsilon keeps float noise on an exact whole-point centre from
+    // flooring it a whole point left.
+    let grid_left_pt: f64 = (centre_pt + 1e-9).floor() - HORIZONTAL_CENTERING_BIAS_PT;
+    let inset_pt: f64 = grid_left_pt - page.margins.left;
     (inset_pt > 0.0).then_some(inset_pt)
 }
 
