@@ -108,3 +108,17 @@ names Times New Roman, and `Normal` names Tahoma with only `w:szCs="24"`.
 Native Word sets the first-page header and the body text in Tahoma 10.
 Compiled-layout regressions check that both are set at 10pt, and that both
 paint in Tahoma or one of its sans stand-ins rather than the default serif.
+
+`continuous_framed_section_mark.docx` is the unmodified synthetic
+`cases/cont-first-first-fits/input.docx` from
+[docxide-pdf at adb8c2b8](https://github.com/sverrejb/docxide-pdf/tree/adb8c2b82baad8deb2973d1d059bfb7513b8e1fe/tests/fixtures/cases/cont-first-first-fits),
+Apache-2.0. Thirty-eight exact 16pt lines end in an empty paragraph carrying a
+`w:framePr` and the section's `w:sectPr`; the continuous next section opens with
+24pt before an exact 16pt line. Native Word puts that line's baseline 40pt below
+the last filler line, and a compiled-layout regression checks both positions.
+
+`empty_frame_control.docx` is the unmodified synthetic
+`cases/empty-frame-control/input.docx` from the same revision and license: an
+empty `w:framePr` paragraph, then "Following paragraph". Native Word sets the
+following line on the first body baseline, 85.03pt, as if the frame were absent;
+a compiled-layout regression checks it.

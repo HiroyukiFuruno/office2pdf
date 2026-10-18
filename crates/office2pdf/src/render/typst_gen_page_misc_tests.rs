@@ -5254,6 +5254,68 @@ fn header_and_body_tahoma_text_paints_in_a_sans_face() {
     }
 }
 
+/// The baseline of the first line on `page` whose text is `text`, in the
+/// generated layout of a committed DOCX fixture.
+#[cfg(not(target_arch = "wasm32"))]
+fn docx_fixture_baseline_pt(fixture: &[u8], page: usize, text: &str) -> f64 {
+    let (document, _warnings) = crate::parser::Parser::parse(
+        &crate::parser::docx::DocxParser,
+        fixture,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the fixture should parse");
+    let generated = generate_typst(&document).expect("the fixture should generate");
+    let runs: Vec<crate::render::pdf::PlacedTextRun> =
+        crate::render::pdf::compiled_text_runs(&generated.source, page)
+            .expect("the fixture's page should compile");
+    runs.iter()
+        .find(|run| run.text == text)
+        .unwrap_or_else(|| panic!("page {page} should contain {text:?}; got {runs:?}"))
+        .baseline_pt
+}
+
+/// docxide-pdf `empty-frame-control`, unmodified: an empty paragraph in a
+/// `w:framePr` frame, then "Following paragraph". Word lifts the frame out of
+/// the flow, so the following line keeps the first baseline, 85.03pt, where
+/// main gave the empty frame a 16.14pt line of its own (issue #2161).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_empty_frame_takes_no_line_before_the_first_body_text() {
+    let following: f64 = docx_fixture_baseline_pt(
+        include_bytes!("../../../../tests/fixtures/docx/docxide/empty_frame_control.docx"),
+        0,
+        "Following paragraph",
+    );
+    assert!(
+        (following - 85.03).abs() < 0.5,
+        "the first body line must sit on Word's 85.03pt baseline, got {following}pt"
+    );
+}
+
+/// docxide-pdf `cont-first-first-fits`, unmodified: 38 exact 16pt lines, an
+/// empty framed paragraph ending the section, and a continuous section whose
+/// first paragraph states 24pt before an exact 16pt line. Word puts its
+/// baseline 40pt below the last filler line, at 716.95pt; main gave the
+/// frame a 16.10pt line and dropped the 24pt, 7.88pt short (issue #2161).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_continuous_section_after_an_empty_framed_mark_keeps_its_space_before() {
+    let fixture: &[u8] = include_bytes!(
+        "../../../../tests/fixtures/docx/docxide/continuous_framed_section_mark.docx"
+    );
+    let last_filler: f64 = docx_fixture_baseline_pt(fixture, 0, "Line 38");
+    let continued: f64 = docx_fixture_baseline_pt(fixture, 0, "Continued text");
+    assert!(
+        (continued - last_filler - 40.0).abs() < 0.05,
+        "the continuation must advance Word's 40pt from the last filler line, got {}pt",
+        continued - last_filler
+    );
+    assert!(
+        (continued - 716.95).abs() < 0.5,
+        "the continuation must sit on Word's 716.95pt baseline, got {continued}pt"
+    );
+}
+
 /// docxide-pdf's `first-header-small-control` and
 /// `first-header-no-minimum-control`, unmodified: packages with no styles
 /// part, whose three Arial 12pt body paragraphs state `w:after="0"` but no

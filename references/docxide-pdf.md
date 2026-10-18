@@ -32,8 +32,8 @@ as an image/path, and extraction order or font availability can change scores.
 Fixes need fresh native GT, all comparison axes, image inspection and issue dispositions.
 HTML expansion follows its CSS mapping, using Rust [html5ever](https://github.com/servo/html5ever) and
 [mailparse](https://github.com/staktrace/mailparse); docx-rs and contextual scans read the expanded XML.
-Section line numbering maps starts, intervals and restarts to Typst margin labels.
-Case70 native exports check fonts/clearance; compiled tests cover section suppression.
+Section line numbering maps starts, intervals and restarts to Typst margin labels; case70 native exports check fonts/clearance, compiled tests section suppression.
+An empty body `w:framePr` paragraph leaves no flow line per `is_empty_wrapping_frame` (`src/pdf/mod.rs` at `adb8c2b8`), checked against Word's `cont-first-first-fits` and `empty-frame-control` (#2161); `section_break_spacing` is the lead for #2232.
 Section alignment maps `sections.rs` properties into Typst page flow. Fresh
 Word case69 probes calibrate trailing spacing and continuous-section uniformity;
 `both` and mixed automatic pagination warn; mixed explicit shared pages use top.

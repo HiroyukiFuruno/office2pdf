@@ -573,6 +573,14 @@ impl Parser for DocxParser {
                         &ctx,
                         &docx.styles,
                     );
+                    if is_empty_lifted_frame(para, &tagged, &docx.document.children, idx) {
+                        tracing::debug!(
+                            format = "DOCX",
+                            body_index = idx,
+                            "Empty framed paragraph leaves no body line"
+                        );
+                        tagged.clear();
+                    }
                     // Inject math equations for this body child
                     let eqs = math.take(idx);
                     for eq in eqs {
@@ -2043,6 +2051,75 @@ fn is_empty_section_break_paragraph(para: &docx_rs::Paragraph) -> bool {
     let mut properties: docx_rs::ParagraphProperty = para.property.clone();
     properties.section_property = None;
     properties == docx_rs::ParagraphProperty::default()
+}
+
+/// A body paragraph alone in a `w:framePr` frame that Word lifts out of the
+/// flow, whose converted paragraph is empty and undecorated. The frame paints
+/// nothing, so the paragraph leaves no line in the flow: Word's exports of
+/// docxide-pdf's `empty-frame-control` and `cont-first-first-fits` advance the
+/// next text as if it were absent (issue #2161). Adjacent paragraphs with an
+/// identical `w:framePr` share one frame, as does a table whose cell
+/// paragraphs carry it; an empty paragraph there is a line of the frame's own
+/// content, so it keeps it.
+fn is_empty_lifted_frame(
+    para: &docx_rs::Paragraph,
+    converted: &[TaggedElement],
+    body: &[docx_rs::DocumentChild],
+    index: usize,
+) -> bool {
+    let Some(frame) = para.property.frame_property.as_ref() else {
+        return false;
+    };
+    let shares_frame = |neighbour: Option<&docx_rs::DocumentChild>| {
+        neighbour.and_then(leading_frame_property) == Some(frame)
+    };
+    frame_lifts_out_of_flow(frame)
+        && !shares_frame(index.checked_sub(1).and_then(|previous| body.get(previous)))
+        && !shares_frame(body.get(index + 1))
+        && matches!(
+            converted,
+            [TaggedElement::Plain(blocks)] if matches!(
+                blocks.as_slice(),
+                [Block::Paragraph(paragraph)] if paragraph.runs.is_empty()
+                    && paragraph.style.background.is_none()
+                    && paragraph.style.border.is_none()
+            )
+        )
+}
+
+/// The `w:framePr` a body child would sit in: a paragraph's own, or a table's
+/// first cell paragraph's, which is how Word frames a table.
+fn leading_frame_property(child: &docx_rs::DocumentChild) -> Option<&docx_rs::FrameProperty> {
+    match child {
+        docx_rs::DocumentChild::Paragraph(paragraph) => paragraph.property.frame_property.as_ref(),
+        docx_rs::DocumentChild::Table(table) => {
+            let docx_rs::TableChild::TableRow(row) = table.rows.first()?;
+            let docx_rs::TableRowChild::TableCell(cell) = row.cells.first()?;
+            match cell.children.first()? {
+                docx_rs::TableCellContent::Paragraph(paragraph) => {
+                    paragraph.property.frame_property.as_ref()
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Whether Word lays a `w:framePr` frame outside the body flow, following
+/// docxide-pdf's Word-probed `is_empty_wrapping_frame`. A frame stating only
+/// its `w:wrap` flows as a plain paragraph, and an inline one sits in the
+/// flow. One that keeps text off its sides (`none`, `notBeside`) or states
+/// its own height also stays: no reference shows those leaving no line.
+fn frame_lifts_out_of_flow(frame: &docx_rs::FrameProperty) -> bool {
+    let placement = docx_rs::FrameProperty {
+        wrap: None,
+        ..frame.clone()
+    };
+    placement != docx_rs::FrameProperty::default()
+        && frame.y_align.as_deref() != Some("inline")
+        && !matches!(frame.wrap.as_deref(), Some("none" | "notBeside"))
+        && frame.h.is_none_or(|height| height == 0)
 }
 
 fn push_inline_images(

@@ -922,6 +922,8 @@ fn write_continuation_flow_setup(
 /// Remove Typst's fallback paragraph gap at the first body block of a
 /// continuous section. The boundary is a Word section transition, not a
 /// paragraph boundary, so implicit block spacing must not separate the flows.
+/// A stated `w:before` stays: the section continues on the same page, which is
+/// no page top, and Word draws the gap there (issue #2161).
 fn suppress_typst_spacing_at_continuous_section_start(content: &mut [Block]) {
     let Some(first_content_index) = content.iter().position(block_has_paragraph_content) else {
         return;
@@ -931,20 +933,23 @@ fn suppress_typst_spacing_at_continuous_section_start(content: &mut [Block]) {
     {
         return;
     }
-    suppress_block_space_before(&mut content[first_content_index]);
-    match &mut content[first_content_index] {
-        Block::Paragraph(paragraph) => paragraph.style.space_before = Some(0.0),
-        Block::Caption(caption) => caption.paragraph.style.space_before = Some(0.0),
+    let space_before: &mut Option<f64> = match &mut content[first_content_index] {
+        Block::Paragraph(paragraph) => &mut paragraph.style.space_before,
+        Block::Caption(caption) => &mut caption.paragraph.style.space_before,
         Block::List(list) => {
-            if let Some(paragraph) = list
+            let Some(paragraph) = list
                 .items
                 .first_mut()
                 .and_then(|item| item.content.first_mut())
-            {
-                paragraph.style.space_before = Some(0.0);
-            }
+            else {
+                return;
+            };
+            &mut paragraph.style.space_before
         }
-        _ => {}
+        _ => return,
+    };
+    if !space_before.is_some_and(|gap| gap > 0.0) {
+        *space_before = Some(0.0);
     }
 }
 
