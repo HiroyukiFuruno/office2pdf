@@ -200,40 +200,31 @@ pub(crate) fn extract_embedded_fonts(
 // GUID parsing
 // =============================================================================
 
-/// Parse a GUID string into 16 bytes using OOXML mixed-endian encoding.
+/// Parse a font-obfuscation GUID into its 16-byte XOR key.
 ///
 /// Input formats: `{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}` or without braces.
-/// Encoding: first 4 bytes LE, next 2 LE, next 2 LE, remaining 8 BE.
+/// ECMA-376 Part 1 §17.8.1 reads the 32 hex digits as bytes in string order
+/// and reverses them, as LibreOffice's `EmbeddedFontHandler` does. The
+/// mixed-endian in-memory GUID layout, reversed or not, corrupts the sfnt
+/// header or the first table record (issue #2200).
 fn parse_guid_to_bytes(guid: &str) -> Option<[u8; 16]> {
     let s = guid.trim_start_matches('{').trim_end_matches('}');
-    let parts: Vec<&str> = s.split('-').collect();
-    if parts.len() != 5 {
+    let groups: Vec<&str> = s.split('-').collect();
+    let group_lengths = groups.iter().map(|group| group.len());
+    if !group_lengths.eq([8, 4, 4, 4, 12]) {
         return None;
     }
-
-    let group1 = u32::from_str_radix(parts[0], 16).ok()?;
-    let group2 = u16::from_str_radix(parts[1], 16).ok()?;
-    let group3 = u16::from_str_radix(parts[2], 16).ok()?;
-    let group4 = u16::from_str_radix(parts[3], 16).ok()?;
-    let group5 = u64::from_str_radix(parts[4], 16).ok()?;
-
-    if parts[4].len() != 12 {
+    let hex = groups.concat();
+    // `from_str_radix` would also accept a sign, and slicing needs ASCII.
+    if !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
 
     let mut key = [0u8; 16];
-    // Group 1: LE
-    key[0..4].copy_from_slice(&group1.to_le_bytes());
-    // Group 2: LE
-    key[4..6].copy_from_slice(&group2.to_le_bytes());
-    // Group 3: LE
-    key[6..8].copy_from_slice(&group3.to_le_bytes());
-    // Group 4: BE (2 bytes)
-    key[8..10].copy_from_slice(&group4.to_be_bytes());
-    // Group 5: BE (6 bytes, from a u64 → take last 6 bytes)
-    let g5_bytes = group5.to_be_bytes();
-    key[10..16].copy_from_slice(&g5_bytes[2..8]);
-
+    for (index, byte) in key.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[2 * index..2 * index + 2], 16).ok()?;
+    }
+    key.reverse();
     Some(key)
 }
 
@@ -263,6 +254,28 @@ fn detect_font_format(data: &[u8]) -> Option<FontFileFormat> {
     } else {
         None
     }
+}
+
+/// Retain deobfuscated bytes, detecting their format from the magic.
+///
+/// Bytes without sfnt magic are still kept as TrueType, since a parser may
+/// recover what detection does not recognise, but a missing magic usually
+/// means the key or the part is wrong and the face will not load.
+fn deobfuscated_face(data: Vec<u8>, family: &str, style: &str) -> EmbeddedFontFace {
+    // The family is the document's own text; `?` escapes it in both log lines.
+    let format = match detect_font_format(&data) {
+        Some(format) => format,
+        None => {
+            tracing::warn!(
+                family = ?family,
+                style,
+                "deobfuscated embedded font has no sfnt magic; the face may not load"
+            );
+            FontFileFormat::Ttf
+        }
+    };
+    tracing::debug!(family = ?family, style, ?format, "deobfuscated embedded font face");
+    EmbeddedFontFace { format, data }
 }
 
 // =============================================================================
@@ -398,18 +411,11 @@ fn extract_pptx_font_data(data: &[u8]) -> Option<EmbeddedFontData> {
             // Deobfuscate
             deobfuscate_font_data(&mut font_data, &key);
 
-            // Detect format and retain the deobfuscated bytes.
-            let format = detect_font_format(&font_data).unwrap_or(FontFileFormat::Ttf);
-            tracing::debug!(
-                family = ?entry.typeface,
-                style = %variant.style,
-                ?format,
-                "deobfuscated embedded font face"
-            );
-            faces.push(EmbeddedFontFace {
-                format,
-                data: font_data,
-            });
+            faces.push(deobfuscated_face(
+                font_data,
+                &entry.typeface,
+                &variant.style,
+            ));
         }
     }
 
@@ -541,18 +547,11 @@ fn extract_docx_font_data(data: &[u8]) -> Option<EmbeddedFontData> {
             // Deobfuscate
             deobfuscate_font_data(&mut font_data, &key);
 
-            // Detect format and retain the deobfuscated bytes.
-            let format = detect_font_format(&font_data).unwrap_or(FontFileFormat::Ttf);
-            tracing::debug!(
-                family = ?entry.font_name,
-                style = %variant.style,
-                ?format,
-                "deobfuscated embedded font face"
-            );
-            faces.push(EmbeddedFontFace {
-                format,
-                data: font_data,
-            });
+            faces.push(deobfuscated_face(
+                font_data,
+                &entry.font_name,
+                &variant.style,
+            ));
         }
     }
 

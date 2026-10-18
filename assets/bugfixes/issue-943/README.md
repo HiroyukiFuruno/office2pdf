@@ -91,8 +91,11 @@ conversion. Both were rendered with `pdftoppm -r 150` before inspection.
   `a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da`
 - Pinned and subsetted Regular face SHA-256:
   `11aa3b851dbc6ff32184983acd5eb2d229feb16789eea9d02a602748f2b644a2`
-- Deterministic DOCX SHA-256:
-  `0fd41454c4289a535e4fee91dae304e87d73767c59e153f525fedbc32613fd11`
+- Deterministic DOCX SHA-256 as audited:
+  `0fd41454c4289a535e4fee91dae304e87d73767c59e153f525fedbc32613fd11`.
+  #2200 re-obfuscated the face with the correct key; the package is now
+  `19b2be17b6f714e9a5d1abeea0ff4c82ec9c1e13b7f1cbc02c03f2c77a46e720`
+  and the deobfuscated face is unchanged.
 - The license and attribution are recorded in
   `tests/fixtures/THIRD-PARTY-LICENSES.md` and
   `tests/fixtures/licenses/NotoSansSC-OFL.txt`.

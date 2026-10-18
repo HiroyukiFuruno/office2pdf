@@ -6,18 +6,31 @@ use super::*;
 
 #[test]
 fn parse_guid_to_bytes_valid_braces() {
-    // Standard GUID: {7B19B49C-2336-4F82-AAD2-5D2BAE389560}
-    // Mixed-endian: first 4 LE, next 2 LE, next 2 LE, remaining 8 BE
+    // ECMA-376 Part 1 §17.8.1: the key is the GUID's hex digits read as bytes
+    // in string order, then reversed. It is not the mixed-endian in-memory GUID
+    // layout, reversed or not.
     let key = parse_guid_to_bytes("{7B19B49C-2336-4F82-AAD2-5D2BAE389560}").unwrap();
-    // Group 1: 7B19B49C → LE → [0x9C, 0xB4, 0x19, 0x7B]
-    // Group 2: 2336 → LE → [0x36, 0x23]
-    // Group 3: 4F82 → LE → [0x82, 0x4F]
-    // Group 4+5: AAD2 5D2BAE389560 → BE → [0xAA, 0xD2, 0x5D, 0x2B, 0xAE, 0x38, 0x95, 0x60]
+    // String order: 7B 19 B4 9C 23 36 4F 82 AA D2 5D 2B AE 38 95 60
     assert_eq!(
         key,
         [
-            0x9C, 0xB4, 0x19, 0x7B, 0x36, 0x23, 0x82, 0x4F, 0xAA, 0xD2, 0x5D, 0x2B, 0xAE, 0x38,
-            0x95, 0x60
+            0x60, 0x95, 0x38, 0xAE, 0x2B, 0x5D, 0xD2, 0xAA, 0x82, 0x4F, 0x36, 0x23, 0x9C, 0xB4,
+            0x19, 0x7B
+        ]
+    );
+}
+
+#[test]
+fn parse_guid_to_bytes_reverses_every_group_in_string_order() {
+    // The fontKey of the Press Start 2P face in
+    // `issue_2200_embedded_press_start_2p.docx`. Each group's bytes are
+    // reversed in place, and the groups come out last-first.
+    let key = parse_guid_to_bytes("{497CBF7F-245D-42A2-A83F-AD87E4FBAC57}").unwrap();
+    assert_eq!(
+        key,
+        [
+            0x57, 0xAC, 0xFB, 0xE4, 0x87, 0xAD, 0x3F, 0xA8, 0xA2, 0x42, 0x5D, 0x24, 0x7F, 0xBF,
+            0x7C, 0x49
         ]
     );
 }
@@ -28,8 +41,8 @@ fn parse_guid_to_bytes_no_braces() {
     assert_eq!(
         key,
         [
-            0x9C, 0xB4, 0x19, 0x7B, 0x36, 0x23, 0x82, 0x4F, 0xAA, 0xD2, 0x5D, 0x2B, 0xAE, 0x38,
-            0x95, 0x60
+            0x60, 0x95, 0x38, 0xAE, 0x2B, 0x5D, 0xD2, 0xAA, 0x82, 0x4F, 0x36, 0x23, 0x9C, 0xB4,
+            0x19, 0x7B
         ]
     );
 }
@@ -40,8 +53,8 @@ fn parse_guid_to_bytes_lowercase() {
     assert_eq!(
         key,
         [
-            0x9C, 0xB4, 0x19, 0x7B, 0x36, 0x23, 0x82, 0x4F, 0xAA, 0xD2, 0x5D, 0x2B, 0xAE, 0x38,
-            0x95, 0x60
+            0x60, 0x95, 0x38, 0xAE, 0x2B, 0x5D, 0xD2, 0xAA, 0x82, 0x4F, 0x36, 0x23, 0x9C, 0xB4,
+            0x19, 0x7B
         ]
     );
 }
@@ -637,5 +650,98 @@ mod integration {
             // dir drops here
         };
         assert!(!path.exists(), "temp dir should be cleaned up on drop");
+    }
+
+    /// Require an sfnt table directory that only the right key recovers.
+    ///
+    /// The first 32 bytes cover the sfnt header and the first table record.
+    /// A wrong key can still restore the magic and `numTables` (issue #2200),
+    /// so check every record's tag, bounds and checksum instead.
+    fn assert_valid_table_directory(data: &[u8]) {
+        let be_u16 = |at: usize| u16::from_be_bytes([data[at], data[at + 1]]);
+        let be_u32 =
+            |at: usize| u32::from_be_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]]);
+        assert_eq!(&data[0..4], &[0x00, 0x01, 0x00, 0x00], "sfnt magic");
+        let num_tables = usize::from(be_u16(4));
+        assert!(num_tables > 0, "a face carries tables");
+        let mut previous_tag: Option<&[u8]> = None;
+        for index in 0..num_tables {
+            let record = 12 + 16 * index;
+            let tag = &data[record..record + 4];
+            assert!(
+                tag.iter().all(|byte| (0x20..0x7F).contains(byte)),
+                "table {index} tag {tag:02X?} must be printable ASCII"
+            );
+            assert!(
+                previous_tag.is_none_or(|previous| previous < tag),
+                "table tags must ascend, {previous_tag:?} then {tag:?}"
+            );
+            previous_tag = Some(tag);
+            let checksum = be_u32(record + 4);
+            let offset = be_u32(record + 8) as usize;
+            let length = be_u32(record + 12) as usize;
+            assert!(
+                offset + length <= data.len(),
+                "table {:?} must lie inside the face",
+                String::from_utf8_lossy(tag)
+            );
+            // `head` stores a whole-file adjustment in its own checksum field.
+            if tag != b"head" {
+                let mut padded = data[offset..offset + length].to_vec();
+                padded.resize(length.div_ceil(4) * 4, 0);
+                let sum = padded
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|word| u32::from_be_bytes(*word))
+                    .fold(0u32, u32::wrapping_add);
+                assert_eq!(
+                    sum,
+                    checksum,
+                    "table {:?} checksum",
+                    String::from_utf8_lossy(tag)
+                );
+            }
+        }
+    }
+
+    fn only_embedded_face(docx: &[u8]) -> Vec<u8> {
+        let fonts = extract_embedded_font_data(docx, crate::config::Format::Docx)
+            .expect("the fixture should carry an embedded font");
+        let faces: Vec<&[u8]> = fonts.font_bytes().collect();
+        assert_eq!(faces.len(), 1, "the fixture embeds one face");
+        faces[0].to_vec()
+    }
+
+    fn family_name(data: &[u8]) -> Option<String> {
+        let face = ttf_parser::Face::parse(data, 0).ok()?;
+        face.names()
+            .into_iter()
+            .find(|name| name.name_id == ttf_parser::name_id::FAMILY && name.is_unicode())
+            .and_then(|name| name.to_string())
+    }
+
+    /// Issue #2200: the Press Start 2P face that Word drew in the docxide-pdf
+    /// case8 reference, kept byte-for-byte as that document obfuscated it.
+    #[test]
+    fn a_word_obfuscated_face_deobfuscates_to_its_table_directory() {
+        let docx = include_bytes!(
+            "../../../../tests/fixtures/docx/issue_2200_embedded_press_start_2p.docx"
+        );
+        let face = only_embedded_face(docx);
+
+        assert_valid_table_directory(&face);
+        assert_eq!(family_name(&face).as_deref(), Some("Press Start 2P"));
+    }
+
+    /// A second face under a different key, so the key rule is triangulated
+    /// rather than fitted to one GUID.
+    #[test]
+    fn the_embedded_cjk_fixture_deobfuscates_to_its_table_directory() {
+        let docx = include_bytes!("../../../../tests/fixtures/docx/wasm_embedded_cjk.docx");
+        let face = only_embedded_face(docx);
+
+        assert_valid_table_directory(&face);
+        assert_eq!(family_name(&face).as_deref(), Some("Noto Sans SC"));
     }
 }
