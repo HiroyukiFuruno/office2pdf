@@ -6002,8 +6002,8 @@ fn explicit_sheet_print_percentage_scales_cell_origins() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn issue_1721_bottom_aligned_cells_match_native_baselines() {
-    if crate::render::pdf::font_line_metrics_em("Trebuchet MS").is_none()
-        || crate::render::pdf::font_line_metrics_em("Cambria").is_none()
+    if !crate::test_support::has_own_face("Trebuchet MS")
+        || !crate::test_support::has_own_face("Cambria")
     {
         return;
     }
@@ -6065,6 +6065,10 @@ fn issue_1721_bottom_aligned_cells_match_native_baselines() {
 fn fitted_budget_title_rests_its_rounded_descent_on_the_native_row_boundary() {
     const NATIVE_ROW_1_BOTTOM_PT: f64 = 102.18;
     const PRINT_SCALE: f64 = 0.78;
+    // The 0.78 fit follows the Normal font's column unit.
+    if crate::test_support::budget_normal_font_substitute().is_some() {
+        return;
+    }
     let Some((_, descent_em, _)) = crate::render::pdf::font_line_metrics_em("Cambria") else {
         return;
     };
@@ -6107,7 +6111,7 @@ fn fitted_budget_title_rests_its_rounded_descent_on_the_native_row_boundary() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn fitted_budget_right_aligned_cells_start_at_native_edges_in_every_format_section() {
-    if crate::render::pdf::font_line_metrics_em("Trebuchet MS").is_none() {
+    if !crate::test_support::has_own_face("Trebuchet MS") {
         return;
     }
     let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");

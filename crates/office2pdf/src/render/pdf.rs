@@ -1903,6 +1903,25 @@ fn best_face(family: &str) -> Option<typst::text::Font> {
     )
 }
 
+/// The family of the face [`best_face`] resolves for `family` when that face
+/// belongs to another family: a substitute its chain reached.
+///
+/// `None` when `family`'s own face answers — a weight-suffixed name answered
+/// by its base family's member included — and when no face resolves at all.
+/// A substitute answers every metric lookup with its own numbers, so a test
+/// that pins a native Office measurement of `family` reads this to skip on a
+/// host where the measured face is absent but a substitute is installed: there
+/// `font_line_metrics_em(family).is_some()` holds, yet measures the substitute
+/// (issue #2208). Exported to integration tests through [`crate::internal`].
+pub fn substitute_face_family(family: &str) -> Option<String> {
+    let resolved: String = best_face(family)?.info().family.clone();
+    let requested: &str = family.trim();
+    let base: &str = super::font_subst::typographic_family(requested);
+    let is_own: bool =
+        resolved.eq_ignore_ascii_case(requested) || resolved.eq_ignore_ascii_case(base);
+    (!is_own).then_some(resolved)
+}
+
 /// Look a per-family `f64` metric up through a process-wide cache.
 ///
 /// Font resolution walks the substitute chain and opens the face, so every

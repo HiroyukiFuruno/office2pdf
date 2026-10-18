@@ -5146,6 +5146,17 @@ fn a_powerpoint_right_legend_key_uses_its_measured_row_seat() {
     // The values are key-bottom minus label-baseline measurements from the
     // native one-factor exports in the #1680 report and its extra size/face
     // probes. A negative Typst baseline moves the square up by this amount.
+    //
+    // Substitutes that declare the same `hhea` box per 2048em as the face
+    // they stand in for: Carlito and Calibri 1950/-550/0, and Liberation Sans,
+    // Serif and Mono against Arial, Times New Roman and Courier New 2.82 at
+    // 1854/-434/67, 1825/-443/87 and 1705/-615/0.
+    const METRIC_CLONES: [&str; 4] = [
+        "Carlito",
+        "Liberation Sans",
+        "Liberation Serif",
+        "Liberation Mono",
+    ];
     let measured_seats: [(&str, f64, f64); 18] = [
         ("Calibri", 18.0, 0.1732),
         ("Arial", 10.0, 0.4832),
@@ -5176,8 +5187,13 @@ fn a_powerpoint_right_legend_key_uses_its_measured_row_seat() {
 
         // Some CI hosts lack optional Microsoft fonts. On those hosts the
         // converter uses its normal fallback metrics, which cannot be compared
-        // to this source-face measurement.
-        if chart_face_line_metrics_em(family, false).is_none() {
+        // to this source-face measurement. Nor can a substitute's, unless it
+        // is a metric clone declaring the source face's own `hhea` box:
+        // Trebuchet MS measured on Ubuntu seats the key 0.57pt off (#2208).
+        if chart_face_line_metrics_em(family, false).is_none()
+            || crate::render::pdf::substitute_face_family(family)
+                .is_some_and(|face| !METRIC_CLONES.contains(&face.as_str()))
+        {
             continue;
         }
         let typst_baseline_pt =
@@ -5498,6 +5514,14 @@ fn non_worksheet_horizontal_value_axes_keep_their_existing_label_gap() {
 fn a_framed_column_chart_reserves_powerpoint_measured_chrome() {
     // Native PowerPoint 16.112 export of slide 14 in the #841 Contoso deck.
     // The coordinates are relative to its 401.95 x 344.25pt graphic frame.
+    //
+    // With no face for the deck's Avenir Next LT Pro, the plot's own top inset
+    // falls back on the constant `CHART_COLUMN_TOP_PAD_PT` and
+    // `CHART_COLUMN_TOP_PAD_EM` pad. A substitute's window box replaces it: a
+    // host's Noto Serif puts the plot top 0.89pt low (issue #2208).
+    if crate::render::pdf::substitute_face_family("Avenir Next LT Pro").is_some() {
+        return;
+    }
     let mut chart = crowded_column_chart();
     chart.text_style.size_pt = Some(11.97);
     chart.category_axis_text_style.size_pt = Some(11.97);
@@ -11794,6 +11818,10 @@ fn budget_month_axis_uses_its_major_theme_font() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn fitted_budget_cell_text_uses_the_snapped_sheet_origin() {
+    // The 0.78 fit follows the Normal font's column unit.
+    if crate::test_support::budget_normal_font_substitute().is_some() {
+        return;
+    }
     let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
     let (doc, _) = crate::parser::Parser::parse(
         &crate::parser::xlsx::XlsxParser,
@@ -11892,6 +11920,10 @@ fn budget_scatter_marker_retains_its_declared_size() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn budget_compiled_marker_centers_match_native_placement_controls() {
+    // The 0.78 fit follows the Normal font's column unit.
+    if crate::test_support::budget_normal_font_substitute().is_some() {
+        return;
+    }
     let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
     use crate::ir::ChartLine;
     let outline = |width| ChartLine::Explicit {
