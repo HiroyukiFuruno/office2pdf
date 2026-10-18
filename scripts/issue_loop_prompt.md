@@ -25,11 +25,13 @@ replace those documents.
   the pull request body the contract check expects. `AGENTS.md` is authoritative if
   this list and it disagree.
 - Before implementing a visual fix, check whether the native export its evidence
-  needs is committed or can be made on this host. If neither: when the issue itself
-  asks for new native exports or probes, block it without code (rule 8); otherwise
-  implement and test the fix, open it as a **draft** pull request, comment on the
-  issue what a Mac must export to finish it, add the blocked label, and merge
-  nothing. This is the settled route; do not re-derive it from earlier drafts.
+  needs is committed, is supplied by an external reference corpus the issue names
+  (check its producer with `pdfinfo`), or can be made on this host. If none: when
+  the issue itself asks for new native exports or probes, block it without code
+  (rule 8); otherwise implement and test the fix, open it as a **draft** pull
+  request, comment on the issue what a Mac must export to finish it, add the
+  blocked label, and merge nothing. This is the settled route; do not re-derive
+  it from earlier drafts.
 - Never name anything under `tests/classified_fixtures/` in a commit message, pull
   request, or issue comment.
 - Re-run the audit on the fixed output before closing an issue. Every material deviation

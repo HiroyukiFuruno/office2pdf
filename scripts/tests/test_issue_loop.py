@@ -154,7 +154,7 @@ class HostNoteTest(unittest.TestCase):
 
     Seven runs on 2026-10-17/18 (#1723, #1728, #1731, #1736, #1738, #1748,
     #1761) each spent turns rediscovering that a Linux host has no native
-    export: disk-wide `find` for PDFs, precedent drafts, advisor calls. A Mac
+    Office export of its own: disk-wide `find` for PDFs, precedent drafts, advisor calls. A Mac
     can export one, so the note must depend on the host, not the prompt file.
     """
 
@@ -181,6 +181,11 @@ class HostNoteTest(unittest.TestCase):
         prompt = self.prompt_on("Linux")
         self.assertIn(self.NOTE, prompt)
         self.assertIn("runs Linux", prompt)
+
+    def test_a_linux_host_may_use_an_external_reference_corpus_the_issue_names(self):
+        # docxide-pdf's corpus keeps its Word reference PDFs outside this
+        # checkout; DOCX issues filed from it must still be able to use them.
+        self.assertIn("reference corpus the issue names", self.prompt_on("Linux"))
 
     def test_any_host_but_macos_is_told_it_has_no_native_office(self):
         self.assertIn("runs FreeBSD", self.prompt_on("FreeBSD"))
