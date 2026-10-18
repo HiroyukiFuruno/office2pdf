@@ -6094,6 +6094,72 @@ fn fitted_budget_title_rests_its_rounded_descent_on_the_native_row_boundary() {
     );
 }
 
+/// Right-aligned cells on the fitted budget sheet start where Excel for Mac
+/// 16.112.3 starts them on page 2, whichever number-format section painted
+/// them: the `_)`-padded positive section of `#,##0_);[Red]\(#,##0\);\-\ \ `,
+/// its parenthesised negative section, its escaped-literal zero section, and
+/// a `General` text cell. The native left edges are the GT trace values kept
+/// in `assets/bugfixes/issue-1729/layout-audit.json`; the Trebuchet MS
+/// numbers' matched widths agree within 0.07%, so their right edges are
+/// native too. The report measured all four classes 0.915pt left of Excel
+/// (#1773). `YEAR` is Cambria Bold, whose substitutes round to different
+/// whole-point widths, so it is checked only when Cambria itself shapes it.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn fitted_budget_right_aligned_cells_start_at_native_edges_in_every_format_section() {
+    if crate::render::pdf::font_line_metrics_em("Trebuchet MS").is_none() {
+        return;
+    }
+    let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
+    let (document, _) = crate::parser::Parser::parse(
+        &crate::parser::xlsx::XlsxParser,
+        data,
+        &ConvertOptions::default(),
+    )
+    .unwrap();
+    let generated = generate_typst(&document).unwrap();
+    let runs =
+        crate::render::pdf::compiled_text_runs_with_images(&generated.source, &generated.images, 1)
+            .expect("the fitted budget sheet compiles");
+    let mut differences: Vec<String> = Vec::new();
+    for (text, face, native_left_pt, native_baseline_pt) in [
+        ("169", "Trebuchet MS", 294.06, 455.52),
+        ("1,225", "Trebuchet MS", 283.92, 589.68),
+        ("(771)", "Trebuchet MS", 446.94, 455.52),
+        ("-", "Trebuchet MS", 301.08, 515.58),
+        ("YEAR", "Cambria", 659.88, 499.98),
+    ] {
+        let matches: Vec<_> = runs
+            .iter()
+            .filter(|run| {
+                run.text.trim() == text
+                    && (run.baseline_pt - native_baseline_pt).abs() < 0.5
+                    && (run.left_pt - native_left_pt).abs() < 15.0
+            })
+            .collect();
+        if matches.len() != 1 {
+            differences.push(format!(
+                "expected one {text:?} run near ({native_left_pt}, {native_baseline_pt}), found {}",
+                matches.len()
+            ));
+            continue;
+        }
+        if matches[0].family != face {
+            if face == "Trebuchet MS" {
+                differences.push(format!("{text}: shaped with {}", matches[0].family));
+            }
+            continue;
+        }
+        if (matches[0].left_pt - native_left_pt).abs() > 0.01 {
+            differences.push(format!(
+                "{text}: native left edge {native_left_pt}pt, output {}pt",
+                matches[0].left_pt
+            ));
+        }
+    }
+    assert!(differences.is_empty(), "{}", differences.join("\n"));
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn tight_merged_expense_labels_keep_native_baselines() {
