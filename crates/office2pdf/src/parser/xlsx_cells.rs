@@ -1226,13 +1226,14 @@ impl NormalFont {
 const CALIBRI_DIGIT_ADVANCE_EM: f64 = 0.506836;
 
 /// Reference maximum digit advances (em over U+0030..=U+0039) of the faces
-/// Excel itself ships, read from their `hmtx` tables by the issue #621 probe
-/// tooling. These outrank live font resolution on purpose: the converting
-/// machine may substitute a digit-incompatible face (Calibri → Liberation
-/// Sans advances 0.556em against Calibri's 0.5068), which would shift column
-/// geometry per machine, while Excel's own print metric always comes from the
-/// face Excel resolves. The table also keeps wasm and font-less environments
-/// on the exact native-Excel numbers.
+/// Excel prints with, read from their `hmtx` tables: most by the issue #621
+/// probe tooling from the faces Excel ships, Tahoma from the subsets a Word
+/// export embeds (issue #2235). These outrank live font resolution on
+/// purpose: the converting machine may substitute a digit-incompatible face
+/// (Calibri → Liberation Sans advances 0.556em against Calibri's 0.5068),
+/// which would shift column geometry per machine, while Excel's own print
+/// metric always comes from the face Excel resolves. The table also keeps
+/// wasm and font-less environments on the exact native-Excel numbers.
 ///
 /// `bold` selects the cell's own weight. Calibri/Carlito, Arial/Helvetica/
 /// Liberation Sans, Times New Roman, and Courier New are read directly from
@@ -1240,9 +1241,10 @@ const CALIBRI_DIGIT_ADVANCE_EM: f64 = 0.506836;
 /// system `Courier New.ttf`/`Courier New Bold.ttf` with `fontTools`: all four
 /// keep the identical digit width at both weights, so `bold` is a no-op for
 /// them. Cambria, Verdana, Segoe UI/Selawik, and Malgun Gothic are each
-/// measured to widen their digits when bold (issue #1623) and get their own
-/// bold entry; do not add a family here without measuring both weights first
-/// — the four no-op families are the exception, not the default.
+/// measured to widen their digits when bold (issue #1623), and so is Tahoma,
+/// read from the subsets a Word export embeds (issue #2235); each gets its
+/// own bold entry. Do not add a family here without measuring both weights
+/// first — the four no-op families are the exception, not the default.
 pub(super) fn reference_digit_advance_em(family: &str, bold: bool) -> Option<f64> {
     match family.to_ascii_lowercase().as_str() {
         "calibri" | "carlito" => Some(CALIBRI_DIGIT_ADVANCE_EM),
@@ -1258,6 +1260,13 @@ pub(super) fn reference_digit_advance_em(family: &str, bold: bool) -> Option<f64
         // Verdana's bold digits (1456/2048em) are ~12% wider than regular
         // (1302/2048em), read from Excel's own `Verdana Bold.ttf` (#1623).
         "verdana" => Some(if bold { 0.7109375 } else { 0.635742 }),
+        // Tahoma's bold digits (1304/2048em) are ~17% wider than regular
+        // (1118/2048em), read from the Tahoma and Tahoma Bold subsets a
+        // Microsoft Word export embeds. Without these a host lacking Tahoma
+        // priced its columns on Liberation Sans, its paint substitute, and
+        // a 10pt column unit rounded to 6pt where Tahoma gives 5pt (issue
+        // #2235).
+        "tahoma" => Some(if bold { 0.63671875 } else { 0.5458984375 }),
         "courier new" => Some(0.600098),
         "times new roman" => Some(0.500000),
         // Malgun Gothic's bold digits (1187/2048em) are ~5% wider than

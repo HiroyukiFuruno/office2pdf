@@ -5214,6 +5214,46 @@ fn header_and_body_text_with_no_stated_size_are_set_at_ten_point() {
     }
 }
 
+/// The same fixture's `Normal` names Tahoma, which Word embeds. A host without
+/// Tahoma painted both lines in the default serif, because the name carries no
+/// class token and the substitution table did not list it (issue #2235). Both
+/// lines must come from Tahoma or one of its sans stand-ins.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn header_and_body_tahoma_text_paints_in_a_sans_face() {
+    const TAHOMA_OR_SANS_STAND_IN: [&str; 6] = [
+        "tahoma",
+        "liberation sans",
+        "arimo",
+        "calibri",
+        "dejavu sans",
+        "helvetica",
+    ];
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/page_header_ordinary_marker.docx");
+    let (document, _warnings) = crate::parser::Parser::parse(
+        &crate::parser::docx::DocxParser,
+        fixture,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the header marker fixture should parse");
+    let generated = generate_typst(&document).expect("the fixture should generate");
+    let runs: Vec<crate::render::pdf::PlacedTextRun> =
+        crate::render::pdf::compiled_text_runs(&generated.source, 0)
+            .expect("the fixture's first page should compile");
+    for text in ["HEADER", "Following"] {
+        let run: &crate::render::pdf::PlacedTextRun = runs
+            .iter()
+            .find(|run| run.text.starts_with(text))
+            .unwrap_or_else(|| panic!("the first page should contain {text:?}"));
+        assert!(
+            TAHOMA_OR_SANS_STAND_IN.contains(&run.family.to_lowercase().as_str()),
+            "{text:?} must paint in Tahoma or a sans stand-in, got {:?}",
+            run.family
+        );
+    }
+}
+
 /// docxide-pdf's `first-header-small-control` and
 /// `first-header-no-minimum-control`, unmodified: packages with no styles
 /// part, whose three Arial 12pt body paragraphs state `w:after="0"` but no

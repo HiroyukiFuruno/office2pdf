@@ -49,6 +49,7 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 |---------|------|-------|--------|
 | [rustybuzz](https://github.com/harfbuzz/rustybuzz) | Rust | Text shaping (used by Typst) | [rustybuzz.md](rustybuzz.md) |
 | [allsorts](https://github.com/yeslogic/allsorts) | Rust | Font parsing, shaping, subsetting | [allsorts.md](allsorts.md) |
+| [LibreOffice VCL.xcu](https://github.com/LibreOffice/core/blob/a11496e66e08c820df21e7985ba79e6a9bd6d7f0/officecfg/registry/data/org/openoffice/VCL.xcu) | XML/C++ | Missing-font substitution table | [libreoffice-vcl-font-substitution.md](libreoffice-vcl-font-substitution.md) |
 
 ## Chart Rendering
 

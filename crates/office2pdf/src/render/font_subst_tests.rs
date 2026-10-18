@@ -166,6 +166,22 @@ fn test_verdana_substitutes() {
 }
 
 #[test]
+fn tahoma_resolves_through_the_arial_metric_sans_chain() {
+    // Tahoma's name carries no class token and the DOCX reader keeps no
+    // declared class, so an unlisted Tahoma fell to the default serif (issue
+    // #2235). Over the lines Word set in Tahoma 10 in the issue's docxide
+    // cases, Liberation Sans runs 2.9% wide and DejaVu Sans, Verdana's stand-in,
+    // 13.2%, so Tahoma follows Arial's chain rather than Verdana's.
+    for family in ["Tahoma", "tahoma", "TAHOMA"] {
+        assert_eq!(
+            substitutes(family),
+            Some(&["Liberation Sans", "Arimo"][..]),
+            "{family} must take the Arial-metric sans chain"
+        );
+    }
+}
+
+#[test]
 fn test_georgia_substitutes() {
     let subs = substitutes("Georgia").expect("Georgia should have substitutes");
     assert!(subs.contains(&"DejaVu Serif"));
@@ -538,7 +554,7 @@ fn a_listed_family_whose_substitutes_are_all_absent_keeps_its_own_class() {
     // "end on the family's own class" rather than a patch for Calibri.
     let sans_only_host: FontSearchContext =
         FontSearchContext::for_test(Vec::new(), &["Libertinus Serif", "DejaVu Sans"], &[], &[]);
-    for family in ["Calibri", "Calibri Light", "Verdana", "Corbel"] {
+    for family in ["Calibri", "Calibri Light", "Verdana", "Corbel", "Tahoma"] {
         assert_eq!(
             resolve_available_fallback(family, TextScript::Latin, &sans_only_host).as_deref(),
             Some("DejaVu Sans"),
@@ -714,6 +730,36 @@ fn test_font_with_fallbacks_single_named_substitute_then_the_class_tail() {
     assert_eq!(
         result,
         r#"("Comic Sans MS", "Comic Neue", "Liberation Sans", "Calibri", "Arimo", "DejaVu Sans", "Helvetica")"#
+    );
+}
+
+#[test]
+fn a_missing_tahoma_paints_from_sans_faces_only() {
+    // Typst paints from this list in order and only reaches its default serif
+    // once the list runs out, so every name in it has to be a sans face
+    // (issue #2235).
+    let result = font_with_fallbacks_for_text("Tahoma", "");
+    assert_eq!(
+        result,
+        r#"("Tahoma", "Liberation Sans", "Arimo", "Calibri", "DejaVu Sans", "Helvetica")"#
+    );
+}
+
+#[test]
+fn a_missing_tahoma_prefers_the_arial_metric_face_to_the_verdana_stand_in() {
+    // DejaVu Sans stands in for Verdana, Tahoma's wider sibling, and set the
+    // issue's lines 13.2% wide against Liberation Sans's 2.9%. Width decides
+    // where a line wraps, so the narrower face wins wherever both are installed
+    // (issue #2235).
+    let host: FontSearchContext = FontSearchContext::for_test(
+        Vec::new(),
+        &["DejaVu Sans", "Liberation Sans", "Liberation Serif"],
+        &[],
+        &[],
+    );
+    assert_eq!(
+        resolve_available_fallback("Tahoma", TextScript::Latin, &host).as_deref(),
+        Some("Liberation Sans")
     );
 }
 

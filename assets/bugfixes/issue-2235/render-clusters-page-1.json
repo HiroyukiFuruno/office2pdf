@@ -1,0 +1,191 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 226.944,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 37.44,
+        "x": 79.2,
+        "y": 30.24
+      },
+      "disposition": {
+        "issue": "#2247",
+        "kind": "issue",
+        "note": "The first-page header `HEADER 1` is now sans on both sides, Word in Tahoma and office2pdf in Liberation Sans, the Arial-metric stand-in for the missing Tahoma. Liberation Sans's capitals set the line 10.1% wide (50.01 against 45.44pt), and its 0.9380em seat puts the baseline 0.52pt above Tahoma's 1.0005em (#2247)."
+      },
+      "id": "p1-1889345b9f0b",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 64.9728,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 14.4,
+        "x": 121.44,
+        "y": 86.4
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-b9be519563ea",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 39.8592,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 10.08,
+        "x": 72.48,
+        "y": 85.92
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-8984cbadb650",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 26.0352,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 4.8,
+        "x": 108.96,
+        "y": 75.36
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-48242208260c",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 25.344,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 4.8,
+        "x": 108.0,
+        "y": 87.84
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-f4913e586ecc",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 24.4224,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 7.2,
+        "x": 92.64,
+        "y": 87.84
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-33adc8f5082b",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 23.5008,
+      "bbox_pt": {
+        "height": 5.28,
+        "width": 7.2,
+        "x": 93.6,
+        "y": 75.84
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-a7ac29388694",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 21.4272,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 5.28,
+        "x": 72.48,
+        "y": 73.92
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-8aa993d45b83",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 20.9664,
+      "bbox_pt": {
+        "height": 6.24,
+        "width": 5.28,
+        "x": 121.92,
+        "y": 75.36
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2247"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section` is now sans on both sides and 1.6% wide (76.69 against 75.51pt). It sits 12.65pt above Word's baseline: 12.07pt is the line Word gives the empty section-mark paragraph, which office2pdf drops (#2232), and 0.58pt comes from Liberation Sans's shorter line and seat (#2247). Each cluster is one copy of the line, Word's at baseline 94.03 or ours at 81.38."
+      },
+      "id": "p1-e326ca352fde",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 9,
+    "duplicate": 0,
+    "total": 9,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
