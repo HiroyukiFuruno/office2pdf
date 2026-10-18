@@ -101,5 +101,48 @@ class DependencyLockContractTest(unittest.TestCase):
         self.assertTrue(all("--locked" in line for line in wasm_builds))
 
 
+class ForkPublishWorkflowTest(unittest.TestCase):
+    """The forks office2pdf depends on reach crates.io only through this workflow.
+
+    A `[patch.crates-io]` entry never applies to a published crate, so 0.9.0
+    built from crates.io used upstream docx-rs and rejected the minimal DOCX
+    packages its fork tolerates. The forks are to be published under their own
+    names through this workflow; this pins how, because it holds the crates.io token.
+    """
+
+    WORKFLOW = PROJECT_ROOT / ".github/workflows/publish-fork.yml"
+    FORKS = {
+        "office2pdf-docx-rs": "developer0hye/docx-rs",
+        "office2pdf-umya-spreadsheet": "developer0hye/umya-spreadsheet",
+    }
+
+    def setUp(self) -> None:
+        self.text = self.WORKFLOW.read_text()
+
+    def test_it_runs_only_on_manual_dispatch(self) -> None:
+        trigger = self.text[self.text.index("\non:") : self.text.index("\npermissions:")]
+        self.assertIn("workflow_dispatch:", trigger)
+        for event in ("push:", "pull_request:", "schedule:", "workflow_run:"):
+            self.assertNotIn(event, trigger)
+
+    def test_it_publishes_only_the_fork_crates_from_their_own_repositories(self) -> None:
+        options = re.search(r"options:\n((?:\s+- .+\n)+)", self.text)
+        self.assertIsNotNone(options)
+        self.assertEqual(
+            sorted(re.findall(r"- (\S+)", options.group(1))), sorted(self.FORKS)
+        )
+        for package, repository in self.FORKS.items():
+            self.assertRegex(
+                self.text, rf"{re.escape(package)}\)\s+repository={re.escape(repository)}"
+            )
+
+    def test_it_publishes_an_exact_reviewed_commit(self) -> None:
+        validation = self.text.index("^[0-9a-f]{40}$")
+        checkout = self.text.index("uses: actions/checkout")
+        self.assertLess(validation, checkout, "validate the ref before checking it out")
+        self.assertIn('cargo +stable publish -p "${PACKAGE}"', self.text)
+        self.assertNotIn("--allow-dirty", self.text)
+
+
 if __name__ == "__main__":
     unittest.main()
