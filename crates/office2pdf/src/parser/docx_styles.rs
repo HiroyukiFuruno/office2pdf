@@ -13,7 +13,7 @@ use super::{
 /// raw `word/styles.xml`.
 ///
 /// Read from the raw part for the reason `extract_default_tab_stop_pt` reads
-/// `w:defaultTabStop` from raw `word/settings.xml`: the pinned docx-rs fork
+/// `w:defaultTabStop` from raw `word/settings.xml`: the docx-rs fork
 /// has no field for the element, so waiting on its parse would report every
 /// document as unkerned — including the 21 tracked fixtures that do state
 /// `w:kern`, 9 of them as `<w:kern w:val="2"/>` in `w:docDefaults`, which asks

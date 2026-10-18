@@ -3,9 +3,9 @@ name: Publish fork crate
 # office2pdf depends on two forks with reader fixes upstream has not released.
 # A [patch.crates-io] entry never applies to a published crate, so 0.9.0 built
 # from crates.io used upstream docx-rs and rejected minimal DOCX packages the
-# fork reads. Each fork is to be published under its own name, from an exact
+# fork reads. Each fork is published under its own name, from an exact
 # reviewed commit of its repository, with this repository's token; office2pdf
-# then depends on those crates instead of patching the workspace. Dispatch it
+# depends on those crates instead of patching the workspace. Dispatch it
 # once per fork release, before the office2pdf release that needs it.
 on:
   workflow_dispatch:
