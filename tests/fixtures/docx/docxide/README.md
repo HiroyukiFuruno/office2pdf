@@ -99,3 +99,11 @@ Apache-2.0. Like `first_header_exact_line.docx`, it has no styles part: its
 header run states no face or size, and its Arial 12pt body lines state no
 `w:line`. Native Word sets the run in Aptos 12pt and the body lines 16pt
 apart. Parser and compiled-layout regressions check both.
+
+`page_header_ordinary_marker.docx` is the unmodified synthetic
+`cases/page-header-ordinary-marker/input.docx` from
+[docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/page-header-ordinary-marker),
+Apache-2.0. Nothing in its styles cascade states a `w:sz`: `w:docDefaults`
+names Times New Roman, and `Normal` names Tahoma with only `w:szCs="24"`.
+Native Word sets the first-page header and the body text in Tahoma 10, and a
+compiled-layout regression checks that both are set at 10pt.

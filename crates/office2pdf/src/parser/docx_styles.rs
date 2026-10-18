@@ -4,9 +4,9 @@ use std::collections::{HashMap, HashSet};
 use crate::ir::{Color, DocumentLanguage, PairKerning, ParagraphStyle, TabStop, TextStyle};
 
 use super::{
-    ThemeFonts, extract_doc_default_paragraph_style, extract_doc_default_text_style_with_theme,
-    extract_paragraph_style, extract_run_style, extract_tab_stop_overrides,
-    pair_kerning_from_half_points, resolve_theme_font_family,
+    ThemeFonts, WORD_UNSTATED_FONT_SIZE_PT, extract_doc_default_paragraph_style,
+    extract_doc_default_text_style_with_theme, extract_paragraph_style, extract_run_style,
+    extract_tab_stop_overrides, pair_kerning_from_half_points, resolve_theme_font_family,
 };
 
 /// The `w:kern` thresholds a document states outside its runs, read from the
@@ -178,6 +178,11 @@ pub(super) struct ResolvedStyle {
     /// top of such a document-defined treatment merely because `w:b` is
     /// absent (issue #1457).
     pub(super) heading_has_document_run_formatting: bool,
+    /// Whether `text.font_size` is `WORD_UNSTATED_FONT_SIZE_PT`, filled in
+    /// because neither this chain nor `w:docDefaults` states a `w:sz`. The
+    /// synthesized heading size still replaces it, as it did when the size
+    /// was left unset (issue #2234).
+    pub(super) font_size_is_unstated_default: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -430,7 +435,8 @@ pub(super) fn build_style_map(
     pair_kerning: &PairKerningRules,
 ) -> StyleMap {
     let mut map = StyleMap::new();
-    let default_text: TextStyle = resolve_doc_default_text_style(styles, theme_fonts, pair_kerning);
+    let (default_text, font_size_is_unstated_default): (TextStyle, bool) =
+        doc_default_text_style(styles, theme_fonts, pair_kerning);
     let default_paragraph: ParagraphStyle = extract_doc_default_paragraph_style(styles);
 
     map.insert(
@@ -442,6 +448,7 @@ pub(super) fn build_style_map(
             paragraph_tab_overrides: None,
             heading_level: None,
             heading_has_document_run_formatting: false,
+            font_size_is_unstated_default,
         },
     );
 
@@ -478,6 +485,7 @@ pub(super) fn build_style_map(
             paragraph_tab_overrides: None,
             heading_level: None,
             heading_has_document_run_formatting: false,
+            font_size_is_unstated_default: is_paragraph && font_size_is_unstated_default,
         };
 
         for definition in chain.into_iter().rev() {
@@ -507,6 +515,7 @@ pub(super) fn build_style_map(
             paragraph_tab_overrides: default_style.paragraph_tab_overrides.clone(),
             heading_level: None,
             heading_has_document_run_formatting: false,
+            font_size_is_unstated_default: default_style.font_size_is_unstated_default,
         };
         map.insert(DOC_DEFAULT_STYLE_ID.to_string(), merged);
     }
@@ -575,6 +584,7 @@ fn merge_style_definition(
     } != TextStyle::default();
     // `None` means "states nothing", so the parent decision survives.
     own_text.pair_kerning = pair_kerning.for_style(&style.style_id);
+    resolved.font_size_is_unstated_default &= own_text.font_size.is_none();
     resolved.text.merge_from(&own_text);
 
     if style.style_type != docx_rs::StyleType::Paragraph {
@@ -613,7 +623,8 @@ fn merge_style_definition(
 }
 
 /// The document-wide run defaults, with the kerning threshold the raw
-/// `word/styles.xml` states folded in.
+/// `word/styles.xml` states folded in, and Word's 10pt when they state no
+/// `w:sz` (issue #2234).
 ///
 /// Kept apart from `extract_doc_default_text_style_with_theme` because that
 /// function reads docx-rs' parse, which has no `w:kern` to give.
@@ -622,9 +633,21 @@ pub(super) fn resolve_doc_default_text_style(
     theme_fonts: &ThemeFonts,
     pair_kerning: &PairKerningRules,
 ) -> TextStyle {
+    doc_default_text_style(styles, theme_fonts, pair_kerning).0
+}
+
+/// `resolve_doc_default_text_style`, and whether its size is the unstated
+/// default rather than a stated `w:sz`.
+fn doc_default_text_style(
+    styles: &docx_rs::Styles,
+    theme_fonts: &ThemeFonts,
+    pair_kerning: &PairKerningRules,
+) -> (TextStyle, bool) {
     let mut text: TextStyle = extract_doc_default_text_style_with_theme(styles, theme_fonts);
     text.pair_kerning = Some(pair_kerning.document_default());
-    text
+    let font_size_is_unstated_default: bool = text.font_size.is_none();
+    text.font_size.get_or_insert(WORD_UNSTATED_FONT_SIZE_PT);
+    (text, font_size_is_unstated_default)
 }
 
 /// Merge style text formatting with explicit run formatting.
@@ -634,14 +657,16 @@ pub(super) fn resolve_doc_default_text_style(
 /// heading definition; a document-defined heading run treatment that omits
 /// `w:b` remains regular.
 pub(super) fn merge_text_style(explicit: &TextStyle, style: Option<&ResolvedStyle>) -> TextStyle {
-    let (style_text, heading_level, heading_has_document_run_formatting) = match style {
-        Some(style) => (
-            &style.text,
-            style.heading_level,
-            style.heading_has_document_run_formatting,
-        ),
-        None => return explicit.clone(),
-    };
+    let (style_text, heading_level, heading_has_document_run_formatting, font_size_is_unstated) =
+        match style {
+            Some(style) => (
+                &style.text,
+                style.heading_level,
+                style.heading_has_document_run_formatting,
+                style.font_size_is_unstated_default,
+            ),
+            None => return explicit.clone(),
+        };
 
     let mut merged: TextStyle = style_text.clone();
 
@@ -649,7 +674,7 @@ pub(super) fn merge_text_style(explicit: &TextStyle, style: Option<&ResolvedStyl
     // doesn't specify them. This must happen before the explicit overwrite
     // so that explicit values still win.
     if let Some(level) = heading_level {
-        if merged.font_size.is_none() {
+        if merged.font_size.is_none() || font_size_is_unstated {
             merged.font_size = Some(HEADING_FONT_SIZES[level]);
         }
         if merged.bold.is_none() && !heading_has_document_run_formatting {

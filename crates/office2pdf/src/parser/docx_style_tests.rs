@@ -464,7 +464,8 @@ fn test_normal_style_no_heading_defaults() {
     let (doc, _warnings) = parser.parse(&data, &ConvertOptions::default()).unwrap();
     let run = first_run(&doc);
 
-    assert!(run.style.font_size.is_none());
+    // Word's 10pt for a size nothing states, not a heading size (issue #2234).
+    assert_eq!(run.style.font_size, Some(10.0));
     assert!(run.style.bold.is_none());
 }
 
@@ -502,7 +503,7 @@ fn test_heading_with_mixed_paragraphs() {
     }
 
     if let Block::Paragraph(p) = &blocks[1] {
-        assert!(p.runs[0].style.font_size.is_none());
+        assert_eq!(p.runs[0].style.font_size, Some(10.0));
         assert!(p.runs[0].style.bold.is_none());
     } else {
         panic!("Expected Paragraph");
@@ -1014,8 +1015,8 @@ const STYLES_WITHOUT_DOC_DEFAULTS: &str = r#"<?xml version="1.0" encoding="UTF-8
 /// Word fills a package with no styles part from its own built-in defaults:
 /// every docxide-pdf reference of that shape embeds `Aptos` at 12pt for a run
 /// that states no `w:rFonts` or `w:sz` (issue #2215). A styles part that
-/// states nothing keeps #1196's serif instead, and direct formatting still
-/// wins over the built-in defaults.
+/// states nothing keeps #1196's serif at #2234's 10pt instead, and direct
+/// formatting still wins over the built-in defaults.
 #[test]
 fn a_package_without_a_styles_part_takes_words_built_in_run_defaults() {
     let body_xml = r#"<w:p><w:r><w:t>Plain words</w:t></w:r></w:p>
@@ -1049,8 +1050,9 @@ fn a_package_without_a_styles_part_takes_words_built_in_run_defaults() {
     let style = &parsed_paragraph_with_text(&doc, "Plain words").runs[0].style;
     assert_eq!(
         (style.font_family.as_deref(), style.font_size),
-        (Some("Times New Roman"), None),
-        "a styles part that states no defaults keeps Word's serif fallback"
+        (Some("Times New Roman"), Some(10.0)),
+        "a styles part that states no defaults keeps Word's serif fallback and \
+         its 10pt for an unstated size (issue #2234)"
     );
 }
 
@@ -1176,6 +1178,148 @@ fn a_header_run_in_a_package_without_a_styles_part_takes_the_built_in_face() {
         (style.font_family.as_deref(), style.font_size),
         (Some("Aptos"), Some(12.0))
     );
+}
+
+/// Run defaults in the shape of docxide-pdf's `page-header-*-marker` and
+/// `picture-padding-*` styles parts: `w:docDefaults` names a face and a
+/// language, `Normal` a face and `w:szCs="24"`, and nothing states a `w:sz`.
+fn styles_with_run_defaults(doc_default_run_xml: &str, normal_run_xml: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr>
+      <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>{doc_default_run_xml}<w:lang w:val="ru-RU"/>
+    </w:rPr></w:rPrDefault>
+    <w:pPrDefault/>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:rPr><w:rFonts w:ascii="Tahoma" w:hAnsi="Tahoma"/>{normal_run_xml}<w:szCs w:val="24"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Caption">
+    <w:name w:val="caption"/>
+    <w:basedOn w:val="Normal"/>
+    <w:rPr><w:i/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Large">
+    <w:name w:val="Large"/>
+    <w:basedOn w:val="Normal"/>
+    <w:rPr><w:sz w:val="28"/></w:rPr>
+  </w:style>
+  <w:style w:type="character" w:styleId="Strong">
+    <w:name w:val="Strong"/>
+    <w:rPr><w:b/></w:rPr>
+  </w:style>
+</w:styles>"#
+    )
+}
+
+/// Word sets a run at 10pt — `w:sz`'s 20 half-points — when nothing in its
+/// cascade states a size: not the run, its character style, its paragraph
+/// style chain or `w:docDefaults`. docxide-pdf's Word references embed such
+/// runs as Tahoma 10, where Typst's own 11pt applied; `w:szCs` sizes only
+/// complex-script text, so Normal's `w:szCs="24"` does not make them 12pt
+/// (issue #2234). A size stated at any level still wins, and the document
+/// default text style carries the same 10pt.
+#[test]
+fn a_run_whose_cascade_states_no_size_takes_words_ten_point_default() {
+    let body_xml = r#"<w:p><w:r><w:t>Plain words</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr><w:r><w:t>Caption words</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:rStyle w:val="Strong"/></w:rPr><w:t>Strong words</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="Large"/></w:pPr><w:r><w:t>Large words</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:sz w:val="32"/></w:rPr><w:t>Own size</w:t></w:r></w:p>
+      <w:tbl><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc>
+        <w:p><w:r><w:t>In a cell</w:t></w:r></w:p>
+      </w:tc></w:tr></w:tbl>"#;
+    let parse = |styles_xml: &str| -> Document {
+        let data = super::page_feature_tests::build_docx_with_raw_styles(styles_xml, body_xml);
+        DocxParser
+            .parse(&data, &ConvertOptions::default())
+            .expect("the package parses")
+            .0
+    };
+
+    let unstated = parse(&styles_with_run_defaults("", ""));
+    for (text, size) in [
+        ("Plain words", 10.0),
+        ("Caption words", 10.0),
+        ("Strong words", 10.0),
+        ("Large words", 14.0),
+        ("Own size", 16.0),
+        ("In a cell", 10.0),
+    ] {
+        assert_eq!(
+            parsed_paragraph_with_text(&unstated, text).runs[0]
+                .style
+                .font_size,
+            Some(size),
+            "{text:?} must resolve {size}pt when nothing above it states a w:sz"
+        );
+    }
+    assert_eq!(
+        unstated
+            .styles
+            .default_text
+            .as_ref()
+            .and_then(|style| style.font_size),
+        Some(10.0),
+        "the document default text style must carry Word's unstated size"
+    );
+
+    for (doc_default_run_xml, normal_run_xml, size) in [
+        (r#"<w:sz w:val="22"/>"#, "", 11.0),
+        ("", r#"<w:sz w:val="24"/>"#, 12.0),
+        (r#"<w:sz w:val="18"/>"#, r#"<w:sz w:val="26"/>"#, 13.0),
+    ] {
+        let stated = parse(&styles_with_run_defaults(
+            doc_default_run_xml,
+            normal_run_xml,
+        ));
+        for text in ["Plain words", "Caption words", "Strong words", "In a cell"] {
+            assert_eq!(
+                parsed_paragraph_with_text(&stated, text).runs[0]
+                    .style
+                    .font_size,
+                Some(size),
+                "{text:?} must keep the stated {size}pt (docDefaults \
+                 {doc_default_run_xml:?}, Normal {normal_run_xml:?})"
+            );
+        }
+    }
+}
+
+/// The 10pt filled in for an unstated size is not a stated one: a bare
+/// `Heading1` still takes its synthesized heading size over it, as it did
+/// while the size was left unset, and a `w:sz` stated in `w:docDefaults`
+/// still suppresses that fallback (issue #2234).
+#[test]
+fn only_a_stated_document_size_suppresses_the_heading_size_fallback() {
+    let heading_style = r#"<w:style w:type="paragraph" w:styleId="Heading1">
+    <w:name w:val="heading 1"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr><w:outlineLvl w:val="0"/></w:pPr>
+  </w:style>
+</w:styles>"#;
+    let body_xml = r#"<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Bare heading</w:t></w:r></w:p>"#;
+    for (doc_default_run_xml, size) in [
+        ("", crate::defaults::HEADING_FONT_SIZES[0]),
+        (r#"<w:sz w:val="22"/>"#, 11.0),
+    ] {
+        let styles_xml =
+            styles_with_run_defaults(doc_default_run_xml, "").replace("</w:styles>", heading_style);
+        let data = super::page_feature_tests::build_docx_with_raw_styles(&styles_xml, body_xml);
+        let (doc, _warnings) = DocxParser
+            .parse(&data, &ConvertOptions::default())
+            .expect("the heading package parses");
+        assert_eq!(
+            parsed_paragraph_with_text(&doc, "Bare heading").runs[0]
+                .style
+                .font_size,
+            Some(size),
+            "a bare Heading1 under docDefaults {doc_default_run_xml:?} must resolve {size}pt"
+        );
+    }
 }
 
 #[test]

@@ -1,0 +1,223 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 222.7968,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 30.24,
+        "x": 72.0,
+        "y": 27.84
+      },
+      "disposition": {
+        "issue": "#2235",
+        "kind": "issue",
+        "note": "The first-page header `HEADER 1`, now 10pt on both sides: office2pdf paints the missing Tahoma with the C059 serif, 17.4% wider, and its 0.72em ascent seats the baseline 2.68pt above Tahoma's 1.0005em on the 28.35pt header line (#2235)."
+      },
+      "id": "p1-eebc21266aa2",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 64.9728,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 14.4,
+        "x": 121.44,
+        "y": 86.4
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-b9be519563ea",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 39.8592,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 6.72,
+        "x": 102.72,
+        "y": 28.32
+      },
+      "disposition": {
+        "issue": "#2235",
+        "kind": "issue",
+        "note": "The first-page header `HEADER 1`, now 10pt on both sides: office2pdf paints the missing Tahoma with the C059 serif, 17.4% wider, and its 0.72em ascent seats the baseline 2.68pt above Tahoma's 1.0005em on the 28.35pt header line (#2235)."
+      },
+      "id": "p1-48d3ba460c51",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 39.8592,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 10.08,
+        "x": 72.48,
+        "y": 85.92
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-8984cbadb650",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 39.168,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 7.2,
+        "x": 109.92,
+        "y": 28.32
+      },
+      "disposition": {
+        "issue": "#2235",
+        "kind": "issue",
+        "note": "The first-page header `HEADER 1`, now 10pt on both sides: office2pdf paints the missing Tahoma with the C059 serif, 17.4% wider, and its 0.72em ascent seats the baseline 2.68pt above Tahoma's 1.0005em on the 28.35pt header line (#2235)."
+      },
+      "id": "p1-84f4c44a446b",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 34.3296,
+      "bbox_pt": {
+        "height": 5.28,
+        "width": 10.56,
+        "x": 95.04,
+        "y": 74.4
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-fca68285bbaf",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 29.0304,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 5.76,
+        "x": 111.84,
+        "y": 73.92
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-18006bf412e4",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 25.344,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 4.8,
+        "x": 108.0,
+        "y": 87.84
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-f4913e586ecc",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 24.8832,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 6.72,
+        "x": 72.0,
+        "y": 72.0
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-89dfd9149b4e",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 24.4224,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 7.2,
+        "x": 92.64,
+        "y": 87.84
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-33adc8f5082b",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 22.1184,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 6.24,
+        "x": 83.52,
+        "y": 71.52
+      },
+      "disposition": {
+        "issues": [
+          "#2232",
+          "#2235"
+        ],
+        "kind": "issue",
+        "note": "The body line `Following section`, now 10pt on both sides, sits 14.81pt above Word's: 12.07pt is the line Word gives the empty section-mark paragraph that office2pdf drops (#2232), and 2.78pt is the C059 stand-in's smaller ascent; the serif face itself is #2235."
+      },
+      "id": "p1-2517e9af8bab",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 11,
+    "duplicate": 0,
+    "total": 11,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
