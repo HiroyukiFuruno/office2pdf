@@ -96,6 +96,24 @@ Also verify:
 
 Only then remove the worktree and delete the merged local and remote branch.
 
+## Fork crates
+
+`[patch.crates-io]` never applies to a published crate, so a fork the library
+needs must itself be on crates.io: `office2pdf-docx-rs` and
+`office2pdf-umya-spreadsheet` come from `developer0hye/docx-rs` and
+`developer0hye/umya-spreadsheet`. To ship a fork fix, merge it in the fork
+with a version bump, then publish that exact commit before the office2pdf
+version PR that requires it:
+
+```bash
+GH_TOKEN='' gh workflow run publish-fork.yml --repo developer0hye/office2pdf \
+  --ref main -f package=office2pdf-docx-rs -f ref=<40-character fork SHA>
+```
+
+Once office2pdf depends on these crates, do not route either fork through
+`[patch.crates-io]` again: the workspace would then test code that crates.io
+users never receive.
+
 ## Recovery
 
 - Authentication failure: rerun with `GH_TOKEN=''` and verify `gh api user` returns `developer0hye`.

@@ -1,0 +1,79 @@
+name: Publish fork crate
+
+# office2pdf depends on two forks with reader fixes upstream has not released.
+# A [patch.crates-io] entry never applies to a published crate, so 0.9.0 built
+# from crates.io used upstream docx-rs and rejected minimal DOCX packages the
+# fork reads. Each fork is to be published under its own name, from an exact
+# reviewed commit of its repository, with this repository's token; office2pdf
+# then depends on those crates instead of patching the workspace. Dispatch it
+# once per fork release, before the office2pdf release that needs it.
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Fork crate to publish"
+        required: true
+        type: choice
+        options:
+          - office2pdf-docx-rs
+          - office2pdf-umya-spreadsheet
+      ref:
+        description: "Full 40-character commit SHA in the fork repository"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    env:
+      PACKAGE: ${{ inputs.package }}
+      REF: ${{ inputs.ref }}
+    steps:
+      - name: Resolve the fork repository
+        id: fork
+        run: |
+          set -euo pipefail
+          if [[ ! "${REF}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::ref must be a full 40-character lowercase commit SHA, got ${REF}"
+            exit 1
+          fi
+          case "${PACKAGE}" in
+            office2pdf-docx-rs) repository=developer0hye/docx-rs ;;
+            office2pdf-umya-spreadsheet) repository=developer0hye/umya-spreadsheet ;;
+            *) echo "::error::unknown fork crate ${PACKAGE}"; exit 1 ;;
+          esac
+          echo "repository=${repository}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.fork.outputs.repository }}
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check the package at this commit
+        run: |
+          set -euo pipefail
+          metadata="$(cargo +stable metadata --no-deps --format-version 1)"
+          version="$(jq -r --arg name "${PACKAGE}" '.packages[] | select(.name == $name) | .version' <<<"${metadata}")"
+          if [[ -z "${version}" ]]; then
+            echo "::error::${PACKAGE} is not a package at ${REF}"
+            exit 1
+          fi
+          echo "Publishing ${PACKAGE} ${version} from ${REF}"
+
+      - name: Publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CARGO_REGISTRY_TOKEN}" ]]; then
+            echo "::error::CARGO_REGISTRY_TOKEN secret is required to publish crates"
+            exit 1
+          fi
+          cargo +stable publish -p "${PACKAGE}"
