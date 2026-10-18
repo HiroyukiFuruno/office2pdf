@@ -118,6 +118,7 @@ python3 scripts/compare_render.py GT.pdf OUTPUT.pdf --page N --dpi 150 \
 - Measure conversion elapsed time and peak process memory on the reported inputs and representative controls, comparing against the visually accepted pre-optimization build. Record commands, repetitions, build profile, hardware/OS/fonts, cache conditions, and before/after results. Follow `PRD.md`'s performance measurement policy; scoped measurements do not establish product SLAs.
 - Optimize measured bottlenecks with simple, proportionate changes. Avoid speculative abstractions, caches, dependencies, or fixture-specific shortcuts. If no worthwhile low-complexity improvement is supported by measurements, record that conclusion instead of forcing a rewrite.
 - Preserve conversion behavior and visual fidelity. After optimization code changes, rerun the required tests and full visual comparison for affected files; revert regressions. Mark the PR's final performance pass complete only after this revalidation. Changes without conversion runtime impact may record `Not applicable` with a reason.
+- The Visual PR Contract checks the completion declaration: visual PRs require `Complete` with non-placeholder measurements/outcome fields, or `Not applicable: explanation`. Review must verify that exemptions have no conversion runtime impact and that measurements, ordering, and revalidation are valid; CI does not establish those facts.
 
 ## Unattended Issue Loop
 

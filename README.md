@@ -372,6 +372,12 @@ office2pdf and its maintainers disclaim related liability to the extent
 permitted by applicable law. Read the [submission policy](CONTRIBUTING.md)
 before submitting documents, screenshots, logs, or test fixtures.
 
+Visual PRs follow the [evidence contract](assets/bugfixes/README.md) and finish
+the [memory and speed pass](AGENTS.md#final-memory-and-speed-pass) after visual
+acceptance. CI requires its completion record or a non-placeholder exemption
+explanation; review verifies no runtime impact for exemptions, measurements,
+and any revalidation.
+
 ## License
 
 Licensed under [Apache License, Version 2.0](LICENSE).
