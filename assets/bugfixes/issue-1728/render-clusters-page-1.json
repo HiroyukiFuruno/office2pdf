@@ -1,0 +1,347 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 204.5952,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 36.0,
+        "x": 495.84,
+        "y": 742.56
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-c0f80492cf16",
+      "region": "bottom-right"
+    },
+    {
+      "area_pt2": 148.8384,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 23.04,
+        "x": 534.72,
+        "y": 42.24
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-364b6ccc2e56",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 123.4944,
+      "bbox_pt": {
+        "height": 10.56,
+        "width": 23.04,
+        "x": 534.72,
+        "y": 742.56
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-848af28ca0df",
+      "region": "bottom-right"
+    },
+    {
+      "area_pt2": 105.5232,
+      "bbox_pt": {
+        "height": 11.04,
+        "width": 16.8,
+        "x": 515.04,
+        "y": 43.2
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-13af28c3bad0",
+      "region": "top-right"
+    },
+    {
+      "area_pt2": 40.0896,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 5.76,
+        "x": 291.36,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-bb57d6ca9836",
+      "region": "top"
+    },
+    {
+      "area_pt2": 37.0944,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 6.24,
+        "x": 284.64,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-ce86c5213947",
+      "region": "top"
+    },
+    {
+      "area_pt2": 35.712,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 5.76,
+        "x": 59.04,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-3dbefb05e4bd",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 35.4816,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 8.64,
+        "x": 297.6,
+        "y": 744.96
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-b316653d0992",
+      "region": "bottom"
+    },
+    {
+      "area_pt2": 35.4816,
+      "bbox_pt": {
+        "height": 5.76,
+        "width": 8.64,
+        "x": 81.6,
+        "y": 744.96
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-565e3843bd93",
+      "region": "bottom-left"
+    },
+    {
+      "area_pt2": 34.56,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 5.28,
+        "x": 77.28,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-39074de96aec",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 34.56,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 5.28,
+        "x": 305.28,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-c383b1fc0689",
+      "region": "top"
+    },
+    {
+      "area_pt2": 32.9472,
+      "bbox_pt": {
+        "height": 9.6,
+        "width": 5.28,
+        "x": 65.76,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-157f684e5a4d",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 30.8736,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 5.28,
+        "x": 321.12,
+        "y": 44.64
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-8499f7f7caec",
+      "region": "top"
+    },
+    {
+      "area_pt2": 29.4912,
+      "bbox_pt": {
+        "height": 10.08,
+        "width": 7.68,
+        "x": 83.04,
+        "y": 42.24
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-82c6c49cbc6a",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 22.1184,
+      "bbox_pt": {
+        "height": 7.68,
+        "width": 4.8,
+        "x": 106.08,
+        "y": 743.52
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-ce69c39bd20a",
+      "region": "bottom-left"
+    },
+    {
+      "area_pt2": 21.888,
+      "bbox_pt": {
+        "height": 9.12,
+        "width": 4.32,
+        "x": 316.8,
+        "y": 43.2
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-9c4f9c159d2c",
+      "region": "top"
+    },
+    {
+      "area_pt2": 20.2752,
+      "bbox_pt": {
+        "height": 6.24,
+        "width": 5.76,
+        "x": 75.36,
+        "y": 744.96
+      },
+      "disposition": {
+        "issue": "#1874",
+        "kind": "issue",
+        "note": "All current footer crops were inspected at original 150 DPI. The left anchor now matches native at 55pt. Small glyph-advance/width residuals and the right anchor displacement of +1.33009pt remain sub-material at normal reading size; measurements are recorded in issue comment 6250743371. No wrong face, emphasis, color, missing or clipped text is observed. No renderer waiver is used."
+      },
+      "id": "p1-6030c4dea25c",
+      "region": "bottom-left"
+    },
+    {
+      "area_pt2": 20.0448,
+      "bbox_pt": {
+        "height": 9.12,
+        "width": 3.84,
+        "x": 280.8,
+        "y": 43.2
+      },
+      "disposition": {
+        "issues": [
+          "#1731",
+          "#1874"
+        ],
+        "kind": "issue",
+        "note": "All current GT/output/diff crops were inspected at original 150 DPI. Header glyph fragments retain the measured -1.599974pt baseline displacement (#1731); small horizontal anchor and glyph-advance residuals remain sub-material under #1874. These are geometry findings, not antialiasing waivers."
+      },
+      "id": "p1-bac92a2c06f2",
+      "region": "top"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 18,
+    "duplicate": 0,
+    "total": 18,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
