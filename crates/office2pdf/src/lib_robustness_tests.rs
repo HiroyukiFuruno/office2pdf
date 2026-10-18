@@ -351,6 +351,7 @@ fn test_edge_image_only_docx() {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             })],
             header: None,
             footer: None,

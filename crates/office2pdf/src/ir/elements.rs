@@ -1899,6 +1899,21 @@ pub struct ImageData {
     /// (flow documents). Word advances a picture paragraph by the picture
     /// plus these, so they have to survive the paragraph being dropped.
     pub paragraph_spacing: Option<ImageParagraphSpacing>,
+    /// Horizontal indents declared by the containing paragraph's `w:ind`
+    /// (flow documents). A picture is a glyph-like inline object, so it starts
+    /// where that paragraph's line of text would.
+    pub paragraph_indent: Option<ImageParagraphIndent>,
+}
+
+/// The `w:ind` of the paragraph that held an inline picture, in points.
+///
+/// `first_line` is signed: a hanging indent is a negative first line, as in
+/// [`ParagraphStyle::indent_first_line`].
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct ImageParagraphIndent {
+    pub left: f64,
+    pub right: f64,
+    pub first_line: f64,
 }
 
 /// The `w:spacing` of the paragraph that held an inline picture, in points.

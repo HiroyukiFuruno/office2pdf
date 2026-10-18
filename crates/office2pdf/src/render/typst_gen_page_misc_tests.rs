@@ -1316,6 +1316,7 @@ fn multiline_sheet_footer_keeps_text_clear_of_inline_picture() {
             fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
+            paragraph_indent: None,
         }));
     let output = generate_typst(&make_doc(vec![page])).unwrap();
     let painted = compiled_paint_sequence(&output.source, &output.images, 0).unwrap();
@@ -6306,6 +6307,7 @@ fn sheet_with_a_picture_over_a_filled_panel() -> Page {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             },
         }],
         text_boxes: Vec::new(),

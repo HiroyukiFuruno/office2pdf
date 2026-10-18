@@ -1,5 +1,5 @@
 use super::*;
-use crate::ir::{ImageCrop, ImageParagraphSpacing};
+use crate::ir::{ImageCrop, ImageParagraphIndent, ImageParagraphSpacing};
 
 /// Minimal valid 1x1 red pixel PNG for testing.
 const MINIMAL_PNG: &[u8] = &[
@@ -64,6 +64,7 @@ fn floating_band_picture(
                 clip_shape: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             },
             wrap_mode,
             vertical_anchor: FloatingImageVerticalAnchor::Margin,
@@ -250,6 +251,201 @@ fn docx_picture_source_crops_follow_each_occurrence_of_shared_media() {
     );
 }
 
+/// The left edges of the pictures the compiled document paints on its first
+/// page, in layout order.
+#[cfg(not(target_arch = "wasm32"))]
+fn compiled_picture_left_edges_pt(document: &Document) -> Vec<f64> {
+    let output = generate_typst(document).unwrap();
+    crate::render::pdf::compiled_image_boxes(&output.source, &output.images, 0)
+        .expect("the picture document compiles")
+        .iter()
+        .map(|picture| picture.corners[0].0)
+        .collect()
+}
+
+/// docxide-pdf's `inline-picture-indent-*` cases, unmodified: one paragraph
+/// holding only a 180x90pt inline picture, under eight combinations of `w:jc`
+/// and `w:ind`, with 72pt side margins. Word places the picture where it
+/// places a first line of text: that line runs from `left + firstLine` (a
+/// hanging indent is a negative first line) to `right`, and the alignment
+/// works inside it. Main drew every picture as if the paragraph had no
+/// indent (issue #2201).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_inline_picture_paragraph_places_its_picture_by_the_paragraph_indent() {
+    use crate::parser::{Parser, docx::DocxParser};
+
+    let cases: [(&str, &[u8], f64); 8] = [
+        (
+            "left, firstLine 709",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_left_first.docx"
+            ),
+            107.45,
+        ),
+        (
+            "both, firstLine 709",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_justify_first.docx"
+            ),
+            107.45,
+        ),
+        (
+            "left, left 720 hanging 360",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_left_hanging.docx"
+            ),
+            90.0,
+        ),
+        (
+            "center, firstLine 709",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_center_first.docx"
+            ),
+            225.38,
+        ),
+        (
+            "center, left 720 hanging 360",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_center_hanging.docx"
+            ),
+            216.65,
+        ),
+        (
+            "center, left 720 right 360",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_center_left_right.docx"
+            ),
+            216.65,
+        ),
+        (
+            "center, no indent",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_center_zero.docx"
+            ),
+            207.65,
+        ),
+        (
+            "right, firstLine 709",
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/inline_picture_indent_right_first.docx"
+            ),
+            343.3,
+        ),
+    ];
+    for (case, source, word_left_pt) in cases {
+        let (document, _) = DocxParser
+            .parse(source, &crate::config::ConvertOptions::default())
+            .expect("the picture document parses");
+        let left_edges: Vec<f64> = compiled_picture_left_edges_pt(&document);
+        assert!(
+            left_edges.len() == 1 && (left_edges[0] - word_left_pt).abs() < 0.05,
+            "{case}: Word puts the picture's left edge at {word_left_pt}pt, got {left_edges:?}"
+        );
+    }
+}
+
+/// The general rule behind
+/// [`an_inline_picture_paragraph_places_its_picture_by_the_paragraph_indent`]:
+/// pictures sit where the paragraph's lines of text would (issue #2201).
+/// Several pictures in one paragraph wrap like words, so only the first line
+/// takes the first-line indent and a wrapped picture starts at `left`. A
+/// negative indent, or a hanging first line past a zero `left`, widens the
+/// line into the margin, as Word does.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn inline_pictures_start_where_the_paragraphs_text_lines_would() {
+    let picture = |width: f64, alignment: Option<Alignment>, indent: ImageParagraphIndent| {
+        let Block::Image(mut image) = make_image(ImageFormat::Png, Some(width), Some(40.0)) else {
+            unreachable!();
+        };
+        image.data = make_quadrant_png();
+        image.alignment = alignment;
+        image.paragraph_indent = Some(indent);
+        image
+    };
+    let hanging = ImageParagraphIndent {
+        left: 36.0,
+        right: 0.0,
+        first_line: -18.0,
+    };
+    // A4 with 72pt margins: the text column runs from 72pt to 523.28pt.
+    let cases: [(&str, Block, &[f64]); 5] = [
+        (
+            "left 0, hanging 18",
+            Block::Image(picture(
+                100.0,
+                None,
+                ImageParagraphIndent {
+                    left: 0.0,
+                    right: 0.0,
+                    first_line: -18.0,
+                },
+            )),
+            &[54.0],
+        ),
+        (
+            "right-aligned, right 18, firstLine 36",
+            Block::Image(picture(
+                100.0,
+                Some(Alignment::Right),
+                ImageParagraphIndent {
+                    left: 0.0,
+                    right: 18.0,
+                    first_line: 36.0,
+                },
+            )),
+            &[405.28],
+        ),
+        (
+            "left -36",
+            Block::Image(picture(
+                100.0,
+                None,
+                ImageParagraphIndent {
+                    left: -36.0,
+                    right: 0.0,
+                    first_line: 0.0,
+                },
+            )),
+            &[36.0],
+        ),
+        (
+            "right-aligned, right -18",
+            Block::Image(picture(
+                100.0,
+                Some(Alignment::Right),
+                ImageParagraphIndent {
+                    left: 0.0,
+                    right: -18.0,
+                    first_line: 0.0,
+                },
+            )),
+            &[441.28],
+        ),
+        (
+            "two pictures too wide to share a line, left 36, hanging 18",
+            Block::InlineImages(vec![
+                picture(250.0, None, hanging),
+                picture(250.0, None, hanging),
+            ]),
+            &[90.0, 108.0],
+        ),
+    ];
+    for (case, block, expected_left_edges) in cases {
+        let left_edges: Vec<f64> =
+            compiled_picture_left_edges_pt(&make_doc(vec![make_flow_page(vec![block])]));
+        assert!(
+            left_edges.len() == expected_left_edges.len()
+                && left_edges
+                    .iter()
+                    .zip(expected_left_edges)
+                    .all(|(left, expected)| (left - expected).abs() < 0.05),
+            "{case}: the pictures must start at {expected_left_edges:?}pt, got {left_edges:?}"
+        );
+    }
+}
+
 fn make_image(format: ImageFormat, width: Option<f64>, height: Option<f64>) -> Block {
     Block::Image(ImageData {
         rotation_deg: None,
@@ -267,6 +463,7 @@ fn make_image(format: ImageFormat, width: Option<f64>, height: Option<f64>) -> B
         fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
+        paragraph_indent: None,
     })
 }
 
@@ -295,6 +492,7 @@ fn picture_paragraph_spacing_becomes_block_gaps() {
             before: Some(6.0),
             after: Some(3.0),
         }),
+        paragraph_indent: None,
     })])]);
     let output = generate_typst(&doc).unwrap();
     assert!(
@@ -360,6 +558,7 @@ fn test_image_crop_preprocesses_raster_asset() {
         fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
+        paragraph_indent: None,
     })])]);
     let output = generate_typst(&doc).unwrap();
     assert!(
@@ -543,6 +742,7 @@ fn test_image_with_border_renders_box_stroke() {
         fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
+        paragraph_indent: None,
     })])]);
     let output = generate_typst(&doc).unwrap();
     assert!(
@@ -606,6 +806,7 @@ fn a_bordered_picture_casts_its_shadow_from_the_stroked_frame() {
                     opacity: 0.38,
                 }),
                 paragraph_spacing: None,
+                paragraph_indent: None,
             }),
         }],
     )]);
@@ -670,6 +871,7 @@ fn a_bordered_picture_rounds_its_shadow_corner_like_the_border_join() {
                         opacity: 0.38,
                     }),
                     paragraph_spacing: None,
+                    paragraph_indent: None,
                 }),
             }],
         )]);
@@ -729,6 +931,7 @@ fn a_blurred_picture_uses_one_filtered_frame_asset() {
                     opacity: 0.38,
                 }),
                 paragraph_spacing: None,
+                paragraph_indent: None,
             }),
         }],
     )]);
@@ -789,6 +992,7 @@ fn test_fixed_image_with_border_uses_rect_overlay() {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             }),
         }],
     )]);
@@ -842,6 +1046,7 @@ fn a_fixed_picture_flip_is_applied_inside_its_rotation() {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             }),
         }],
     )]);
@@ -901,6 +1106,7 @@ fn oversized_turned_picture() -> (Document, [(f64, f64); 4]) {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             }),
         }],
     )]);
@@ -1019,6 +1225,7 @@ fn an_svg_crop_narrows_the_view_box() {
         fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
+        paragraph_indent: None,
     })])]);
 
     let output = generate_typst(&doc).unwrap();
@@ -1085,6 +1292,7 @@ fn an_uncropped_svg_is_left_alone() {
         fill_rect: None,
         shadow: None,
         paragraph_spacing: None,
+        paragraph_indent: None,
     })])]);
 
     let output = generate_typst(&doc).unwrap();
