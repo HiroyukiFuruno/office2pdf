@@ -71,6 +71,12 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 | [officeopenxml.com](http://officeopenxml.com/) | Readable OOXML reference |
 | [PowerPoint BulletFormat docs](https://learn.microsoft.com/en-us/office/vba/api/powerpoint.bulletformat) | PowerPoint bullet semantics reference ([detail](powerpoint-bulletformat.md)) |
 
+## Native Excel Layout
+
+| Reference | Focus | Detail |
+|-----------|-------|--------|
+| [Native Excel probes (#1728)](https://github.com/developer0hye/office2pdf/issues/1728) | Plain left header/footer anchors and scaled footer inset | [excel-plain-header-footer.md](excel-plain-header-footer.md) |
+
 ## Agent Harness
 
 | Resource | Type |

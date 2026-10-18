@@ -1,0 +1,166 @@
+{
+ "pages": [
+  {
+   "lines": {
+    "gt": 3,
+    "out": 3,
+    "matched": 3,
+    "missing": 0,
+    "extra": 0,
+    "deviant": 1,
+    "missing_text": [],
+    "extra_text": []
+   },
+   "baseline": {
+    "mean_abs_dy": 0.5999902500000012,
+    "worst_dy": 1.5999740000000031,
+    "worst_dy_signed": -1.5999740000000031,
+    "worst_line": "topleft"
+   },
+   "dx0": {
+    "mean_abs": 0.3282899999999884,
+    "worst": 1.3300899999999842
+   },
+   "width": {
+    "mean_abs_pct": 0.6354672785180149,
+    "worst_pct": 1.893532875343483
+   },
+   "instances": {
+    "compared": 8,
+    "large_shift_threshold": 5.0,
+    "large_shift_count": 0,
+    "large_shifts": [],
+    "fine_shift_threshold": 0.5,
+    "fine_shift_count": 4,
+    "fine_shifts": [
+     {
+      "label": "topleft",
+      "gt_x": 55.0,
+      "gt_y": 52.0,
+      "out_x": 55.0,
+      "out_y": 50.400026,
+      "dx": 0.0,
+      "dy": -1.5999740000000031,
+      "width_pct": -1.893532875343483
+     },
+     {
+      "label": "topcenter",
+      "gt_x": 281.0,
+      "gt_y": 52.0,
+      "out_x": 280.73439,
+      "out_y": 50.400026,
+      "dx": -0.26560999999998103,
+      "dy": -1.5999740000000031,
+      "width_pct": 0.6576112904777591
+     },
+     {
+      "label": "topright",
+      "gt_x": 515.0,
+      "gt_y": 52.0,
+      "out_x": 515.9531,
+      "out_y": 50.400026,
+      "dx": 0.9530999999999494,
+      "dy": -1.5999740000000031,
+      "width_pct": -0.012594913795445231
+     },
+     {
+      "label": "bottomright",
+      "gt_x": 495.0,
+      "gt_y": 751.0,
+      "out_x": 496.33009,
+      "out_y": 751.0,
+      "dx": 1.3300899999999842,
+      "dy": 0.0,
+      "width_pct": -0.5666134442939748
+     }
+    ]
+   },
+   "visibility": {
+    "mismatch_count": 0,
+    "mismatches": [],
+    "unmatched_hidden_gt": 0,
+    "unmatched_hidden_out": 0,
+    "unmatched_hidden_gt_text": [],
+    "unmatched_hidden_out_text": []
+   },
+   "visible_fills": {
+    "mismatch_count": 0,
+    "mismatches": []
+   },
+   "pitch": {
+    "pairs": 2,
+    "worst_delta": 1.5999740000000031
+   },
+   "wraps": {
+    "count": 0,
+    "samples": []
+   },
+   "topology": {
+    "groups": 0,
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "reflow": {
+    "gt_lines": 0,
+    "out_lines": 0,
+    "samples": []
+   },
+   "rects": {
+    "gt_count": 0,
+    "out_count": 0,
+    "canonical_gt_count": 0,
+    "canonical_out_count": 0,
+    "matched": 0,
+    "unmatched_gt": 0,
+    "unmatched_out": 0,
+    "mean_center_delta": 0.0,
+    "geometry_threshold": 0.5,
+    "raw_geometry_mismatch_count": 0,
+    "raw_geometry_mismatch_samples": [],
+    "coverage_equivalent_count": 0,
+    "coverage_unmodeled_count": 0,
+    "geometry_mismatch_count": 0,
+    "geometry_mismatch_samples": [],
+    "samples": [],
+    "x": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "y": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "width": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "height": {
+     "mean_abs": 0.0,
+     "worst": 0.0
+    },
+    "edges": {
+     "left": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "top": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "right": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     },
+     "bottom": {
+      "mean_abs": 0.0,
+      "worst": 0.0
+     }
+    }
+   },
+   "noise_floor": 0.5
+  }
+ ],
+ "gt_pages": 1,
+ "out_pages": 1
+}
