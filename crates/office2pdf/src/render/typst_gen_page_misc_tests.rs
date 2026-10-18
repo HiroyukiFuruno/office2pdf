@@ -4804,6 +4804,151 @@ fn an_exact_header_paragraph_reserves_each_line_it_takes() {
     );
 }
 
+/// A header paragraph with no content, whose paragraph mark resolves to `mark`.
+#[cfg(not(target_arch = "wasm32"))]
+fn empty_header_paragraph(mark: TextStyle) -> crate::ir::HeaderFooterParagraph {
+    let mut paragraph = header_text_paragraph("", TextStyle::default());
+    paragraph.elements.clear();
+    paragraph.style.paragraph_mark_text_style = Some(Box::new(mark));
+    paragraph
+}
+
+/// Word's single line for a header line set in `style`, or `None` where the
+/// face is unavailable on this runner.
+#[cfg(not(target_arch = "wasm32"))]
+fn natural_header_line_pt(style: TextStyle) -> Option<f64> {
+    crate::render::typst_gen::text::word_line_advance_pt(&[Run {
+        text: "Header".to_string(),
+        style,
+        href: None,
+        footnote: None,
+        inline_box: None,
+    }])
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn times(size_pt: f64) -> TextStyle {
+    TextStyle {
+        font_family: Some("Times New Roman".to_string()),
+        font_size: Some(size_pt),
+        ..TextStyle::default()
+    }
+}
+
+/// An empty header paragraph takes one line of its paragraph mark's face.
+///
+/// Word lays out a paragraph with no runs as one line sized from its mark, so
+/// three header lines and a trailing empty paragraph reach one mark line
+/// further than the three lines alone. Two scraped docxide-pdf specifications
+/// with that header, three Calibri 11pt lines over an empty paragraph whose
+/// mark is Times New Roman 11pt in one and 12pt in the other, have Word start
+/// the body 1.25pt apart: the difference between those two lines. The mark's
+/// own face sets the line, not the text's. Main measured no height at all once
+/// a paragraph was empty, and the body overprinted the third header line.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_trailing_empty_header_paragraph_reserves_its_mark_line() {
+    let Some(text_line_pt) = natural_header_line_pt(arial(12.0)) else {
+        return; // the face is unavailable on this runner
+    };
+    for mark_size_pt in [11.0, 12.0, 20.0] {
+        let Some(mark_line_pt) = natural_header_line_pt(times(mark_size_pt)) else {
+            return;
+        };
+        let mut paragraphs = arial_header_lines(&["One", "Two", "Three"]);
+        paragraphs.push(empty_header_paragraph(times(mark_size_pt)));
+        let margin_pt: f64 = header_top_margin_pt(36.0, 72.0, paragraphs);
+        let expected_pt: f64 = 36.0 + 3.0 * text_line_pt + mark_line_pt;
+        assert!(
+            (margin_pt - expected_pt).abs() < 0.001,
+            "three {text_line_pt}pt lines and a {mark_size_pt}pt empty mark \
+             ({mark_line_pt}pt) 36pt below the page top must start the body at \
+             {expected_pt}pt, got {margin_pt}pt"
+        );
+    }
+}
+
+/// A header holding nothing but empty paragraphs still reserves their lines.
+///
+/// A scraped docxide-pdf procurement contract states `w:top` and `w:header`
+/// both 36pt over a header part with one empty paragraph, and Word starts the
+/// body one line lower than main did; a scraped job description whose header
+/// is two empty paragraphs lowers it by two.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_empty_header_story_grows_a_margin_it_overflows() {
+    let Some(mark_line_pt) = natural_header_line_pt(arial(11.0)) else {
+        return;
+    };
+    for count in [1_usize, 2, 3] {
+        let margin_pt: f64 =
+            header_top_margin_pt(36.0, 36.0, vec![empty_header_paragraph(arial(11.0)); count]);
+        let expected_pt: f64 = 36.0 + count as f64 * mark_line_pt;
+        assert!(
+            (margin_pt - expected_pt).abs() < 0.001,
+            "{count} empty 11pt Arial header paragraphs on the 36pt margin must \
+             start the body at {expected_pt}pt, got {margin_pt}pt"
+        );
+    }
+}
+
+/// An empty header paragraph that fits its band leaves the declared margin,
+/// which is Word's own default: one empty Header paragraph 36pt below a 72pt
+/// margin.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_empty_header_paragraph_inside_its_band_leaves_the_margin() {
+    let margin_pt: f64 =
+        header_top_margin_pt(36.0, 72.0, vec![empty_header_paragraph(arial(11.0))]);
+    assert!(
+        (margin_pt - 72.0).abs() < 0.001,
+        "an empty 11pt line in a 36pt band must keep the 72pt margin, got {margin_pt}pt"
+    );
+}
+
+/// An empty paragraph's exact line is its height, whatever its mark's face.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_empty_header_paragraph_reserves_its_exact_line() {
+    for mark in [arial(11.0), TextStyle::default()] {
+        let mut paragraph = empty_header_paragraph(mark.clone());
+        paragraph.style.line_spacing = Some(crate::ir::LineSpacing::Exact(100.0));
+        let margin_pt: f64 = header_top_margin_pt(6.0, 36.0, vec![paragraph]);
+        assert!(
+            (margin_pt - 106.0).abs() < 0.001,
+            "a 100pt exact empty line 6pt below the page top must start the body \
+             at 106pt, got {margin_pt}pt for {mark:?}"
+        );
+    }
+}
+
+/// Once a trailing empty paragraph grows the band, the header's first baseline
+/// takes Word's full ascent seat instead of a clamped one.
+///
+/// The band shift that seats it is capped at the room the band leaves below
+/// the drawn story. In a 28.8pt band, three 12pt lines left none, so the
+/// first line sat on the compiler's cap-height seat: in the scraped
+/// specification with `w:top` 64.8pt, 3.47pt above Word's.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_trailing_empty_header_paragraph_leaves_room_for_the_first_line_seat() {
+    if natural_header_line_pt(arial(12.0)).is_none() {
+        return;
+    }
+    let mut paragraphs = arial_header_lines(&["One", "Two", "Three"]);
+    paragraphs.push(empty_header_paragraph(arial(12.0)));
+    let doc = doc_with_header(Some(36.0), 64.8, paragraphs);
+    let first_baseline_pt: f64 = *baselines_of(&doc, "One")
+        .first()
+        .expect("the first header line is placed");
+    let expected_pt: f64 = 36.0 + 12.0 * arial_header_line_ascent_em();
+    assert!(
+        (first_baseline_pt - expected_pt).abs() < 0.05,
+        "the first header baseline must sit one Arial ascent below the 36pt \
+         header line at {expected_pt}pt, got {first_baseline_pt}pt"
+    );
+}
+
 /// docxide-pdf `first-header-no-minimum-control`, unmodified: Word starts the
 /// body below the first-page header's 160pt exact line.
 ///

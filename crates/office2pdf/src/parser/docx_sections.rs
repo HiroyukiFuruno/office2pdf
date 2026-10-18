@@ -1238,7 +1238,8 @@ fn extract_docx_footer(
         })
 }
 
-/// Resolve a header or footer's runs against `w:docDefaults/w:rPrDefault`.
+/// Resolve a header or footer's runs, and its empty paragraphs' marks, against
+/// `w:docDefaults/w:rPrDefault`.
 ///
 /// Header and footer parts are read from the archive before the stylesheet is,
 /// so their runs were left with only the properties they state themselves and
@@ -1258,6 +1259,9 @@ fn apply_doc_default_text_style(
         return;
     };
     for paragraph in &mut header_footer.paragraphs {
+        if let Some(mark) = paragraph.style.paragraph_mark_text_style.as_deref_mut() {
+            *mark = merge_text_style(mark, Some(doc_default_style));
+        }
         for element in &mut paragraph.elements {
             match element {
                 HFInline::Run(run) => {
@@ -1370,6 +1374,20 @@ fn convert_hf_paragraph(
             Some(inline) => elements.push(inline),
             None => elements.extend(field_state.cached_result.drain(..).map(HFInline::Run)),
         }
+    }
+
+    // Word gives an empty paragraph a line of its own, sized from the
+    // paragraph mark, and the header's height counts it (issue #2056). The
+    // mark resolves through the run cascade, as a body paragraph's does
+    // (issue #1700).
+    if elements.is_empty() {
+        style.paragraph_mark_text_style = Some(Box::new(resolve_run_style(
+            &paragraph.property.run_property,
+            false,
+            resolved_style,
+            styles.style_map,
+            styles.theme_fonts,
+        )));
     }
 
     HeaderFooterParagraph {
