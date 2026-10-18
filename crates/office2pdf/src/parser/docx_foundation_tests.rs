@@ -421,7 +421,11 @@ fn test_plain_text_has_only_docx_default_font() {
     assert!(run.style.italic.is_none());
     assert!(run.style.underline.is_none());
     assert!(run.style.strikethrough.is_none());
-    assert!(run.style.font_size.is_none());
+    assert_eq!(
+        run.style.font_size,
+        Some(10.0),
+        "the package states no `w:sz`, so the run takes Word's 10pt (issue #2234)"
+    );
     assert!(run.style.letter_spacing.is_none());
     assert!(run.style.color.is_none());
     assert_eq!(

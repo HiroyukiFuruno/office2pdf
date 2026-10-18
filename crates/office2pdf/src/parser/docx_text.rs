@@ -31,6 +31,13 @@ const WORD_DEFAULT_THEME_MINOR_FONT: &str = "Aptos";
 /// The `w:sz` of Word's built-in document defaults, in half-points: 12pt.
 const WORD_BUILT_IN_FONT_SIZE_HALF_POINTS: usize = 24;
 
+/// The size Word sets text in when a styles part exists but nothing in the
+/// run's cascade states a `w:sz`, in points: 20 half-points. ECMA-376 leaves
+/// that size to the application. docxide-pdf's Word references embed such
+/// runs as Tahoma 10 under a `Normal` that states only `w:szCs="24"`, which
+/// sizes complex-script text alone (issue #2234).
+pub(super) const WORD_UNSTATED_FONT_SIZE_PT: f64 = 10.0;
+
 /// The `w:line` of Word's built-in document defaults, in 240ths of a line
 /// under `w:lineRule="auto"`: 1.158 lines.
 const WORD_BUILT_IN_LINE_SPACING: i32 = 278;

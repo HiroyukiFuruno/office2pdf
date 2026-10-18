@@ -4982,6 +4982,38 @@ fn an_exact_first_page_header_line_pushes_the_body_below_it() {
     );
 }
 
+/// docxide-pdf `page-header-ordinary-marker`, unmodified: no part of its
+/// styles cascade states a `w:sz`, and Word's reference embeds the first-page
+/// header and the body as Tahoma 10, where Typst's own 11pt applied
+/// (issue #2234).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn header_and_body_text_with_no_stated_size_are_set_at_ten_point() {
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/page_header_ordinary_marker.docx");
+    let (document, _warnings) = crate::parser::Parser::parse(
+        &crate::parser::docx::DocxParser,
+        fixture,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the header marker fixture should parse");
+    let generated = generate_typst(&document).expect("the fixture should generate");
+    let runs: Vec<crate::render::pdf::PlacedTextRun> =
+        crate::render::pdf::compiled_text_runs(&generated.source, 0)
+            .expect("the fixture's first page should compile");
+    for text in ["HEADER", "Following"] {
+        let run: &crate::render::pdf::PlacedTextRun = runs
+            .iter()
+            .find(|run| run.text.starts_with(text))
+            .unwrap_or_else(|| panic!("the first page should contain {text:?}"));
+        assert!(
+            (run.font_size_pt - 10.0).abs() < 1e-6,
+            "{text:?} must be set at Word's 10pt, got {}pt",
+            run.font_size_pt
+        );
+    }
+}
+
 /// docxide-pdf's `first-header-small-control` and
 /// `first-header-no-minimum-control`, unmodified: packages with no styles
 /// part, whose three Arial 12pt body paragraphs state `w:after="0"` but no
