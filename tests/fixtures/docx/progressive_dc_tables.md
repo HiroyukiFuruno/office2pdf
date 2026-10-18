@@ -12,4 +12,5 @@ No crop, flip, rotation, stroke, or wrapping. JPEG generation and reference meas
 
 Native Word 16.113.4 confirms these positions and colors. Baseline office2pdf
 adds 72pt to both image coordinates; that independent defect is tracked in
-#2115. Color corruption is tracked in #2114.
+#2115. The color corruption fixed in #2114 came from a patched zune-jpeg
+snapshot; `crates/office2pdf/tests/progressive_jpeg.rs` pins the colors.

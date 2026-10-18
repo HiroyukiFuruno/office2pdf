@@ -13,14 +13,6 @@ rust-version = "1.92"
 license = "Apache-2.0"
 repository = "https://github.com/developer0hye/office2pdf"
 
-[patch.crates-io]
-# Retain the stable-version compiler fix (#816) and backport upstream 2e540da3:
-# separate progressive DC scans must select their declared Huffman table.
-# Replace this pin when a compatible stable release includes both fixes.
-# Both crates need the same source to keep image's ZByteReaderTrait identity.
-zune-jpeg = { git = "https://github.com/developer0hye/zune-image", rev = "f256e946a0017d1577e7da553281108e4038452b" }
-zune-core = { git = "https://github.com/developer0hye/zune-image", rev = "f256e946a0017d1577e7da553281108e4038452b" }
-
 # CI test profile. The suite is bound by executing unoptimized dependencies
 # (Typst layout, font parsing, inflate), not by compiling them: optimizing only
 # the dependencies cut the Windows test run from 17.5 to 3.2 minutes while the
