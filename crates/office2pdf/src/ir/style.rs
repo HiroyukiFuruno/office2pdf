@@ -351,6 +351,37 @@ impl PairKerning {
     }
 }
 
+/// The OpenType ligature classes a run is shaped with.
+///
+/// Word states them per run in `w14:ligatures`, a Word 2010 extension whose
+/// `ST_Ligatures` values name any combination of standard (`liga`),
+/// contextual (`clig`), historical (`hlig`) and discretional (`dlig`)
+/// ligatures, or `none`. A document that states nothing gets none at all,
+/// which is not the shaping engine's own default of standard and contextual
+/// ligatures on (issue #2205).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Ligatures {
+    /// `liga`: the `fi`, `fl` and `ffi` forms a face substitutes by default.
+    pub standard: bool,
+    /// `clig`: ligatures a face substitutes only in context.
+    pub contextual: bool,
+    /// `hlig`: archaic forms such as a long-s ligature.
+    pub historical: bool,
+    /// `dlig`: decorative forms such as `ct` and `st`.
+    pub discretional: bool,
+}
+
+impl Ligatures {
+    /// No ligature of any class, which is what Word draws for a document that
+    /// states none.
+    pub const NONE: Ligatures = Ligatures {
+        standard: false,
+        contextual: false,
+        historical: false,
+        discretional: false,
+    };
+}
+
 /// Character-level formatting.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TextStyle {
@@ -408,6 +439,15 @@ pub struct TextStyle {
     /// a non-zero `letter_spacing` switches kerning off regardless — except
     /// under the RTL shaping exemption (issue #864).
     pub pair_kerning: Option<PairKerning>,
+    /// The ligature classes the source application draws in this run.
+    ///
+    /// `None` means the format states nothing, so the renderer's default
+    /// stands: XLSX never states it, and a PowerPoint slide switches standard
+    /// ligatures off for the whole document instead (issue #1058). DOCX always
+    /// resolves it, because Word's unstated answer is `Ligatures::NONE`
+    /// (issue #2205). A non-zero `letter_spacing` still switches every class
+    /// off (issue #684).
+    pub ligatures: Option<Ligatures>,
 }
 
 impl TextStyle {
@@ -466,6 +506,9 @@ impl TextStyle {
         }
         if other.pair_kerning.is_some() {
             self.pair_kerning = other.pair_kerning;
+        }
+        if other.ligatures.is_some() {
+            self.ligatures = other.ligatures;
         }
     }
 }

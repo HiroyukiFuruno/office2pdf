@@ -12,7 +12,7 @@ use crate::ir::{
     Alignment, Block, BorderLineStyle, BorderSide, Caption, CellBorder, CellVerticalAlign, Color,
     ColumnLayout, Document, DocumentLanguage, FloatingImage, FloatingImageVerticalAnchor,
     FloatingTable, FloatingTextBox, ImageData, ImageFormat, ImageParagraphIndent,
-    ImageParagraphSpacing, InlineTextBox, Insets, LineCap, LineJoin, LineSpacing, Page,
+    ImageParagraphSpacing, InlineTextBox, Insets, Ligatures, LineCap, LineJoin, LineSpacing, Page,
     PageNumbering, PairKerning, Paragraph, ParagraphStyle, Run, StyleSheet, TabAlignment,
     TabLeader, TabStop, Table, TableCell, TableOfContents, TableRow, TextDirection, TextStyle,
     VerticalTextAlign, WordCompatibilityMode,
@@ -25,10 +25,10 @@ use self::contexts::{
     BidiContext, ChartContext, ContextualSpacingContext, DocxConversionContext,
     DrawingShapeContext, DrawingTextBoxContext, DrawingTextBoxInfo, FieldContext, MathContext,
     NoteContent, NoteContext, ParagraphContextualSpacing, ParagraphMarkContext,
-    ParagraphShadingContext, PictureCropContext, SmallCapsContext, TableHeaderContext,
-    TableStyleContext, VmlTextBoxContext, VmlTextBoxInfo, WordWrapContext, WpgDrawingInfo,
-    WrapContext, build_chart_context_from_xml, build_math_context_from_xml,
-    build_note_context_from_xml, build_wrap_context_from_xml,
+    ParagraphRunLigatures, ParagraphShadingContext, PictureCropContext, RunLigatureContext,
+    SmallCapsContext, TableHeaderContext, TableStyleContext, VmlTextBoxContext, VmlTextBoxInfo,
+    WordWrapContext, WpgDrawingInfo, WrapContext, build_chart_context_from_xml,
+    build_math_context_from_xml, build_note_context_from_xml, build_wrap_context_from_xml,
     extract_column_layout_from_section_property, is_note_reference_run, read_zip_text,
     scan_column_layouts, scan_line_numbering, scan_page_borders, scan_page_numbering,
     scan_section_alignment, scan_style_paragraph_shading, scan_style_word_wrap, seq_identifier,
@@ -47,10 +47,12 @@ use self::sections::{
     HeaderFooterAssets, HeaderFooterStyleContext, SectionHeaderFooterInputs, SectionOverrides,
     build_flow_page_from_section, build_header_footer_assets,
 };
+#[cfg(test)]
+use self::styles::parse_ligatures_value;
 use self::styles::{
-    DOC_DEFAULT_STYLE_ID, PairKerningRules, ResolvedStyle, StyleMap, TabStopOverride,
-    apply_tab_stop_overrides, build_style_map, get_paragraph_style_id, merge_paragraph_style,
-    merge_text_style, resolve_doc_default_text_style,
+    DOC_DEFAULT_STYLE_ID, LigatureRules, PairKerningRules, ResolvedStyle, StyleMap,
+    TabStopOverride, apply_tab_stop_overrides, build_style_map, get_paragraph_style_id,
+    merge_paragraph_style, merge_text_style, resolve_doc_default_text_style,
 };
 use self::tables::{convert_table, convert_table_in_text_box};
 use self::text::{
@@ -262,6 +264,9 @@ struct ZipPreParseAssets {
     /// `w:kern` (issue #628).
     pair_kerning: PairKerningRules,
     /// Read from the raw `word/styles.xml` because docx-rs has no field for
+    /// `w14:ligatures` (issue #2205).
+    ligatures: LigatureRules,
+    /// Read from the raw `word/styles.xml` because docx-rs has no field for
     /// `w:lang`.
     default_language: Option<DocumentLanguage>,
     /// Whether the package has a `word/styles.xml`; one without it takes
@@ -351,6 +356,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 vml_text_boxes,
                 bidi,
                 small_caps,
+                run_ligatures: RunLigatureContext::from_xml(doc_xml.as_deref()),
                 paragraph_shading: ParagraphShadingContext::from_xml(doc_xml.as_deref()),
                 word_wraps: WordWrapContext::from_xml(doc_xml.as_deref()),
                 contextual_spacing: ContextualSpacingContext::from_xml(
@@ -384,6 +390,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 style_paragraph_backgrounds,
                 style_word_wraps,
                 pair_kerning: PairKerningRules::from_styles_xml(styles_xml.as_deref()),
+                ligatures: LigatureRules::from_styles_xml(styles_xml.as_deref()),
                 default_language,
                 styles_part_is_present: styles_xml.is_some(),
             }
@@ -403,6 +410,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 vml_text_boxes: VmlTextBoxContext::from_xml(None),
                 bidi: BidiContext::from_xml(None),
                 small_caps: SmallCapsContext::from_xml(None),
+                run_ligatures: RunLigatureContext::from_xml(None),
                 paragraph_shading: ParagraphShadingContext::from_xml(None),
                 word_wraps: WordWrapContext::from_xml(None),
                 contextual_spacing: ContextualSpacingContext::from_xml(None, None),
@@ -424,6 +432,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             style_paragraph_backgrounds: HashMap::new(),
             style_word_wraps: HashMap::new(),
             pair_kerning: PairKerningRules::default(),
+            ligatures: LigatureRules::default(),
             default_language: None,
             // docx-rs rejects a package that is not a ZIP, so nothing reads it.
             styles_part_is_present: true,
@@ -458,6 +467,7 @@ impl Parser for DocxParser {
             style_paragraph_backgrounds,
             style_word_wraps,
             pair_kerning,
+            ligatures,
             default_language,
             styles_part_is_present,
         } = build_zip_preparse_assets(data);
@@ -514,6 +524,7 @@ impl Parser for DocxParser {
             &style_paragraph_backgrounds,
             &style_word_wraps,
             &pair_kerning,
+            &ligatures,
         );
         let numberings = build_numbering_map(&docx.numberings, &style_map, &theme_fonts);
 
@@ -764,6 +775,7 @@ impl Parser for DocxParser {
                         &docx.styles,
                         &theme_fonts,
                         &pair_kerning,
+                        &ligatures,
                     )),
                     word_compatibility_mode: Some(word_compatibility_mode),
                     default_language,
@@ -1092,6 +1104,15 @@ fn resolve_run_style(
         explicit_style = combined;
     }
     merge_text_style(&explicit_style, resolved_style)
+}
+
+/// Lay a run's own `w14:ligatures` over its resolved style. A run's direct
+/// formatting outranks every style it inherits from, so this needs no merge
+/// (issue #2205).
+fn apply_direct_ligatures(style: &mut TextStyle, direct_ligatures: Option<Ligatures>) {
+    if direct_ligatures.is_some() {
+        style.ligatures = direct_ligatures;
+    }
 }
 
 /// Intermediate results from scanning a run segment for media and text boxes.
@@ -1506,14 +1527,16 @@ fn process_hyperlink_runs(
     resolved_style: Option<&ResolvedStyle>,
     style_map: &StyleMap,
     ctx: &DocxConversionContext,
+    run_ligatures: &ParagraphRunLigatures<'_>,
     runs: &mut Vec<Run>,
 ) {
     let href: Option<String> = resolve_hyperlink_url(hyperlink, hyperlinks);
     for hchild in &hyperlink.children {
         if let docx_rs::ParagraphChild::Run(run) = hchild {
             let hl_small_caps: bool = ctx.small_caps.next_is_small_caps();
+            let direct_ligatures: Option<Ligatures> = run_ligatures.next_run(run);
             let text: String = extract_run_text(run);
-            if let Some(ir_run) = build_text_run(
+            if let Some(mut ir_run) = build_text_run(
                 text,
                 &run.run_property,
                 hl_small_caps,
@@ -1522,6 +1545,7 @@ fn process_hyperlink_runs(
                 &ctx.theme_fonts,
                 href.clone(),
             ) {
+                apply_direct_ligatures(&mut ir_run.style, direct_ligatures);
                 runs.push(ir_run);
             }
         }
@@ -1600,6 +1624,7 @@ fn convert_paragraph_blocks(
     // document, so this paragraph has no break of its own: it merges into the
     // paragraph after it (issue #1710).
     let mark_is_removed: bool = ctx.paragraph_marks.next_mark_is_removed(style_id);
+    let run_ligatures: ParagraphRunLigatures<'_> = ctx.run_ligatures.next_paragraph(style_id);
 
     // Emit page break before the paragraph if requested
     if para.property.page_break_before == Some(true) {
@@ -1650,6 +1675,9 @@ fn convert_paragraph_blocks(
             ParagraphItem::Run(run) => {
                 // Advance smallCaps cursor for every <w:r> in body
                 let is_small_caps: bool = ctx.small_caps.next_is_small_caps();
+                // Taken once per docx-rs run, before the run is split, so a
+                // note reference still keeps the paragraph's runs in step.
+                let direct_ligatures: Option<Ligatures> = run_ligatures.next_run(run);
 
                 // Check for footnote/endnote reference runs
                 if is_note_reference_run(run, &ctx.notes) {
@@ -1802,7 +1830,7 @@ fn convert_paragraph_blocks(
                             let text: String =
                                 seq_field_text(&run_segment, &ctx.fields, &mut caption_identifier)
                                     .unwrap_or_else(|| extract_run_text(&run_segment));
-                            if let Some(ir_run) = build_text_run(
+                            if let Some(mut ir_run) = build_text_run(
                                 text,
                                 &run_segment.run_property,
                                 is_small_caps,
@@ -1811,6 +1839,7 @@ fn convert_paragraph_blocks(
                                 &ctx.theme_fonts,
                                 None,
                             ) {
+                                apply_direct_ligatures(&mut ir_run.style, direct_ligatures);
                                 runs.push(ir_run);
                             }
 
@@ -1854,6 +1883,7 @@ fn convert_paragraph_blocks(
                     resolved_style,
                     style_map,
                     ctx,
+                    &run_ligatures,
                     &mut runs,
                 );
             }

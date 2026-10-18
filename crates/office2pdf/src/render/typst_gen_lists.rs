@@ -1219,6 +1219,9 @@ fn intersect_text_style(left: &TextStyle, right: &TextStyle) -> TextStyle {
         pair_kerning: (left.pair_kerning == right.pair_kerning)
             .then_some(left.pair_kerning)
             .flatten(),
+        ligatures: (left.ligatures == right.ligatures)
+            .then_some(left.ligatures)
+            .flatten(),
         ..TextStyle::default()
     }
 }

@@ -409,6 +409,10 @@ pub(super) fn extract_run_style_from_json(rp: &serde_json::Value) -> TextStyle {
             .and_then(serde_json::Value::as_i64)
             .map(|twips| twips_to_pt(twips as f64)),
         pair_kerning: extract_pair_kerning(rp),
+        // docx-rs drops `w14:ligatures` from `RunProperty`, so it never
+        // reaches this JSON: `LigatureRules` reads the style levels and
+        // `RunLigatureContext` a body run's own value (issue #2205).
+        ligatures: None,
     }
 }
 

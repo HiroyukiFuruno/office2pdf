@@ -104,6 +104,20 @@ pub(super) fn write_powerpoint_ligature_state(out: &mut String) {
     let _ = writeln!(out, "#set text(ligatures: false)");
 }
 
+/// Emit the ligature default a Word document states for all of its text.
+///
+/// Every run carries its own decision, so this reaches only the text no run
+/// style does: a generated table of contents shapes its entries from bare
+/// metadata, and a VML text box's paragraphs are rebuilt without one. Left to
+/// the engine's default, a deed in docxide's scraped corpus that states no
+/// ligatures drew 99 `ti` and `fi` ligatures in its contents (issue #2205).
+pub(super) fn write_document_ligature_state(out: &mut String, ligatures: crate::ir::Ligatures) {
+    out.push_str("#set text(");
+    let mut first = true;
+    write_ligature_params(out, &mut first, ligatures);
+    out.push_str(")\n");
+}
+
 /// Emit the contextual Typst helpers used by fixed-page (PowerPoint) text.
 ///
 /// A word stays one shaped item, preserving its kerning and PDF text mapping.
@@ -6062,7 +6076,10 @@ fn collect_formatting_wrappers(run: &Run) -> Vec<String> {
 /// when text properties are present, or the escaped text directly (with a
 /// `#[...]` safety wrapper when needed to prevent Typst syntax ambiguity).
 fn write_run_content(out: &mut String, source: &str, escaped: &str, style: &TextStyle) {
-    if has_text_properties(style) || needs_kerning_wrapper(style, escaped, source) {
+    if has_text_properties(style)
+        || needs_kerning_wrapper(style, escaped, source)
+        || needs_ligature_wrapper(style, escaped)
+    {
         out.push_str("#text(");
         write_text_params_for_run(out, style, escaped, source);
         out.push_str(")[");
@@ -6256,7 +6273,8 @@ fn write_text_params_inner(out: &mut String, style: &TextStyle, kerning_text: Ke
     if let Some(ref color) = style.color {
         write_param(out, &mut first, &format_run_fill(color, style.color_alpha));
     }
-    if let Some(spacing) = effective_letter_spacing(style, kerning_text) {
+    let tracking: Option<f64> = effective_letter_spacing(style, kerning_text);
+    if let Some(spacing) = tracking {
         write_param(
             out,
             &mut first,
@@ -6279,6 +6297,11 @@ fn write_text_params_inner(out: &mut String, style: &TextStyle, kerning_text: Ke
             write_param(out, &mut first, "ligatures: false");
         }
     }
+    if !tracking.is_some_and(|spacing| spacing != 0.0)
+        && let Some(ligatures) = style.ligatures
+    {
+        write_ligature_params(out, &mut first, ligatures);
+    }
     if let Some(BaselineShiftEm(shift_em)) = style.baseline_shift {
         // Typst's text baseline parameter is positive downward, opposite to
         // DrawingML. Resolve against the effective run size when available.
@@ -6290,6 +6313,37 @@ fn write_text_params_inner(out: &mut String, style: &TextStyle, kerning_text: Ke
     }
     if let Some(param) = kerning_param(style, kerning_text) {
         write_param(out, &mut first, &param);
+    }
+}
+
+/// The ligature classes a run states, as Typst parameters (issue #2205).
+///
+/// `ligatures:` is always written, because a stated answer must hold whatever
+/// an enclosing `#set text` says — a Word text box inside a slide-like fixed
+/// group sits under the PowerPoint rule. Typst switches `liga` and `clig`
+/// together, so the standard class decides it: Word offers contextual
+/// ligatures only together with standard ones, and a lone `clig` request is
+/// dropped rather than letting it fuse every `fi` the way the standard class
+/// would. Historical and discretionary ligatures are off unless requested.
+///
+/// A document that shapes right-to-left keeps the standard class on. Word
+/// joins the lam-alef of Arabic text in a document that states no ligatures,
+/// and a face that encodes it under `liga` loses it with the feature off: the
+/// Word export of docxide's scraped Arabic article draws 42, and the DejaVu
+/// Sans that sets its Arabic here kept 10 of them with the feature off. The
+/// exemption is the kerning rule's (see [`with_rtl_shaping_exemption`]), so
+/// it covers every run of the document for the same bidi reason.
+fn write_ligature_params(out: &mut String, first: &mut bool, ligatures: crate::ir::Ligatures) {
+    write_param(
+        out,
+        first,
+        &format!("ligatures: {}", standard_ligatures_apply(ligatures)),
+    );
+    if ligatures.historical {
+        write_param(out, first, "historical-ligatures: true");
+    }
+    if ligatures.discretional {
+        write_param(out, first, "discretionary-ligatures: true");
     }
 }
 
@@ -6831,6 +6885,23 @@ fn needs_kerning_wrapper(style: &TextStyle, escaped: &str, shaped: &str) -> bool
     !escaped.is_empty()
         && kerning_param(style, KerningText::Known { escaped, shaped })
             .is_some_and(|param| param.ends_with("false"))
+}
+
+/// Whether a run needs a `#text(...)` of its own purely to state ligatures.
+///
+/// The same reasoning as [`needs_kerning_wrapper`]: bare text takes the
+/// engine's default of standard ligatures on and the other classes off, which
+/// is wrong for a Word run that states anything else (issue #2205).
+fn needs_ligature_wrapper(style: &TextStyle, escaped: &str) -> bool {
+    !escaped.is_empty()
+        && style.ligatures.is_some_and(|ligatures| {
+            !standard_ligatures_apply(ligatures) || ligatures.historical || ligatures.discretional
+        })
+}
+
+/// Whether a run's text is shaped with the standard ligature class.
+fn standard_ligatures_apply(ligatures: crate::ir::Ligatures) -> bool {
+    ligatures.standard || rtl_shaping_exemption_is_active()
 }
 
 pub(super) fn write_param(out: &mut String, first: &mut bool, param: &str) {
