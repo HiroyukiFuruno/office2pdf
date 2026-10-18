@@ -690,8 +690,10 @@ mod integration {
                 let mut padded = data[offset..offset + length].to_vec();
                 padded.resize(length.div_ceil(4) * 4, 0);
                 let sum = padded
-                    .chunks_exact(4)
-                    .map(|word| u32::from_be_bytes([word[0], word[1], word[2], word[3]]))
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|word| u32::from_be_bytes(*word))
                     .fold(0u32, u32::wrapping_add);
                 assert_eq!(
                     sum,
