@@ -390,6 +390,38 @@ fn test_reference_digit_advance_em_is_bold_aware_only_where_measured() {
     }
 }
 
+/// Tahoma is a Normal font whose substitute is digit-incompatible: Liberation
+/// Sans advances its digits 0.556em against Tahoma's 0.5459em, which rounds a
+/// 10pt column unit to 6pt where Excel prints 5pt. The reference values are
+/// the `hmtx` advances of the Tahoma and Tahoma Bold faces a Microsoft Word
+/// export embeds, so a host without Tahoma keeps Excel's column grid at both
+/// weights (issue #2235).
+#[test]
+fn tahoma_digit_advances_are_pinned_at_both_weights() {
+    let regular: f64 = reference_digit_advance_em("Tahoma", false).unwrap();
+    let bold: f64 = reference_digit_advance_em("Tahoma", true).unwrap();
+    assert!((regular - 1118.0 / 2048.0).abs() < 1e-9);
+    assert!((bold - 1304.0 / 2048.0).abs() < 1e-9);
+
+    for (size_pt, regular_unit_pt, bold_unit_pt) in [
+        (9.0, 5.0, 6.0),
+        (10.0, 5.0, 6.0),
+        (11.0, 6.0, 7.0),
+        (12.0, 7.0, 8.0),
+    ] {
+        assert_eq!(
+            column_unit_pt("Tahoma", size_pt, false),
+            regular_unit_pt,
+            "Tahoma {size_pt}pt"
+        );
+        assert_eq!(
+            column_unit_pt("Tahoma", size_pt, true),
+            bold_unit_pt,
+            "Tahoma Bold {size_pt}pt"
+        );
+    }
+}
+
 /// Families outside the reference table resolve their digit advance from the
 /// real face `hmtx`, exactly as Excel measures the face it resolves. The
 /// embedded Libertinus Serif face makes this deterministic on every target:

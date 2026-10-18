@@ -105,5 +105,6 @@ apart. Parser and compiled-layout regressions check both.
 [docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/page-header-ordinary-marker),
 Apache-2.0. Nothing in its styles cascade states a `w:sz`: `w:docDefaults`
 names Times New Roman, and `Normal` names Tahoma with only `w:szCs="24"`.
-Native Word sets the first-page header and the body text in Tahoma 10, and a
-compiled-layout regression checks that both are set at 10pt.
+Native Word sets the first-page header and the body text in Tahoma 10.
+Compiled-layout regressions check that both are set at 10pt, and that both
+paint in Tahoma or one of its sans stand-ins rather than the default serif.

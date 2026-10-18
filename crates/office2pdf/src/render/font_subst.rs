@@ -773,6 +773,12 @@ fn table_entry(normalized_family: &str) -> Option<(FamilyClass, &'static [&'stat
         "courier new" => (Monospace, &["Liberation Mono", "Cousine"]),
         "comic sans ms" => (SansSerif, &["Comic Neue"]),
         "verdana" => (SansSerif, &["DejaVu Sans"]),
+        // Tahoma is Verdana's narrower sibling, so it takes Arial's chain, not
+        // Verdana's. Over the lines a Word export set in Tahoma 10 in the
+        // docxide-pdf cases of issue #2235, Liberation Sans runs 2.9% wide and
+        // DejaVu Sans 13.2%. LibreOffice's VCL.xcu also substitutes Tahoma with
+        // Arial-metric faces, and docxide-pdf paints it in Liberation Sans.
+        "tahoma" => (SansSerif, &["Liberation Sans", "Arimo"]),
         "georgia" => (Serif, &["DejaVu Serif"]),
         "consolas" => (Monospace, &["Inconsolata"]),
         "trebuchet ms" => (SansSerif, &["Ubuntu"]),
