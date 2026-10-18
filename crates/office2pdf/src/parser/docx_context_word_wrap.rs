@@ -1,11 +1,12 @@
 //! Per-paragraph `w:wordWrap` recovered from the raw document XML.
 //!
-//! The published `docx-rs` does not parse `w:pPr/w:wordWrap`; only the
-//! workspace's patched fork does. `cargo publish` verifies the packaged crate
-//! against the published dependency graph, where `[patch.crates-io]` does not
-//! apply, so reading the fork's field made the crate unpublishable — the
+//! Upstream `docx-rs` does not parse `w:pPr/w:wordWrap`. When the fork that
+//! does was patched in through `[patch.crates-io]`, which never reaches a
+//! published crate, reading its field made the crate unpublishable — the
 //! v0.6.6 release's crates.io job failed on exactly that (issue #1041).
-//! Scanning the raw XML keeps the behaviour of issue #730 without the fork.
+//! Scanning the raw XML keeps the behaviour of issue #730 independent of
+//! which `docx-rs` build is linked, even though the `office2pdf-docx-rs`
+//! dependency now parses the element too.
 //!
 //! The scan counts the paragraph sequence of [`super::paragraph_cursor`], so a
 //! text box's `mc:Fallback` copy cannot shift the property onto a later

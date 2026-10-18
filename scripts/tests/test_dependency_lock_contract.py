@@ -57,6 +57,26 @@ class DependencyLockContractTest(unittest.TestCase):
                 f"{name} must expose its exact Git revision in Cargo.lock",
             )
 
+    def test_published_crates_resolve_their_direct_dependencies_from_the_registry(self) -> None:
+        # [patch.crates-io] never reaches a published crate. 0.9.0 patched its
+        # docx-rs fork in this way, so its crates.io build used upstream docx-rs
+        # and rejected minimal DOCX packages the workspace tests passed.
+        manifest = tomllib.loads((PROJECT_ROOT / "Cargo.toml").read_text())
+        patched = set(manifest.get("patch", {}).get("crates-io", {}))
+        for crate_manifest in sorted(PROJECT_ROOT.glob("crates/*/Cargo.toml")):
+            crate = tomllib.loads(crate_manifest.read_text())
+            if crate["package"].get("publish", True) is False:
+                continue
+            for table in ("dependencies", "build-dependencies", "dev-dependencies"):
+                for key, spec in crate.get(table, {}).items():
+                    package = spec.get("package", key) if isinstance(spec, dict) else key
+                    self.assertNotIn(
+                        package,
+                        patched,
+                        f"{crate_manifest.relative_to(PROJECT_ROOT)} [{table}] {key}: "
+                        "depend on a published crate instead of a [patch.crates-io] fork",
+                    )
+
     def test_workflow_dependency_commands_refuse_lockfile_updates(self) -> None:
         for relative_path in (
             ".github/workflows/ci.yml",
@@ -106,8 +126,8 @@ class ForkPublishWorkflowTest(unittest.TestCase):
 
     A `[patch.crates-io]` entry never applies to a published crate, so 0.9.0
     built from crates.io used upstream docx-rs and rejected the minimal DOCX
-    packages its fork tolerates. The forks are to be published under their own
-    names through this workflow; this pins how, because it holds the crates.io token.
+    packages its fork tolerates. The forks are published under their own names
+    through this workflow; this pins how, because it holds the crates.io token.
     """
 
     WORKFLOW = PROJECT_ROOT / ".github/workflows/publish-fork.yml"

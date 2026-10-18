@@ -1063,11 +1063,11 @@ xlsx_fixture_tests!(
     "poi/FormulaEvalTestData_Copy.xlsx"
 );
 
-// --- Upstream panic safety (patched umya-spreadsheet) ------------------------
+// --- Upstream panic safety (forked umya-spreadsheet) ------------------------
 // Related: #83
 
 /// Files that previously panicked in umya-spreadsheet now convert successfully
-/// after the fork fix (developer0hye/umya-spreadsheet fix/panic-safety-v2).
+/// after the fork fix, published as `office2pdf-umya-spreadsheet`.
 ///
 /// All 21 previously-panicking files now produce valid PDFs.
 #[test]

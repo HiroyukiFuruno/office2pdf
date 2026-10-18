@@ -993,22 +993,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "780955b8b195a21ab8e4ac6b60dd1dbdcec1dc6c51c0617964b08c81785e12c9"
 
 [[package]]
-name = "docx-rs"
-version = "0.4.22"
-source = "git+https://github.com/developer0hye/docx-rs.git?rev=71954c60f6a90c0e8dc637b8d8e8876310b29f48#71954c60f6a90c0e8dc637b8d8e8876310b29f48"
-dependencies = [
- "base64",
- "crc32fast",
- "image",
- "quick-xml 0.41.0",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.18",
- "zip 8.6.0",
-]
-
-[[package]]
 name = "ecb"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2481,7 +2465,6 @@ version = "0.9.0"
 dependencies = [
  "comemo",
  "criterion",
- "docx-rs",
  "getrandom 0.2.17",
  "getrandom 0.3.4",
  "html5ever",
@@ -2489,6 +2472,8 @@ dependencies = [
  "lopdf 0.45.0",
  "mailparse",
  "markup5ever_rcdom",
+ "office2pdf-docx-rs",
+ "office2pdf-umya-spreadsheet",
  "paste",
  "pdf-extract",
  "png",
@@ -2503,7 +2488,6 @@ dependencies = [
  "typst-kit",
  "typst-layout",
  "typst-pdf",
- "umya-spreadsheet",
  "unicode-normalization",
  "wasm-bindgen",
  "wasm-bindgen-test",
@@ -2517,11 +2501,57 @@ version = "0.9.0"
 dependencies = [
  "anyhow",
  "clap",
- "docx-rs",
  "lopdf 0.45.0",
  "office2pdf",
+ "office2pdf-docx-rs",
  "rayon",
  "tiny_http",
+]
+
+[[package]]
+name = "office2pdf-docx-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e150763928e42b066e9c510eff540f51688f7f28ac476adc818063cf718f8d85"
+dependencies = [
+ "base64",
+ "crc32fast",
+ "image",
+ "quick-xml 0.41.0",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.18",
+ "zip 8.6.0",
+]
+
+[[package]]
+name = "office2pdf-umya-spreadsheet"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0017a17477eb5cf3095fd4dd7a2b26068788be4956a96cdd7fb22db34196a8d6"
+dependencies = [
+ "aes 0.8.4",
+ "ahash",
+ "base64",
+ "byteorder",
+ "cbc 0.1.2",
+ "cfb",
+ "chrono",
+ "encoding_rs",
+ "fancy-regex 0.14.0",
+ "getrandom 0.2.17",
+ "hmac",
+ "html_parser",
+ "imagesize",
+ "lazy_static",
+ "md-5 0.10.6",
+ "quick-xml 0.41.0",
+ "regex",
+ "sha2 0.10.9",
+ "thin-vec",
+ "thousands",
+ "zip 2.4.2",
 ]
 
 [[package]]
@@ -4410,34 +4440,6 @@ name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
-
-[[package]]
-name = "umya-spreadsheet"
-version = "2.3.3"
-source = "git+https://github.com/developer0hye/umya-spreadsheet.git?branch=fix%2Fpanic-safety-v2#3e001dcbdbf2c490e93724af6f502560a3d7d766"
-dependencies = [
- "aes 0.8.4",
- "ahash",
- "base64",
- "byteorder",
- "cbc 0.1.2",
- "cfb",
- "chrono",
- "encoding_rs",
- "fancy-regex 0.14.0",
- "getrandom 0.2.17",
- "hmac",
- "html_parser",
- "imagesize",
- "lazy_static",
- "md-5 0.10.6",
- "quick-xml 0.41.0",
- "regex",
- "sha2 0.10.9",
- "thin-vec",
- "thousands",
- "zip 2.4.2",
-]
 
 [[package]]
 name = "unic-langid"
