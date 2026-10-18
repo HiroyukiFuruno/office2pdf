@@ -91,3 +91,11 @@ PDFs remain external; source-crop and placement defects are tracked separately.
 Apache-2.0. Its first-page header is one 160pt exact line 6pt below the page
 top. Native Word starts the body at 166pt, and a compiled-layout regression
 checks that body baseline.
+
+`first_header_small_control.docx` is the unmodified synthetic
+`cases/first-header-small-control/input.docx` from
+[docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/first-header-small-control),
+Apache-2.0. Like `first_header_exact_line.docx`, it has no styles part: its
+header run states no face or size, and its Arial 12pt body lines state no
+`w:line`. Native Word sets the run in Aptos 12pt and the body lines 16pt
+apart. Parser and compiled-layout regressions check both.

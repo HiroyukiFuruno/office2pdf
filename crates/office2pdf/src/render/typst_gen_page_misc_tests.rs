@@ -4982,6 +4982,54 @@ fn an_exact_first_page_header_line_pushes_the_body_below_it() {
     );
 }
 
+/// docxide-pdf's `first-header-small-control` and
+/// `first-header-no-minimum-control`, unmodified: packages with no styles
+/// part, whose three Arial 12pt body paragraphs state `w:after="0"` but no
+/// `w:line`. Word spaces them at its built-in `w:line="278"` multiple, 16pt
+/// apart, where single spacing advanced Arial's 13.80pt (issue #2215).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn body_lines_without_a_styles_part_take_words_built_in_pitch() {
+    let fixtures: [(&[u8], [f64; 3]); 2] = [
+        (
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/first_header_small_control.docx"
+            ),
+            [47.27, 63.27, 79.30],
+        ),
+        (
+            include_bytes!("../../../../tests/fixtures/docx/docxide/first_header_exact_line.docx"),
+            [177.35, 193.35, 209.35],
+        ),
+    ];
+    for (fixture, word_baselines_pt) in fixtures {
+        let (document, _warnings) = crate::parser::Parser::parse(
+            &crate::parser::docx::DocxParser,
+            fixture,
+            &crate::config::ConvertOptions::default(),
+        )
+        .expect("the first-page header fixture should parse");
+        let generated = generate_typst(&document).expect("the fixture should generate");
+        let runs: Vec<crate::render::pdf::PlacedTextRun> =
+            crate::render::pdf::compiled_text_runs(&generated.source, 0)
+                .expect("the fixture's first page should compile");
+        for (text, word_baseline_pt) in ["Before", "Minimum", "Second"]
+            .into_iter()
+            .zip(word_baselines_pt)
+        {
+            let run: &crate::render::pdf::PlacedTextRun = runs
+                .iter()
+                .find(|run| run.text == text)
+                .unwrap_or_else(|| panic!("the first page should contain {text:?}"));
+            assert!(
+                (run.baseline_pt - word_baseline_pt).abs() < 0.5,
+                "{text:?} must sit on Word's {word_baseline_pt}pt baseline, got {}pt",
+                run.baseline_pt
+            );
+        }
+    }
+}
+
 /// An inherited floating header table must leave enough room for a continuous
 /// section's first body lines on the page where its rendered break lands.
 #[cfg(not(target_arch = "wasm32"))]

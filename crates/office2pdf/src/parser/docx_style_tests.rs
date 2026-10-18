@@ -906,6 +906,278 @@ fn test_doc_default_falls_back_to_words_face_only_when_none_resolves() {
     }
 }
 
+/// A package of `[Content_Types].xml`, relationships and `word/document.xml`,
+/// plus `word/theme/theme1.xml` when one is given: no styles part, the shape
+/// of the docxide-pdf synthetic cases issue #2215 measured.
+fn build_docx_without_styles_part(body_xml: &str, theme_xml: Option<&str>) -> Vec<u8> {
+    use std::io::Write;
+
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = zip::write::FileOptions::default();
+    let theme_override: &str = if theme_xml.is_some() {
+        r#"<Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>"#
+    } else {
+        ""
+    };
+    let theme_relationship: &str = if theme_xml.is_some() {
+        r#"<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>"#
+    } else {
+        ""
+    };
+    let parts: Vec<(&str, String)> = vec![
+        (
+            "[Content_Types].xml",
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  {theme_override}
+</Types>"#
+            ),
+        ),
+        (
+            "_rels/.rels",
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>"#
+                .to_string(),
+        ),
+        (
+            "word/_rels/document.xml.rels",
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  {theme_relationship}
+</Relationships>"#
+            ),
+        ),
+        (
+            "word/document.xml",
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    {body_xml}
+    <w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>
+  </w:body>
+</w:document>"#
+            ),
+        ),
+    ];
+    for (name, contents) in parts
+        .iter()
+        .map(|(name, contents)| (*name, contents.as_str()))
+        .chain(theme_xml.map(|theme| ("word/theme/theme1.xml", theme)))
+    {
+        zip.start_file(name, options).unwrap();
+        zip.write_all(contents.as_bytes()).unwrap();
+    }
+    zip.finish().unwrap().into_inner()
+}
+
+/// The body paragraph or table-cell paragraph whose runs read `text`.
+fn paragraph_with_text<'a>(blocks: &'a [Block], text: &str) -> Option<&'a Paragraph> {
+    blocks.iter().find_map(|block| match block {
+        Block::Paragraph(paragraph) => paragraph
+            .runs
+            .iter()
+            .any(|run| run.text == text)
+            .then_some(paragraph),
+        Block::Table(table) => table
+            .rows
+            .iter()
+            .flat_map(|row| &row.cells)
+            .find_map(|cell| paragraph_with_text(&cell.content, text)),
+        _ => None,
+    })
+}
+
+fn parsed_paragraph_with_text<'a>(doc: &'a Document, text: &str) -> &'a Paragraph {
+    let Page::Flow(page) = &doc.pages[0] else {
+        panic!("Expected FlowPage");
+    };
+    paragraph_with_text(&page.content, text)
+        .unwrap_or_else(|| panic!("a paragraph reading {text:?} should be parsed"))
+}
+
+/// A styles part that states no document defaults, as #1196's fixture does.
+const STYLES_WITHOUT_DOC_DEFAULTS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+  </w:style>
+</w:styles>"#;
+
+/// Word fills a package with no styles part from its own built-in defaults:
+/// every docxide-pdf reference of that shape embeds `Aptos` at 12pt for a run
+/// that states no `w:rFonts` or `w:sz` (issue #2215). A styles part that
+/// states nothing keeps #1196's serif instead, and direct formatting still
+/// wins over the built-in defaults.
+#[test]
+fn a_package_without_a_styles_part_takes_words_built_in_run_defaults() {
+    let body_xml = r#"<w:p><w:r><w:t>Plain words</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="20"/></w:rPr><w:t>Own face</w:t></w:r></w:p>
+      <w:p><w:r><w:rPr><w:sz w:val="32"/></w:rPr><w:t>Own size</w:t></w:r></w:p>"#;
+
+    let data = build_docx_without_styles_part(body_xml, None);
+    let (doc, _warnings) = DocxParser
+        .parse(&data, &ConvertOptions::default())
+        .expect("the package without a styles part parses");
+    for (text, family, size) in [
+        ("Plain words", "Aptos", 12.0),
+        ("Own face", "Arial", 10.0),
+        ("Own size", "Aptos", 16.0),
+    ] {
+        let style = &parsed_paragraph_with_text(&doc, text).runs[0].style;
+        assert_eq!(
+            (style.font_family.as_deref(), style.font_size),
+            (Some(family), Some(size)),
+            "{text:?} must resolve {family} {size}pt in a package without a styles part"
+        );
+    }
+
+    let styled = super::page_feature_tests::build_docx_with_raw_styles(
+        STYLES_WITHOUT_DOC_DEFAULTS,
+        body_xml,
+    );
+    let (doc, _warnings) = DocxParser
+        .parse(&styled, &ConvertOptions::default())
+        .expect("the package with an empty styles part parses");
+    let style = &parsed_paragraph_with_text(&doc, "Plain words").runs[0].style;
+    assert_eq!(
+        (style.font_family.as_deref(), style.font_size),
+        (Some("Times New Roman"), None),
+        "a styles part that states no defaults keeps Word's serif fallback"
+    );
+}
+
+/// Word's built-in defaults name the theme's minor font, so a package that has
+/// a theme part but no styles part takes that face; only the theme-less form
+/// is measured (issue #2215), where Word's own theme supplies Aptos.
+#[test]
+fn a_package_without_a_styles_part_takes_its_themes_minor_font() {
+    let theme_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  <a:themeElements><a:fontScheme name="Office">
+    <a:majorFont><a:latin typeface="Cambria"/></a:majorFont>
+    <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+  </a:fontScheme></a:themeElements>
+</a:theme>"#;
+    let data = build_docx_without_styles_part(
+        r#"<w:p><w:r><w:t>Plain words</w:t></w:r></w:p>"#,
+        Some(theme_xml),
+    );
+    let (doc, _warnings) = DocxParser
+        .parse(&data, &ConvertOptions::default())
+        .expect("the package with only a theme part parses");
+    let style = &parsed_paragraph_with_text(&doc, "Plain words").runs[0].style;
+    assert_eq!(
+        (style.font_family.as_deref(), style.font_size),
+        (Some("Calibri"), Some(12.0))
+    );
+}
+
+/// Word's built-in defaults also space lines at `w:line="278"`
+/// `w:lineRule="auto"`. In the issue's reference, 12pt Arial lines with
+/// `w:after="0"` and no `w:line` advance 16.00pt and 16.03pt, 1.16 times
+/// Arial's 13.80pt line; in docxide-pdf case109, 14pt Times New Roman lines
+/// advance 18.75pt and 18.50pt, 1.16 times its 16.10pt line (issue #2215).
+/// The multiple applies wherever a paragraph states no `w:line`, in table
+/// cells too; a stated rule still wins, and a styles part that states nothing
+/// stays single.
+#[test]
+fn a_package_without_a_styles_part_spaces_lines_at_words_built_in_multiple() {
+    let body_xml = r#"<w:p><w:r><w:t>No spacing</w:t></w:r></w:p>
+      <w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:t>Gapless</w:t></w:r></w:p>
+      <w:p><w:pPr><w:spacing w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:t>Single</w:t></w:r></w:p>
+      <w:p><w:pPr><w:spacing w:line="300" w:lineRule="exact"/></w:pPr><w:r><w:t>Exact</w:t></w:r></w:p>
+      <w:tbl><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc>
+        <w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:t>In a cell</w:t></w:r></w:p>
+      </w:tc></w:tr></w:tbl>"#;
+    let built_in_multiple: f64 = 278.0 / 240.0;
+
+    let data = build_docx_without_styles_part(body_xml, None);
+    let (doc, _warnings) = DocxParser
+        .parse(&data, &ConvertOptions::default())
+        .expect("the package without a styles part parses");
+    for (text, expected) in [
+        ("No spacing", LineSpacing::Proportional(built_in_multiple)),
+        ("Gapless", LineSpacing::Proportional(built_in_multiple)),
+        ("Single", LineSpacing::Proportional(1.0)),
+        ("Exact", LineSpacing::Exact(15.0)),
+        ("In a cell", LineSpacing::Proportional(built_in_multiple)),
+    ] {
+        let actual: Option<LineSpacing> = parsed_paragraph_with_text(&doc, text).style.line_spacing;
+        let matches: bool = match (actual, expected) {
+            (Some(LineSpacing::Proportional(actual)), LineSpacing::Proportional(expected))
+            | (Some(LineSpacing::Exact(actual)), LineSpacing::Exact(expected)) => {
+                (actual - expected).abs() < 1e-9
+            }
+            _ => false,
+        };
+        assert!(
+            matches,
+            "{text:?} in a package without a styles part must take {expected:?}, got {actual:?}"
+        );
+    }
+    assert_eq!(
+        parsed_paragraph_with_text(&doc, "No spacing")
+            .style
+            .space_after,
+        Some(8.0),
+        "the built-in defaults keep their 8pt gap below an unspaced paragraph"
+    );
+
+    let styled = super::page_feature_tests::build_docx_with_raw_styles(
+        STYLES_WITHOUT_DOC_DEFAULTS,
+        body_xml,
+    );
+    let (doc, _warnings) = DocxParser
+        .parse(&styled, &ConvertOptions::default())
+        .expect("the package with an empty styles part parses");
+    let actual: Option<LineSpacing> = parsed_paragraph_with_text(&doc, "Gapless")
+        .style
+        .line_spacing;
+    assert!(
+        actual.is_none(),
+        "a styles part that states no line spacing keeps single lines, got {actual:?}"
+    );
+}
+
+/// The issue's own package: its first-page header run states no face or
+/// size, and Word's reference embeds it as Aptos 12pt.
+#[test]
+fn a_header_run_in_a_package_without_a_styles_part_takes_the_built_in_face() {
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/first_header_small_control.docx");
+    let (doc, _warnings) = DocxParser
+        .parse(fixture, &ConvertOptions::default())
+        .expect("the small first-page header fixture parses");
+    let Page::Flow(page) = &doc.pages[0] else {
+        panic!("Expected FlowPage");
+    };
+    let header = page
+        .first_header
+        .as_ref()
+        .expect("the fixture has a first-page header");
+    let style = header
+        .paragraphs
+        .iter()
+        .flat_map(|paragraph| &paragraph.elements)
+        .find_map(|element| match element {
+            HFInline::Run(run) if run.text == "Header" => Some(&run.style),
+            _ => None,
+        })
+        .expect("the header story holds the `Header` run");
+    assert_eq!(
+        (style.font_family.as_deref(), style.font_size),
+        (Some("Aptos"), Some(12.0))
+    );
+}
+
 #[test]
 fn test_paragraph_shading_extracted_as_background() {
     // Word paints w:pPr/w:shd behind the whole paragraph (code blocks in

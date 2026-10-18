@@ -7,14 +7,15 @@ use crate::parser::units::{half_points_to_pt, twips_to_pt};
 use crate::parser::xml_util;
 use crate::parser::xml_util::OOXML_XML_VERSION;
 
-// Word's fallback for a package that resolves no Latin face at all — no
-// `w:rFonts` in `w:docDefaults`, none on a style, none on a run, and no theme
-// slot to resolve through — is a serif, not a sans. `pdffonts` on a native
-// macOS Word 16 export of `tests/fixtures/docx/unit_test_headers.docx`, which
-// is exactly that package, embeds `TimesNewRomanPSMT` and
+// Word's fallback for a package whose styles part resolves no Latin face at
+// all — no `w:rFonts` in `w:docDefaults`, none on a style, none on a run, and
+// no theme slot to resolve through — is a serif, not a sans. `pdffonts` on a
+// native macOS Word 16 export of `tests/fixtures/docx/unit_test_headers.docx`,
+// which is exactly that package, embeds `TimesNewRomanPSMT` and
 // `TimesNewRomanPS-BoldMT`; the `Arial` this named before rendered the page
 // sans and set its 24pt `Heading1` line 11% wide — 417.41pt of visible ink
-// against the export's 375.96pt (issue #1196).
+// against the export's 375.96pt (issue #1196). A package with no styles part
+// at all takes `word_built_in_doc_defaults` instead (issue #2215).
 //
 // Unmeasured: whether a package that carries a `word/theme/theme1.xml` while
 // still naming no `w:rFonts` takes `minorHAnsi` instead. Nothing reaches the
@@ -22,6 +23,48 @@ use crate::parser::xml_util::OOXML_XML_VERSION;
 // requires one — so both readings agree on every package that has no theme
 // part, which is every fixture in the corpus of this shape.
 const WORD_COMPATIBLE_DEFAULT_FONT: &str = "Times New Roman";
+
+/// The minor (body) Latin face of the Office theme Word applies when a
+/// package carries no theme part of its own.
+const WORD_DEFAULT_THEME_MINOR_FONT: &str = "Aptos";
+
+/// The `w:sz` of Word's built-in document defaults, in half-points: 12pt.
+const WORD_BUILT_IN_FONT_SIZE_HALF_POINTS: usize = 24;
+
+/// The `w:line` of Word's built-in document defaults, in 240ths of a line
+/// under `w:lineRule="auto"`: 1.158 lines.
+const WORD_BUILT_IN_LINE_SPACING: i32 = 278;
+
+/// The document defaults Word substitutes for `w:docDefaults` when a package
+/// has no styles part at all.
+///
+/// In docxide-pdf's Word exports of packages of that shape, every text run that
+/// names no face — 25 cases, with or without a settings part, under
+/// `compatibilityMode` 14 and 15 — is set in `Aptos`, all of it at 12pt. Lines
+/// that state no `w:line` advance 1.16 times apart: 12pt Arial 16.00pt against
+/// its 13.80pt line, 14pt Times New Roman 18.75pt against 16.10pt, and two 12pt
+/// Aptos paragraphs 25.00pt apart, 8pt of it the built-in gap (issue #2215). Those
+/// are the defaults of a current Word's blank document — the `minorHAnsi`
+/// theme slot, 12pt, `w:line="278"` — so a package with a theme part takes its
+/// minor face; only the theme-less form is measured.
+///
+/// The 8pt gap below a paragraph is left out: no styles part means no
+/// `w:pPrDefault`, which `word_compatible_paragraph_space_after_pt` already
+/// answers with that gap.
+pub(super) fn word_built_in_doc_defaults(theme_fonts: &ThemeFonts) -> docx_rs::DocDefaults {
+    let family: &str = theme_fonts
+        .minor_latin
+        .as_deref()
+        .unwrap_or(WORD_DEFAULT_THEME_MINOR_FONT);
+    docx_rs::DocDefaults::new()
+        .fonts(docx_rs::RunFonts::new().ascii(family).hi_ansi(family))
+        .size(WORD_BUILT_IN_FONT_SIZE_HALF_POINTS)
+        .line_spacing(
+            docx_rs::LineSpacing::new()
+                .line(WORD_BUILT_IN_LINE_SPACING)
+                .line_rule(docx_rs::LineSpacingType::Auto),
+        )
+}
 
 /// Map a `w:jc` value onto the IR's alignment.
 ///

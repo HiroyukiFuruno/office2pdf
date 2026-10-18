@@ -57,7 +57,7 @@ use self::text::{
     extract_paragraph_style, extract_run_style, extract_run_style_id, extract_run_text,
     extract_tab_stop_overrides, insert_east_asian_auto_space, is_column_break, is_page_break,
     pair_kerning_from_half_points, parse_hex_color, parse_theme_fonts, resolve_hyperlink_url,
-    resolve_latin_theme_font_family, resolve_theme_font_family,
+    resolve_latin_theme_font_family, resolve_theme_font_family, word_built_in_doc_defaults,
 };
 #[cfg(test)]
 use self::text::{extract_pair_kerning, extract_tab_stops, resolve_highlight_color};
@@ -262,6 +262,9 @@ struct ZipPreParseAssets {
     /// Read from the raw `word/styles.xml` because docx-rs has no field for
     /// `w:lang`.
     default_language: Option<DocumentLanguage>,
+    /// Whether the package has a `word/styles.xml`; one without it takes
+    /// Word's built-in document defaults (issue #2215).
+    styles_part_is_present: bool,
 }
 
 /// Build all pre-parse contexts from the DOCX ZIP in a single pass.
@@ -380,6 +383,7 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
                 style_word_wraps,
                 pair_kerning: PairKerningRules::from_styles_xml(styles_xml.as_deref()),
                 default_language,
+                styles_part_is_present: styles_xml.is_some(),
             }
         }
         Err(_) => ZipPreParseAssets {
@@ -419,6 +423,8 @@ fn build_zip_preparse_assets(data: &[u8]) -> ZipPreParseAssets {
             style_word_wraps: HashMap::new(),
             pair_kerning: PairKerningRules::default(),
             default_language: None,
+            // docx-rs rejects a package that is not a ZIP, so nothing reads it.
+            styles_part_is_present: true,
         },
     }
 }
@@ -451,6 +457,7 @@ impl Parser for DocxParser {
             style_word_wraps,
             pair_kerning,
             default_language,
+            styles_part_is_present,
         } = build_zip_preparse_assets(data);
 
         warnings.append(&mut ctx.smartart.warnings);
@@ -475,6 +482,15 @@ impl Parser for DocxParser {
         let mut docx = docx_rs::read_docx(data).map_err(|e| {
             crate::parser::parse_err(format!("Failed to parse DOCX (docx-rs): {e}"))
         })?;
+        // docx-rs leaves `Styles` empty when it finds no styles part; the
+        // comparison keeps a part it found elsewhere through its relationship.
+        if !styles_part_is_present && docx.styles == docx_rs::Styles::new() {
+            tracing::debug!(
+                format = "DOCX",
+                "No styles part; applying Word's built-in document defaults"
+            );
+            docx.styles.doc_defaults = word_built_in_doc_defaults(&theme_fonts);
+        }
 
         let numbering_xml = zip::ZipArchive::new(std::io::Cursor::new(data))
             .ok()
