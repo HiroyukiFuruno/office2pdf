@@ -11,10 +11,11 @@ const MAX_TABLE_DEPTH: usize = 64;
 use crate::ir::{
     Alignment, Block, BorderLineStyle, BorderSide, Caption, CellBorder, CellVerticalAlign, Color,
     ColumnLayout, Document, DocumentLanguage, FloatingImage, FloatingImageVerticalAnchor,
-    FloatingTable, FloatingTextBox, ImageData, ImageFormat, ImageParagraphSpacing, InlineTextBox,
-    Insets, LineCap, LineJoin, LineSpacing, Page, PageNumbering, PairKerning, Paragraph,
-    ParagraphStyle, Run, StyleSheet, TabAlignment, TabLeader, TabStop, Table, TableCell,
-    TableOfContents, TableRow, TextDirection, TextStyle, VerticalTextAlign, WordCompatibilityMode,
+    FloatingTable, FloatingTextBox, ImageData, ImageFormat, ImageParagraphIndent,
+    ImageParagraphSpacing, InlineTextBox, Insets, LineCap, LineJoin, LineSpacing, Page,
+    PageNumbering, PairKerning, Paragraph, ParagraphStyle, Run, StyleSheet, TabAlignment,
+    TabLeader, TabStop, Table, TableCell, TableOfContents, TableRow, TextDirection, TextStyle,
+    VerticalTextAlign, WordCompatibilityMode,
 };
 use crate::parser::Parser;
 
@@ -1672,12 +1673,9 @@ fn convert_paragraph_blocks(
                             push_inline_images(
                                 out,
                                 &mut inline_images,
-                                paragraph_alignment(para),
-                                paragraph_image_spacing(
-                                    para,
-                                    resolved_style,
-                                    flow.contextual_spacing,
-                                ),
+                                para,
+                                resolved_style,
+                                flow.contextual_spacing,
                             );
                             if !runs.is_empty() {
                                 clear_paragraph_fragment_borders(
@@ -1774,12 +1772,9 @@ fn convert_paragraph_blocks(
                                     push_inline_images(
                                         out,
                                         &mut inline_images,
-                                        paragraph_alignment(para),
-                                        paragraph_image_spacing(
-                                            para,
-                                            resolved_style,
-                                            flow.contextual_spacing,
-                                        ),
+                                        para,
+                                        resolved_style,
+                                        flow.contextual_spacing,
                                     );
                                     push_paragraph_from_runs(
                                         out,
@@ -1796,12 +1791,9 @@ fn convert_paragraph_blocks(
                                     push_inline_images(
                                         out,
                                         &mut inline_images,
-                                        paragraph_alignment(para),
-                                        paragraph_image_spacing(
-                                            para,
-                                            resolved_style,
-                                            flow.contextual_spacing,
-                                        ),
+                                        para,
+                                        resolved_style,
+                                        flow.contextual_spacing,
                                     );
                                 }
                                 out.extend(media.text_box_blocks);
@@ -1874,8 +1866,9 @@ fn convert_paragraph_blocks(
     push_inline_images(
         out,
         &mut inline_images,
-        paragraph_alignment(para),
-        paragraph_image_spacing(para, resolved_style, flow.contextual_spacing),
+        para,
+        resolved_style,
+        flow.contextual_spacing,
     );
 
     if emitted_layout_break
@@ -2125,23 +2118,40 @@ fn frame_lifts_out_of_flow(frame: &docx_rs::FrameProperty) -> bool {
 fn push_inline_images(
     out: &mut Vec<Block>,
     inline_images: &mut Vec<Block>,
-    alignment: Option<Alignment>,
-    spacing: Option<ImageParagraphSpacing>,
+    para: &docx_rs::Paragraph,
+    resolved_style: Option<&ResolvedStyle>,
+    contextual_spacing: ParagraphContextualSpacing<'_>,
 ) {
+    if inline_images.is_empty() {
+        return;
+    }
+    let alignment: Option<Alignment> = paragraph_alignment(para);
+    let style: ParagraphStyle = merge_paragraph_style(
+        &extract_paragraph_style(&para.property),
+        None,
+        resolved_style,
+    );
+    let spacing: Option<ImageParagraphSpacing> =
+        paragraph_image_spacing(&style, contextual_spacing);
+    let indent: Option<ImageParagraphIndent> = paragraph_image_indent(&style);
     let mut grouped: Vec<ImageData> = Vec::new();
 
     for block in inline_images.drain(..) {
         match block {
             Block::Image(mut image) => {
-                // Inline images inherit the containing paragraph's alignment
-                // and its `w:spacing`: the picture consumes the paragraph, so
-                // the gaps Word draws around it have to travel with the
-                // picture instead (issue #499).
+                // Inline images inherit the containing paragraph's alignment,
+                // `w:spacing` and `w:ind`: the picture consumes the paragraph,
+                // so the gaps Word draws around it (issue #499) and the indents
+                // it starts from (issue #2201) have to travel with the picture
+                // instead.
                 if image.alignment.is_none() {
                     image.alignment = alignment;
                 }
                 if image.paragraph_spacing.is_none() {
                     image.paragraph_spacing = spacing;
+                }
+                if image.paragraph_indent.is_none() {
+                    image.paragraph_indent = indent;
                 }
                 grouped.push(image)
             }
@@ -2169,24 +2179,30 @@ fn paragraph_alignment(para: &docx_rs::Paragraph) -> Option<Alignment> {
 
 /// The `w:spacing` a picture paragraph contributes to the flow.
 ///
-/// Resolved through the same style merge a text paragraph uses, so spacing
+/// Read from the same style merge a text paragraph uses, so spacing
 /// inherited from `styles.xml` counts as well as direct formatting.
 fn paragraph_image_spacing(
-    para: &docx_rs::Paragraph,
-    resolved_style: Option<&ResolvedStyle>,
+    style: &ParagraphStyle,
     contextual_spacing: ParagraphContextualSpacing<'_>,
 ) -> Option<ImageParagraphSpacing> {
-    let style: ParagraphStyle = merge_paragraph_style(
-        &extract_paragraph_style(&para.property),
-        None,
-        resolved_style,
-    );
     let mut spacing = ImageParagraphSpacing {
         before: style.space_before,
         after: style.space_after,
     };
     contextual_spacing.apply(&mut spacing.before, &mut spacing.after);
     (spacing != ImageParagraphSpacing::default()).then_some(spacing)
+}
+
+/// The `w:ind` a picture paragraph places its pictures by, from the same
+/// style merge as [`paragraph_image_spacing`]: a text paragraph's indents,
+/// because Word lays an inline picture out like a glyph (issue #2201).
+fn paragraph_image_indent(style: &ParagraphStyle) -> Option<ImageParagraphIndent> {
+    let indent = ImageParagraphIndent {
+        left: style.indent_left.unwrap_or(0.0),
+        right: style.indent_right.unwrap_or(0.0),
+        first_line: style.indent_first_line.unwrap_or(0.0),
+    };
+    (indent != ImageParagraphIndent::default()).then_some(indent)
 }
 
 fn push_paragraph_from_runs(

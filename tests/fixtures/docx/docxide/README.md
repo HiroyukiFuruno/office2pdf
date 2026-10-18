@@ -122,3 +122,11 @@ the last filler line, and a compiled-layout regression checks both positions.
 empty `w:framePr` paragraph, then "Following paragraph". Native Word sets the
 following line on the first body baseline, 85.03pt, as if the frame were absent;
 a compiled-layout regression checks it.
+
+The eight `inline_picture_indent_*.docx` fixtures are the unmodified synthetic
+`cases/inline-picture-indent-*/input.docx` from
+[docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases),
+Apache-2.0, named by their `w:jc` and `w:ind` variant. Each holds one paragraph
+with only a 180×90pt inline picture and 72pt side margins. Native Word puts the
+picture where the paragraph's first line of text would start, inside its
+indents; a compiled-layout regression checks the eight left edges.

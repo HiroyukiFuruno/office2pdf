@@ -273,6 +273,7 @@ fn test_render_document_with_image() {
                 fill_rect: None,
                 shadow: None,
                 paragraph_spacing: None,
+                paragraph_indent: None,
             })],
             header: None,
             footer: None,
@@ -327,6 +328,7 @@ fn test_render_document_image_mixed_with_text() {
                     fill_rect: None,
                     shadow: None,
                     paragraph_spacing: None,
+                    paragraph_indent: None,
                 }),
                 Block::Paragraph(Paragraph {
                     style: ParagraphStyle::default(),

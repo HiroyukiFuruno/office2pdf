@@ -174,6 +174,62 @@ fn test_docx_vml_shape_image_is_emitted() {
     assert_eq!(images[0].height, Some(36.0));
 }
 
+/// A VML picture in the line takes its paragraph's `w:ind` as a DrawingML
+/// inline does, but one whose style positions it is placed by its own
+/// offsets, so the paragraph's indent must not move it (issue #2201).
+#[test]
+fn only_vml_pictures_in_the_line_take_the_paragraph_indent() {
+    let cases: [(&str, Option<ImageParagraphIndent>); 4] = [
+        (
+            "width:72pt;height:36pt",
+            Some(ImageParagraphIndent {
+                left: 36.0,
+                right: 0.0,
+                first_line: 9.0,
+            }),
+        ),
+        (
+            "position:absolute;margin-left:0;margin-top:0;width:72pt;height:36pt",
+            Some(ImageParagraphIndent::default()),
+        ),
+        (
+            "position:absolute;left:0;margin-left:35.25pt;width:72pt;height:36pt;mso-position-horizontal-relative:page",
+            Some(ImageParagraphIndent::default()),
+        ),
+        (
+            "margin-left:12pt;width:72pt;height:36pt",
+            Some(ImageParagraphIndent::default()),
+        ),
+    ];
+    for (shape_style, expected) in cases {
+        let document_xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:v="urn:schemas-microsoft-com:vml"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    <w:body>
+        <w:p>
+            <w:pPr><w:ind w:left="720" w:firstLine="180"/></w:pPr>
+            <w:r>
+                <w:pict>
+                    <v:shape id="VMLImage1" style="{shape_style}">
+                        <v:imagedata r:id="rIdImage1"/>
+                    </v:shape>
+                </w:pict>
+            </w:r>
+        </w:p>
+        <w:sectPr/>
+    </w:body>
+</w:document>"#
+        );
+        let data = build_docx_with_custom_image_document(&document_xml);
+        let (doc, _warnings) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        let images = find_images(&doc);
+        assert_eq!(images.len(), 1, "{shape_style}: one VML picture");
+        assert_eq!(images[0].paragraph_indent, expected, "{shape_style}");
+    }
+}
+
 #[test]
 fn test_docx_image_dimensions() {
     let data = build_docx_with_image(100, 80);
@@ -577,6 +633,91 @@ fn test_inline_image_inherits_paragraph_center_alignment() {
         })
         .expect("expected an inline image block");
     assert_eq!(image.alignment, Some(Alignment::Center));
+}
+
+/// A picture paragraph's `w:ind` reaches its pictures resolved the way a text
+/// paragraph's does: each attribute it states directly over its style's, and a
+/// hanging indent as a negative first line (issue #2201).
+#[test]
+fn inline_pictures_carry_their_paragraphs_resolved_indent() {
+    use docx_rs::SpecialIndentType::{FirstLine, Hanging};
+
+    let bmp_data = make_test_bmp();
+    let picture = || docx_rs::Run::new().add_image(docx_rs::Pic::new(&bmp_data).size(9525, 9525));
+    let figure_style = docx_rs::Style::new("Figure", docx_rs::StyleType::Paragraph)
+        .name("Figure")
+        .indent(Some(1440), Some(Hanging(360)), Some(240), None);
+    let indent = |left: f64, right: f64, first_line: f64| {
+        Some(ImageParagraphIndent {
+            left,
+            right,
+            first_line,
+        })
+    };
+    let cases: [(&str, docx_rs::Paragraph, Option<ImageParagraphIndent>); 5] = [
+        ("no indent", docx_rs::Paragraph::new(), None),
+        (
+            "direct first line",
+            docx_rs::Paragraph::new().indent(None, Some(FirstLine(709)), None, None),
+            indent(0.0, 0.0, 35.45),
+        ),
+        (
+            "direct left, hanging and right",
+            docx_rs::Paragraph::new().indent(Some(720), Some(Hanging(360)), Some(360), None),
+            indent(36.0, 18.0, -18.0),
+        ),
+        (
+            "style indent",
+            docx_rs::Paragraph::new().style("Figure"),
+            indent(72.0, 12.0, -18.0),
+        ),
+        (
+            // The builder always writes `w:left` and `w:right`, so all
+            // three attributes are direct here.
+            "direct indent over the style's",
+            docx_rs::Paragraph::new().style("Figure").indent(
+                Some(360),
+                Some(FirstLine(720)),
+                None,
+                None,
+            ),
+            indent(18.0, 0.0, 36.0),
+        ),
+    ];
+    for (case, paragraph, expected) in cases {
+        for picture_count in [1, 2] {
+            let paragraph = (0..picture_count).fold(paragraph.clone(), |paragraph, _| {
+                paragraph.add_run(picture())
+            });
+            let docx = docx_rs::Docx::new()
+                .add_style(figure_style.clone())
+                .add_paragraph(paragraph);
+            let mut cursor = Cursor::new(Vec::new());
+            docx.build().pack(&mut cursor).unwrap();
+            let (doc, _warnings) = DocxParser
+                .parse(&cursor.into_inner(), &ConvertOptions::default())
+                .unwrap();
+            let Page::Flow(page) = &doc.pages[0] else {
+                panic!("Expected FlowPage");
+            };
+            let indents: Vec<Option<ImageParagraphIndent>> = page
+                .content
+                .iter()
+                .flat_map(|block| match block {
+                    Block::Image(image) => vec![image.paragraph_indent],
+                    Block::InlineImages(images) => {
+                        images.iter().map(|image| image.paragraph_indent).collect()
+                    }
+                    _ => Vec::new(),
+                })
+                .collect();
+            assert_eq!(
+                indents,
+                vec![expected; picture_count],
+                "{case}, {picture_count} picture(s)"
+            );
+        }
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

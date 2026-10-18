@@ -11,13 +11,13 @@ use crate::ir::{
     ColumnLayout, Document, FixedElement, FixedElementKind, FixedPage, FloatingImage,
     FloatingImageVerticalAnchor, FloatingShape, FloatingTextBox, FlowPage, FrameAnchor,
     GradientFill, HFInline, HeaderFooter, HeaderFooterFrame, HeaderFooterShapeContent, IconShading,
-    ImageCrop, ImageData, ImageFormat, ImageParagraphSpacing, InlineTextBox, Insets,
-    LegendPosition, LineBox, LineCap, LineJoin, LineSpacing, List, ListKind, Margins, MathEquation,
-    Metadata, Page, PageNumberFormat, PageSize, PairKerning, Paragraph, ParagraphStyle,
-    PatternFill, PatternPreset, PositionedTabAlignment, PositionedTabRelativeTo, Run, Shadow,
-    Shape, ShapeKind, SheetPage, SmartArt, SparklineInfo, TabAlignment, TabLeader, TabStop, Table,
-    TableBorderPaintModel, TableCell, TableOfContents, TableRow, TextBoxData, TextBoxVerticalAlign,
-    TextDirection, TextStyle, VerticalTextAlign, WrapMode,
+    ImageCrop, ImageData, ImageFormat, ImageParagraphIndent, ImageParagraphSpacing, InlineTextBox,
+    Insets, LegendPosition, LineBox, LineCap, LineJoin, LineSpacing, List, ListKind, Margins,
+    MathEquation, Metadata, Page, PageNumberFormat, PageSize, PairKerning, Paragraph,
+    ParagraphStyle, PatternFill, PatternPreset, PositionedTabAlignment, PositionedTabRelativeTo,
+    Run, Shadow, Shape, ShapeKind, SheetPage, SmartArt, SparklineInfo, TabAlignment, TabLeader,
+    TabStop, Table, TableBorderPaintModel, TableCell, TableOfContents, TableRow, TextBoxData,
+    TextBoxVerticalAlign, TextDirection, TextStyle, VerticalTextAlign, WrapMode,
 };
 
 use self::diagrams::{
@@ -5830,7 +5830,13 @@ fn generate_block_inner(
             // around an inline figure (issues #463, #491) - so both gaps stay
             // pinned, but to the declared spacing rather than to zero, which
             // dropped the gap Word actually draws (issue #499).
-            write_image_block_open(out, img.paragraph_spacing);
+            // The picture is its paragraph's only line, so it spans that
+            // line's measure: from `left + first_line` to `right`, inside
+            // which the alignment works, as for a line of text (issue #2201).
+            let inset: Option<(f64, f64)> = img
+                .paragraph_indent
+                .map(|indent| (indent.left + indent.first_line, indent.right));
+            write_image_block_open(out, img.paragraph_spacing, inset);
             let align_str: Option<&str> = match img.alignment {
                 Some(Alignment::Center) => Some("center"),
                 Some(Alignment::Right) => Some("right"),
@@ -5867,8 +5873,26 @@ fn generate_block_inner(
                         .and_then(|last| last.paragraph_spacing)
                         .and_then(|last| last.after),
                 });
-            write_image_block_open(out, spacing);
+            // The pictures wrap like words: every line spans the paragraph's
+            // `left` to `right`, and only the first also takes `first_line`.
+            let indent: Option<ImageParagraphIndent> =
+                images.first().and_then(|first| first.paragraph_indent);
+            write_image_block_open(
+                out,
+                spacing,
+                indent.map(|indent| (indent.left, indent.right)),
+            );
             out.push('\n');
+            let first_line: Option<f64> = indent
+                .map(|indent| indent.first_line)
+                .filter(|first_line| first_line.abs() > 0.0001);
+            if let Some(first_line) = first_line {
+                let _ = write!(
+                    out,
+                    "#par(first-line-indent: (amount: {}pt, all: true))[",
+                    format_f64(first_line)
+                );
+            }
             for (index, image) in images.iter().enumerate() {
                 if index > 0 {
                     out.push(' ');
@@ -5876,6 +5900,9 @@ fn generate_block_inner(
                 out.push_str("#box[");
                 generate_image(out, image, ctx);
                 out.pop();
+                out.push(']');
+            }
+            if first_line.is_some() {
                 out.push(']');
             }
             out.push_str("\n]\n");
@@ -5981,15 +6008,33 @@ fn border_line_style_to_typst(style: BorderLineStyle) -> &'static str {
 ///
 /// Both are always written. An absent `w:spacing` means Word draws no gap, not
 /// that Typst should fall back to its 1.2em default, so `None` maps to `0pt`.
-fn write_image_block_open(out: &mut String, spacing: Option<ImageParagraphSpacing>) {
+/// A `(left, right)` inset narrows the picture's measure to its paragraph's
+/// indents. A negative one widens it into the margin, as Word does; text still
+/// clamps a negative `w:left` or `w:right` at the margin (issue #2233).
+fn write_image_block_open(
+    out: &mut String,
+    spacing: Option<ImageParagraphSpacing>,
+    inset: Option<(f64, f64)>,
+) {
     let above: f64 = spacing.and_then(|gap| gap.before).unwrap_or(0.0);
     let below: f64 = spacing.and_then(|gap| gap.after).unwrap_or(0.0);
     let _ = write!(
         out,
-        "#block(width: 100%, above: {}pt, below: {}pt)[",
+        "#block(width: 100%, above: {}pt, below: {}pt",
         format_f64(above),
         format_f64(below)
     );
+    if let Some((left, right)) =
+        inset.filter(|(left, right)| left.abs() > 0.0001 || right.abs() > 0.0001)
+    {
+        let _ = write!(
+            out,
+            ", inset: (left: {}pt, right: {}pt)",
+            format_f64(left),
+            format_f64(right)
+        );
+    }
+    out.push_str(")[");
 }
 
 fn generate_image(out: &mut String, img: &ImageData, ctx: &mut GenCtx) {

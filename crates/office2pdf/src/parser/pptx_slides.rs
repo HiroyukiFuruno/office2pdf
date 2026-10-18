@@ -475,6 +475,7 @@ fn build_background_image_element<R: Read + std::io::Seek>(
             fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
+            paragraph_indent: None,
         }),
     })
 }
@@ -1474,6 +1475,7 @@ fn finalize_picture(
                     fill_rect: pic.fill_rect,
                     shadow: pic.shadow.clone(),
                     paragraph_spacing: None,
+                    paragraph_indent: None,
                 }),
             }
         })

@@ -368,6 +368,7 @@ fn test_drawings_shift_with_the_inset_grid() {
             fill_rect: None,
             shadow: None,
             paragraph_spacing: None,
+            paragraph_indent: None,
         },
     });
     page.text_boxes.push(SheetTextBox {
