@@ -273,6 +273,10 @@ pub enum LineSpacing {
     Proportional(f64),
     /// Exact spacing in points.
     Exact(f64),
+    /// A minimum line height in points (`w:lineRule="atLeast"`): a face whose
+    /// natural line is taller keeps it. Rendered as [`LineSpacing::Exact`]
+    /// except where Word's exact-line seat would misplace it.
+    AtLeast(f64),
 }
 
 /// Font-relative line box metrics.

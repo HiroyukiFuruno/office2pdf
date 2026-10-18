@@ -926,7 +926,7 @@ pub(super) fn apply_pptx_saved_normal_autofit(
             }
             // ECMA-376 limits lnSpcReduction to percentage line spacing;
             // point-based a:spcPts is an absolute rule and stays unchanged.
-            Some(LineSpacing::Exact(points)) => Some(LineSpacing::Exact(points)),
+            Some(spacing @ (LineSpacing::Exact(_) | LineSpacing::AtLeast(_))) => Some(spacing),
             None => Some(LineSpacing::Proportional(1.0 - reduction)),
         };
     }
