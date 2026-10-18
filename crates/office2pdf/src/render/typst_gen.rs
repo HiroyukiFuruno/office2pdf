@@ -3024,7 +3024,15 @@ fn flow_page_top_margin_pt(
             let overlay_bottom: Option<f64> = reserve_page_anchored_header_shapes
                 .then(|| page_anchored_header_shape_bottom_pt(header, size, page.margins.top))
                 .flatten();
-            if !hf_has_flow_content(header) && overlay_bottom.is_none() {
+            // A story of nothing but empty paragraphs still has their lines
+            // (issue #2056).
+            if !hf_has_flow_content(header)
+                && !header
+                    .paragraphs
+                    .iter()
+                    .any(hf_paragraph_is_empty_flow_line)
+                && overlay_bottom.is_none()
+            {
                 return None;
             }
 
@@ -3092,10 +3100,12 @@ enum HfLineHeights {
 
 /// Height a header or footer story's lines take, in points.
 ///
-/// Reserve each measurable wrapped line plus its paragraph border rules.
-/// Empty paragraphs outside the overlay case, paragraph spacing and
-/// proportional line spacing retain their existing behavior; their drawn and
-/// reserved layout needs a separate correction (issue #2056).
+/// Reserve each measurable wrapped line plus its paragraph border rules. An
+/// empty paragraph is a line of its paragraph mark in Word's measurement and
+/// nothing in the drawn story's, which leaves it out (issue #2062). Paragraph
+/// spacing and proportional line spacing retain their existing behavior, as
+/// does an empty paragraph with a rule; their drawn and reserved layout needs a
+/// separate correction (issue #2056).
 fn hf_content_height_pt(
     hf: &HeaderFooter,
     default_text: Option<&TextStyle>,
@@ -3108,6 +3118,13 @@ fn hf_content_height_pt(
         if include_empty_flow_paragraphs
             && paragraph.frame.as_ref().is_some_and(is_page_anchored_frame)
         {
+            continue;
+        }
+        if !include_empty_flow_paragraphs && hf_paragraph_is_empty_flow_line(paragraph) {
+            total += match line_heights {
+                HfLineHeights::Natural => 0.0,
+                HfLineHeights::Declared => hf_empty_paragraph_line_pt(paragraph, default_text)?,
+            };
             continue;
         }
         let line_count: usize = hf_paragraph_line_count(paragraph, text_width_pt);
@@ -3136,8 +3153,11 @@ fn hf_content_height_pt(
 /// The exact line height a header or footer paragraph with text states.
 ///
 /// Word lays every line of such a paragraph out at exactly that height,
-/// whatever its face, so the height needs no face metrics. A paragraph
-/// without text keeps the empty-paragraph measurement instead.
+/// whatever its face, so the height needs no face metrics. An empty flow
+/// paragraph is measured by [`hf_empty_paragraph_line_pt`] instead, which
+/// honours an exact line as well. One holding only a picture or a positioned
+/// tab still takes the natural-line path, which cannot measure it (issue
+/// #2164).
 fn hf_paragraph_exact_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<f64> {
     match paragraph.style.line_spacing {
         Some(crate::ir::LineSpacing::Exact(line_pt))
@@ -3146,6 +3166,31 @@ fn hf_paragraph_exact_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> O
             Some(line_pt)
         }
         _ => None,
+    }
+}
+
+/// Whether a header or footer paragraph is an empty line in its story's flow:
+/// no content, no rule, and no `w:framePr` frame, which Word positions out of
+/// the flow. A scraped docxide-pdf decree's first-page header is an empty
+/// frame over an empty paragraph; counting the frame as a line ran the decree
+/// to three pages where Word lays it out on two.
+fn hf_paragraph_is_empty_flow_line(paragraph: &crate::ir::HeaderFooterParagraph) -> bool {
+    !hf_paragraph_has_content(paragraph) && paragraph.frame.is_none()
+}
+
+/// The line Word gives an empty header or footer paragraph, in points.
+///
+/// It is the line of the paragraph mark's face: two scraped docxide-pdf
+/// specifications whose headers end in an empty paragraph, with an 11pt and a
+/// 12pt Times New Roman mark, have Word start the body 1.25pt apart. An exact
+/// `w:spacing w:line` sets it whatever the face, as it does a line of text.
+fn hf_empty_paragraph_line_pt(
+    paragraph: &crate::ir::HeaderFooterParagraph,
+    default_text: Option<&TextStyle>,
+) -> Option<f64> {
+    match paragraph.style.line_spacing {
+        Some(crate::ir::LineSpacing::Exact(line_pt)) if line_pt > 0.0 => Some(line_pt),
+        _ => hf_paragraph_height_pt(paragraph, default_text, true),
     }
 }
 

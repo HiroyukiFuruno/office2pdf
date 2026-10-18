@@ -2572,6 +2572,99 @@ fn a_style_defined_header_renders_like_the_same_header_stated_directly() {
     );
 }
 
+/// A Times New Roman document whose Normal style is 12pt and whose Header style
+/// adds nothing to it, as in Word's older built-in template.
+const TIMES_HEADER_STYLE_STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/></w:rPr></w:rPrDefault><w:pPrDefault/></w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="24"/></w:rPr></w:style>
+  <w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/></w:style>
+</w:styles>"#;
+
+#[test]
+fn an_empty_header_paragraph_keeps_its_paragraph_mark_style() {
+    // Word gives an empty paragraph one line sized from its paragraph mark,
+    // and the mark resolves through the same cascade a run does: `w:pPr/w:rPr`
+    // over the paragraph style over `w:rPrDefault` (issue #2056). The body
+    // parser has kept it since #1700; the header parser kept nothing, so an
+    // empty header line had no face to measure.
+    let data = build_docx_with_raw_header_styles(
+        TIMES_HEADER_STYLE_STYLES,
+        r#"<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>Running head</w:t></w:r></w:p>
+           <w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/></w:rPr></w:pPr></w:p>
+           <w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr></w:p>"#,
+    );
+    let page = parse_flow_page(&data);
+    let header = page.header.as_ref().expect("default header");
+    let mark = |index: usize| -> (Option<String>, Option<f64>) {
+        let style = header.paragraphs[index]
+            .style
+            .paragraph_mark_text_style
+            .as_deref()
+            .expect("an empty header paragraph keeps its mark style");
+        (style.font_family.clone(), style.font_size)
+    };
+
+    assert_eq!(
+        mark(1),
+        (Some("Arial".to_string()), Some(11.0)),
+        "the mark's own w:rPr outranks the Header style"
+    );
+    assert_eq!(
+        mark(2),
+        (Some("Times New Roman".to_string()), Some(12.0)),
+        "a bare mark takes the Header style's 12pt and the document's face"
+    );
+}
+
+/// A Times New Roman header of three lines over one empty paragraph whose mark
+/// is `mark_size_half_points`; the first body baseline below it.
+#[cfg(not(target_arch = "wasm32"))]
+fn body_baseline_below_trailing_empty_header_paragraph(mark_size_half_points: u32) -> f64 {
+    let data = build_docx_with_raw_header_styles(
+        TIMES_HEADER_STYLE_STYLES,
+        &format!(
+            r#"<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>Line one</w:t></w:r></w:p>
+               <w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>Line two</w:t></w:r></w:p>
+               <w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:t>Line three</w:t></w:r></w:p>
+               <w:p><w:pPr><w:pStyle w:val="Header"/><w:rPr><w:sz w:val="{mark_size_half_points}"/></w:rPr></w:pPr></w:p>"#
+        ),
+    );
+    let (document, _warnings) = DocxParser
+        .parse(&data, &ConvertOptions::default())
+        .expect("document parses");
+    let source: String = crate::internal::generate_typst(&document)
+        .expect("document generates")
+        .source;
+    crate::render::pdf::compiled_text_runs(&source, 0)
+        .unwrap()
+        .into_iter()
+        .find(|run| run.text.contains("Body"))
+        .expect("the body's first line is placed")
+        .baseline_pt
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_trailing_empty_header_paragraph_lowers_the_body_by_its_mark_line() {
+    // `w:header` 42.55pt plus three 12pt Times lines already overflows the
+    // 72pt margin, so the empty paragraph below them sets how far the body
+    // moves: Word's line for the mark's own size (issue #2056).
+    let Some((_, _, pitch_em)) = crate::render::pdf::font_line_metrics_em("Times New Roman") else {
+        return; // the face is unavailable on this runner
+    };
+    let (small_line_pt, large_line_pt) = (10.0 * pitch_em, 20.0 * pitch_em);
+    let small_mark_body_pt: f64 = body_baseline_below_trailing_empty_header_paragraph(20);
+    let large_mark_body_pt: f64 = body_baseline_below_trailing_empty_header_paragraph(40);
+
+    assert!(
+        (large_mark_body_pt - small_mark_body_pt - (large_line_pt - small_line_pt)).abs() < 0.01,
+        "a 20pt empty mark must start the body {}pt below a 10pt one, got \
+         {small_mark_body_pt}pt and {large_mark_body_pt}pt",
+        large_line_pt - small_line_pt
+    );
+}
+
 #[test]
 fn a_multi_line_footer_border_keeps_its_double_rule() {
     // `FancyFoot.docx` rules its footer off with `thinThickSmallGap`, one of
