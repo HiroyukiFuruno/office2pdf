@@ -189,7 +189,7 @@ fn alias_family(font_family: &str) -> Option<&'static str> {
 /// `Calibri Light` finds nothing even where Office ships the face. A trailing
 /// suffix only counts when a separator precedes it, so `CalibriLight` and
 /// `Blackadder ITC` stay whole (issue #1286).
-fn typographic_family(family: &str) -> &str {
+pub(crate) fn typographic_family(family: &str) -> &str {
     const SEPARATORS: [char; 3] = [' ', '-', '_'];
     const MODIFIERS: &[&str] = &[
         "extra", "ext", "ex", "x", "semi", "sem", "sm", "demi", "dem", "ultra",

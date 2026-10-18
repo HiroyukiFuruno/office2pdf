@@ -744,6 +744,10 @@ fn test_number_format_thousands_separator() {
 /// prints five hashes for the five-digit totals in O37 and O72.
 #[test]
 fn a_fixed_numeric_format_that_does_not_fit_prints_hashes() {
+    // The cell widths follow the Normal font's column unit.
+    if crate::test_support::budget_normal_font_substitute().is_some() {
+        return;
+    }
     let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
     let parser = XlsxParser;
     let (doc, _warnings) = parser.parse(data, &ConvertOptions::default()).unwrap();

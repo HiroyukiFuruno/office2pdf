@@ -381,3 +381,29 @@ pub(crate) fn make_face_with_hhea_line_gap(mut font_bytes: Vec<u8>, line_gap: i1
     font_bytes[hhea_offset + 8..hhea_offset + 10].copy_from_slice(&line_gap.to_be_bytes());
     font_bytes
 }
+
+/// The face this host substitutes for Trebuchet MS, the Normal font of the
+/// budget workbook `issue_1181_fit_to_height.xlsx`, when it has one.
+///
+/// Tests pinning that workbook's native geometry skip on such a host. The
+/// sheet's column unit is priced off the Normal font's digit advance, and a
+/// substitute with other digits re-fits the whole sheet: Ubuntu's 564/1000em
+/// prints a 6pt unit at 10pt where Trebuchet MS's 1074/2048em prints 5pt, so
+/// the sheet fits at 0.74 instead of Excel's 0.78 (issue #2208). A host with
+/// no face at all still runs them, on the Calibri default's same 5pt unit.
+///
+/// TODO(#2210): the column unit should not follow a substitute.
+pub(crate) fn budget_normal_font_substitute() -> Option<String> {
+    crate::render::pdf::substitute_face_family("Trebuchet MS")
+}
+
+/// Whether `family`'s own face answers its metric lookups on this host: not a
+/// substitute its chain reached, and not nothing at all.
+///
+/// `font_line_metrics_em(family).is_some()` alone holds for a substitute too,
+/// which then answers with its own metrics (issue #2208).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn has_own_face(family: &str) -> bool {
+    crate::render::pdf::font_line_metrics_em(family).is_some()
+        && crate::render::pdf::substitute_face_family(family).is_none()
+}

@@ -3594,6 +3594,10 @@ fn a_bare_theme_named_face_rounds_a_near_whole_point_row_height_up() {
 /// the same 0.78pt-per-sheet-point gap the issue measures on the cell fills.
 #[test]
 fn the_budget_sheets_declared_row_height_rounds_up_near_the_next_point() {
+    // The 0.78 fit follows the Normal font's column unit.
+    if crate::test_support::budget_normal_font_substitute().is_some() {
+        return;
+    }
     let data = include_bytes!("../../../../tests/fixtures/xlsx/issue_1181_fit_to_height.xlsx");
     let parser = XlsxParser;
     let (doc, _warnings) = parser.parse(data, &ConvertOptions::default()).unwrap();

@@ -60,6 +60,7 @@ pub mod internal {
     pub use crate::parser::docx::DocxParser;
     pub use crate::parser::pptx::PptxParser;
     pub use crate::parser::xlsx::XlsxParser;
+    pub use crate::render::pdf::substitute_face_family;
     pub use crate::render::typst_gen::{TypstOutput, generate_typst};
 }
 

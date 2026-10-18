@@ -515,12 +515,21 @@ fn a_weight_suffixed_family_measures_the_member_its_name_denotes() {
     // 1069/-293/0 on 1000 upem and the light 1500/-293/0. Reading the regular's
     // box for a light request is then off by 0.431em, the same shape as reading
     // Arial's for Arial Black.
-    use crate::render::font_context::test_faces::{
-        noto_serif_at_weight, noto_serif_at_weight_with_ascender,
-    };
+    //
+    // Both members are renamed `Test Serif`, a family no host ships. Under the
+    // tracked face's own name, a host's `NotoSerif-Light.ttf` — which declares
+    // `Noto Serif Light` itself — answered the light request from disk before
+    // the chain reached the in-memory member, and measured its own 1069/-293
+    // box (issue #2208).
+    use crate::render::font_context::test_faces::noto_serif_named;
 
-    let regular: typst::text::Font = noto_serif_at_weight(400);
-    let light: typst::text::Font = noto_serif_at_weight_with_ascender(300, 1500);
+    let regular: typst::text::Font = noto_serif_named("Test Serif", 400, 1069);
+    let light: typst::text::Font = noto_serif_named("Test Serif", 300, 1500);
+    assert_eq!(
+        light.info().family,
+        "Test Serif",
+        "the book must file the light member under its base family"
+    );
     let expected_regular = declared_line_box_em(&regular);
     let expected_light = declared_line_box_em(&light);
     assert_ne!(
@@ -535,10 +544,10 @@ fn a_weight_suffixed_family_measures_the_member_its_name_denotes() {
     let (suffixed_line, base_line, suffixed_ascender, suffixed_gap) =
         crate::render::font_subst::with_font_search_context(Some(&context), || {
             (
-                font_line_metrics_em("Noto Serif Light"),
-                font_line_metrics_em("Noto Serif"),
-                font_hhea_ascender_em("Noto Serif Light"),
-                font_line_gap_em("Noto Serif Light"),
+                font_line_metrics_em("Test Serif Light"),
+                font_line_metrics_em("Test Serif"),
+                font_hhea_ascender_em("Test Serif Light"),
+                font_line_gap_em("Test Serif Light"),
             )
         });
 
@@ -555,12 +564,12 @@ fn a_weight_suffixed_family_measures_the_member_its_name_denotes() {
     };
     assert!(
         close(suffixed_line, expected_light),
-        "`Noto Serif Light` must measure the 300 member's own line box: \
+        "`Test Serif Light` must measure the 300 member's own line box: \
          {suffixed_line:?} against {expected_light:?}"
     );
     assert!(
         close(base_line, expected_regular),
-        "`Noto Serif` must still measure the regular member: \
+        "`Test Serif` must still measure the regular member: \
          {base_line:?} against {expected_regular:?}"
     );
 
@@ -574,6 +583,44 @@ fn a_weight_suffixed_family_measures_the_member_its_name_denotes() {
     assert!(
         (suffixed_gap - f64::from(light_ttf.line_gap()) / upem).abs() < 1e-12,
         "the line gap must come from the 300 member too: {suffixed_gap}"
+    );
+}
+
+/// A test pinning a native measurement of one family must tell that family's
+/// own face from a substitute its chain reached. A substitute answers every
+/// metric lookup with its own numbers, so `font_line_metrics_em(..).is_some()`
+/// cannot: on a host with the Ubuntu font, Trebuchet MS resolves to Ubuntu and
+/// re-fits the budget sheet at 0.74 instead of the native 0.78 (issue #2208).
+#[test]
+fn a_substitute_face_is_named_and_a_familys_own_face_is_not() {
+    use crate::render::font_context::test_faces::noto_serif_named;
+
+    let mut fonts: Vec<typst::text::Font> = vec![
+        noto_serif_named("Test Serif", 400, 1069),
+        noto_serif_named("Test Serif", 300, 1500),
+    ];
+    fonts.extend_from_slice(crate::bundled_fonts::noto_serif_fonts());
+    let context = crate::render::font_context::resolve_font_search_context_from_fonts(&fonts);
+    let (own, own_member, substitute) =
+        crate::render::font_subst::with_font_search_context(Some(&context), || {
+            (
+                substitute_face_family("Test Serif"),
+                substitute_face_family("Test Serif Light"),
+                // The substitute table sends this Office display face to the
+                // bundled Noto Serif (issue #1458).
+                substitute_face_family("Avenir Next LT Pro"),
+            )
+        });
+
+    assert_eq!(own, None, "a family's own face is not a substitute");
+    assert_eq!(
+        own_member, None,
+        "a weight-suffixed name answered by its family's 300 member is not a substitute"
+    );
+    assert_eq!(
+        substitute.as_deref(),
+        Some("Noto Serif"),
+        "the face another family's chain reached is named"
     );
 }
 
