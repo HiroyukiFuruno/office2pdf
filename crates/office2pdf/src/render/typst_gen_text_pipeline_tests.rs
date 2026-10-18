@@ -1,5 +1,5 @@
 use super::*;
-use crate::ir::PairKerning;
+use crate::ir::{Ligatures, PairKerning};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::render::word_justified_gap_phases::{GapBudget, GapKind, spread_demand_as_word_does};
 
@@ -2451,6 +2451,112 @@ fn test_neutral_run_beside_an_rtl_run_keeps_kerning() {
     assert!(
         !source.contains("kerning: false"),
         "no run of a paragraph carrying RTL may state kerning: false: {source}"
+    );
+}
+
+/// Text no run style reaches still takes the document's ligature default: a
+/// generated table of contents shapes its entries from bare metadata text, and
+/// in a deed of docxide's scraped corpus that states no ligatures they drew
+/// `ti` and `fi` ligatures (issue #2205).
+#[test]
+fn test_document_ligature_default_reaches_text_without_a_run_style() {
+    let doc = make_doc_with_default_text(
+        vec![make_flow_page(vec![styled_paragraph(
+            "Definitions",
+            TextStyle::default(),
+        )])],
+        TextStyle {
+            font_size: Some(11.0),
+            ligatures: Some(Ligatures::NONE),
+            ..TextStyle::default()
+        },
+    );
+
+    let source = generate_typst(&doc).unwrap().source;
+
+    assert!(
+        source.contains("#set text(ligatures: false)"),
+        "the document default must be stated document-wide: {source}"
+    );
+}
+
+/// Triangulation: a document whose default asks for standard ligatures states
+/// that instead, and the RTL exemption still keeps them on.
+#[test]
+fn test_document_ligature_default_follows_the_document_and_the_rtl_exemption() {
+    let standard = TextStyle {
+        font_size: Some(11.0),
+        ligatures: Some(Ligatures {
+            standard: true,
+            contextual: true,
+            ..Ligatures::NONE
+        }),
+        ..TextStyle::default()
+    };
+    let doc = make_doc_with_default_text(
+        vec![make_flow_page(vec![styled_paragraph(
+            "Affirmed",
+            TextStyle::default(),
+        )])],
+        standard,
+    );
+    let source = generate_typst(&doc).unwrap().source;
+    assert!(
+        source.contains("#set text(ligatures: true)") && !source.contains("ligatures: false"),
+        "a document that asks for ligatures keeps them: {source}"
+    );
+
+    let rtl = make_doc_with_default_text(
+        vec![make_flow_page(vec![styled_paragraph(
+            "فوائد الأرز",
+            TextStyle::default(),
+        )])],
+        TextStyle {
+            font_size: Some(11.0),
+            ligatures: Some(Ligatures::NONE),
+            ..TextStyle::default()
+        },
+    );
+    let source = generate_typst(&rtl).unwrap().source;
+    assert!(
+        !source.contains("ligatures: false"),
+        "nothing may switch the lam-alef's feature off: {source}"
+    );
+}
+
+#[test]
+fn test_rtl_document_keeps_standard_ligatures_despite_the_word_rule() {
+    // Word draws the lam-alef of `الأرز` as one glyph in a document that
+    // states no ligatures, and a face that encodes it under `liga`, such as
+    // DejaVu Sans, loses it with the feature off: the Word export of docxide's
+    // scraped Arabic article draws 42 such ligatures (issue #2205).
+    // Disabling a feature on RTL text is also what trips typst's glyph-range
+    // defect, so the exemption covers the document, Latin runs included.
+    let unligated = TextStyle {
+        font_size: Some(14.0),
+        ligatures: Some(Ligatures::NONE),
+        ..TextStyle::default()
+    };
+    let doc = make_doc_with_default_text(
+        vec![make_flow_page(vec![paragraph_of_runs(
+            ParagraphStyle::default(),
+            &[
+                ("فوائد الأرز ", unligated.clone()),
+                ("office", unligated.clone()),
+            ],
+        )])],
+        TextStyle {
+            font_size: Some(11.0),
+            ligatures: Some(Ligatures::NONE),
+            ..TextStyle::default()
+        },
+    );
+
+    let source = generate_typst(&doc).unwrap().source;
+
+    assert!(
+        !source.contains("ligatures: false"),
+        "no run of a document carrying RTL may switch standard ligatures off: {source}"
     );
 }
 

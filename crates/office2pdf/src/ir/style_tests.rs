@@ -84,6 +84,7 @@ fn text_style_merge_from_all_none_source_preserves_target() {
         small_caps: Some(false),
         letter_spacing: Some(1.5),
         pair_kerning: Some(PairKerning::Never),
+        ligatures: Some(Ligatures::NONE),
     };
     let original: TextStyle = target.clone();
     let source = TextStyle::default();
@@ -116,6 +117,7 @@ fn text_style_merge_from_all_some_source_overwrites_target() {
         small_caps: Some(true),
         letter_spacing: Some(1.5),
         pair_kerning: Some(PairKerning::Never),
+        ligatures: Some(Ligatures::NONE),
     };
     let source = TextStyle {
         line_box: Some(LineBox {
@@ -138,6 +140,11 @@ fn text_style_merge_from_all_some_source_overwrites_target() {
         small_caps: Some(false),
         letter_spacing: Some(3.0),
         pair_kerning: Some(PairKerning::AtOrAbovePt(16.0)),
+        ligatures: Some(Ligatures {
+            standard: true,
+            contextual: true,
+            ..Ligatures::NONE
+        }),
     };
 
     target.merge_from(&source);

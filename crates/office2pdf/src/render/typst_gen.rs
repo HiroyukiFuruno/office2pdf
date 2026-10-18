@@ -672,6 +672,14 @@ fn generate_pages(doc: &Document, options: &ConvertOptions) -> Result<TypstOutpu
     write_page_format_state(&mut out);
     write_document_language(&mut out, doc.styles.default_language.as_ref());
     write_hyphenation_rule(&mut out, doc.styles.hyphenates_automatically);
+    if let Some(ligatures) = doc
+        .styles
+        .default_text
+        .as_ref()
+        .and_then(|text| text.ligatures)
+    {
+        write_document_ligature_state(&mut out, ligatures);
+    }
     if doc.pages.iter().any(|page| matches!(page, Page::Fixed(_))) {
         write_powerpoint_ligature_state(&mut out);
         write_powerpoint_advance_grid_helpers(&mut out);

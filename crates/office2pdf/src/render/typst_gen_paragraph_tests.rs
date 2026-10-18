@@ -3654,8 +3654,9 @@ fn test_powerpoint_slide_disables_ligatures_document_wide() {
 }
 
 /// Triangulation: the rule is keyed to the slide, not switched on for every
-/// document, so a flow page keeps the engine's default. Word's own ligature
-/// setting is a separate question this change does not answer.
+/// document, so a flow page whose document states no ligature default keeps
+/// the engine's. A Word document states its own default and each run its own
+/// answer (issue #2205); see `test_word_run_without_ligatures_switches_them_off`.
 #[test]
 fn test_flow_page_keeps_ligatures_document_wide() {
     let doc = make_doc(vec![make_flow_page(vec![make_paragraph(
@@ -3665,6 +3666,120 @@ fn test_flow_page_keeps_ligatures_document_wide() {
     assert!(
         !result.contains("ligatures: false"),
         "a flow page must not disable ligatures document-wide, got: {result}"
+    );
+}
+
+fn word_run_paragraph(text: &str, style: TextStyle) -> Block {
+    Block::Paragraph(Paragraph {
+        style: ParagraphStyle::default(),
+        runs: vec![Run {
+            text: text.to_string(),
+            style,
+            href: None,
+            footnote: None,
+            inline_box: None,
+        }],
+    })
+}
+
+/// A Word run that resolves to no ligatures says so on its own text, because
+/// Typst ligates by default: the Word reference of docxide case8 draws the
+/// `ffi` of `officia` as three glyphs where the face's ligature fused them and
+/// pulled the rest of the line one 10pt cell left (issue #2205).
+#[test]
+fn test_word_run_without_ligatures_switches_them_off() {
+    let doc = make_doc(vec![make_flow_page(vec![word_run_paragraph(
+        "culpa qui officia",
+        TextStyle {
+            ligatures: Some(crate::ir::Ligatures::NONE),
+            ..TextStyle::default()
+        },
+    )])]);
+    let result = generate_typst(&doc).unwrap().source;
+    assert!(
+        result.contains("ligatures: false"),
+        "a run Word sets without ligatures must switch them off, got: {result}"
+    );
+}
+
+/// Triangulation: a run whose style asks for standard ligatures states them
+/// on in its `#text(...)`, so it ligates even inside content that switched
+/// them off around it. Every Word run resolves a size, so it has one.
+#[test]
+fn test_word_run_with_standard_ligatures_switches_them_on() {
+    let doc = make_doc(vec![make_flow_page(vec![word_run_paragraph(
+        "scientific flow",
+        TextStyle {
+            font_size: Some(11.0),
+            ligatures: Some(crate::ir::Ligatures {
+                standard: true,
+                contextual: true,
+                ..crate::ir::Ligatures::NONE
+            }),
+            ..TextStyle::default()
+        },
+    )])]);
+    let result = generate_typst(&doc).unwrap().source;
+    assert!(
+        result.contains("ligatures: true") && !result.contains("ligatures: false"),
+        "a run asking for standard ligatures must keep them, got: {result}"
+    );
+    assert!(
+        !result.contains("discretionary-ligatures") && !result.contains("historical-ligatures"),
+        "classes the run does not ask for stay at the engine's off default, got: {result}"
+    );
+}
+
+/// The historical and discretional classes are off unless a run asks for
+/// them, in Word and in Typst alike, so only a request is emitted.
+#[test]
+fn test_word_run_with_historical_and_discretional_ligatures_requests_them() {
+    let doc = make_doc(vec![make_flow_page(vec![word_run_paragraph(
+        "Th ct st",
+        TextStyle {
+            ligatures: Some(crate::ir::Ligatures {
+                historical: true,
+                discretional: true,
+                ..crate::ir::Ligatures::NONE
+            }),
+            ..TextStyle::default()
+        },
+    )])]);
+    let result = generate_typst(&doc).unwrap().source;
+    assert!(
+        result.contains("ligatures: false")
+            && result.contains("discretionary-ligatures: true")
+            && result.contains("historical-ligatures: true"),
+        "historical and discretional ligatures without standard ones, got: {result}"
+    );
+}
+
+/// Tracking still wins over a stated ligature request (issue #684), and the
+/// run carries one `ligatures:` argument, which Typst requires.
+#[test]
+fn test_tracked_word_run_states_ligatures_once() {
+    let doc = make_doc(vec![make_flow_page(vec![word_run_paragraph(
+        "office2pdf",
+        TextStyle {
+            letter_spacing: Some(0.5),
+            ligatures: Some(crate::ir::Ligatures {
+                standard: true,
+                contextual: true,
+                historical: true,
+                discretional: true,
+            }),
+            ..TextStyle::default()
+        },
+    )])]);
+    let result = generate_typst(&doc).unwrap().source;
+    assert_eq!(
+        result.matches("ligatures: ").count(),
+        1,
+        "exactly one ligatures argument, got: {result}"
+    );
+    assert!(
+        result.contains("ligatures: false"),
+        "tracked text must disable ligatures, got: {result}"
     );
 }
 
