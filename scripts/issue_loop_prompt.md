@@ -4,6 +4,15 @@ replace those documents.
 
 - Work in a git worktree on a `<type>/<short-description>` branch created from current
   `main`. Never `git checkout` in the main working tree — other sessions use it.
+- A shared `CARGO_TARGET_DIR` can let a build from another worktree replace the
+  binary you intended to measure. Build baseline and candidate binaries in separate,
+  run-owned scratch targets and preserve the binaries used for evidence. `cmp`
+  detects identical binaries; it does not establish baseline provenance or fidelity.
+  Before ending a run, including one leaving a draft PR, remove only private build
+  directories created by that run and no longer needed for active work, after
+  preserving required evidence. Never delete the runner's shared target, shared
+  caches, or another session's build output. Keep uncertain ownership or required
+  directories and record why they remain.
 - Test-driven: write the failing test first, then the minimal fix, then refactor. The
   test must pin the general rule, not the one input from the issue.
 - Sign off every commit (`git commit -s`) with the repository's configured identity.
