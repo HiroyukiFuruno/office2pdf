@@ -296,22 +296,28 @@ mod integration {
 
     /// Build a minimal PPTX ZIP with an obfuscated embedded font.
     fn build_pptx_with_embedded_font(ttf_data: &[u8], guid: &str) -> Vec<u8> {
+        build_pptx_with_named_embedded_font(ttf_data, guid, "TestFont")
+    }
+
+    fn build_pptx_with_named_embedded_font(ttf_data: &[u8], guid: &str, typeface: &str) -> Vec<u8> {
         let buf = Vec::new();
         let cursor = Cursor::new(buf);
         let mut zip = ZipWriter::new(cursor);
         let options = FileOptions::default();
 
         // presentation.xml with embedded font list
-        let pres_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+        let pres_xml = format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                 xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <p:embeddedFontLst>
     <p:embeddedFont>
-      <p:font typeface="TestFont"/>
+      <p:font typeface="{typeface}"/>
       <p:regular r:id="rId5"/>
     </p:embeddedFont>
   </p:embeddedFontLst>
-</p:presentation>"#;
+</p:presentation>"#
+        );
         zip.start_file("ppt/presentation.xml", options).unwrap();
         zip.write_all(pres_xml.as_bytes()).unwrap();
 
@@ -342,6 +348,14 @@ mod integration {
 
     /// Build a minimal DOCX ZIP with an obfuscated embedded font.
     fn build_docx_with_embedded_font(ttf_data: &[u8], guid: &str) -> Vec<u8> {
+        build_docx_with_named_embedded_font(ttf_data, guid, "TestFont")
+    }
+
+    fn build_docx_with_named_embedded_font(
+        ttf_data: &[u8],
+        guid: &str,
+        font_name: &str,
+    ) -> Vec<u8> {
         let buf = Vec::new();
         let cursor = Cursor::new(buf);
         let mut zip = ZipWriter::new(cursor);
@@ -352,7 +366,7 @@ mod integration {
             r#"<?xml version="1.0" encoding="UTF-8"?>
 <w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <w:font w:name="TestFont">
+  <w:font w:name="{font_name}">
     <w:embedRegular w:fontKey="{guid}" r:id="rId1"/>
   </w:font>
 </w:fonts>"#
@@ -404,7 +418,7 @@ mod integration {
         let font_data = extract_embedded_font_data(&zip_data, crate::config::Format::Pptx)
             .expect("should retain deobfuscated PPTX font bytes in memory");
         assert_eq!(font_data.faces.len(), 1);
-        assert_eq!(font_data.faces[0].filename, "TestFont-regular.ttf");
+        assert_eq!(font_data.faces[0].format, FontFileFormat::Ttf);
         assert_eq!(font_data.faces[0].data, original_ttf);
 
         let result = extract_embedded_fonts(&zip_data, crate::config::Format::Pptx);
@@ -442,7 +456,7 @@ mod integration {
         let font_data = extract_embedded_font_data(&zip_data, crate::config::Format::Docx)
             .expect("should retain deobfuscated DOCX font bytes in memory");
         assert_eq!(font_data.faces.len(), 1);
-        assert_eq!(font_data.faces[0].filename, "TestFont-regular.ttf");
+        assert_eq!(font_data.faces[0].format, FontFileFormat::Ttf);
         assert_eq!(font_data.faces[0].data, original_ttf);
 
         let result = extract_embedded_fonts(&zip_data, crate::config::Format::Docx);
@@ -459,6 +473,120 @@ mod integration {
 
         let extracted = std::fs::read(entries[0].path()).unwrap();
         assert_eq!(extracted, original_ttf);
+    }
+
+    /// Removes a scratch file or directory even when the test panics, so a
+    /// regression cannot leave escaped fonts behind in the temp directory.
+    struct RemoveOnDrop(std::path::PathBuf);
+
+    impl Drop for RemoveOnDrop {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// A scratch path no other test or run shares, so a leaked write is
+    /// attributable to the case that made it.
+    fn unique_scratch_path(label: &str) -> std::path::PathBuf {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be valid")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "office2pdf-font-name-escape-{label}-{}-{nanos}",
+            std::process::id()
+        ))
+    }
+
+    /// Materialize a document whose embedded font declares `declared_name`,
+    /// then require the face to land as a direct child of the font directory
+    /// under a name that does not echo the document's text.
+    fn assert_declared_name_cannot_choose_the_path(
+        format: crate::config::Format,
+        declared_name: &str,
+    ) {
+        let guid = "{7B19B49C-2336-4F82-AAD2-5D2BAE389560}";
+        let original_ttf = make_fake_ttf(64);
+        let zip_data = match format {
+            crate::config::Format::Pptx => {
+                build_pptx_with_named_embedded_font(&original_ttf, guid, declared_name)
+            }
+            crate::config::Format::Docx => {
+                build_docx_with_named_embedded_font(&original_ttf, guid, declared_name)
+            }
+            crate::config::Format::Xlsx => unreachable!("XLSX carries no embedded fonts"),
+        };
+
+        let dir = extract_embedded_fonts(&zip_data, format)
+            .unwrap_or_else(|| panic!("{format:?} face named {declared_name:?} was dropped"));
+        let entries: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        assert_eq!(
+            entries.len(),
+            1,
+            "{format:?} face named {declared_name:?} must be written inside {:?}",
+            dir.path()
+        );
+        assert_eq!(entries[0].parent(), Some(dir.path()));
+        assert_eq!(std::fs::read(&entries[0]).unwrap(), original_ttf);
+        let file_name = entries[0].file_name().unwrap().to_string_lossy();
+        for component in declared_name.split(['/', '\\']).filter(|c| c.len() > 2) {
+            assert!(
+                !file_name.contains(component),
+                "file name {file_name:?} echoes document text {component:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn embedded_font_relative_escape_name_stays_in_font_dir() {
+        for format in [crate::config::Format::Pptx, crate::config::Format::Docx] {
+            let sentinel = unique_scratch_path("relative");
+            let sentinel_name = sentinel.file_name().unwrap().to_string_lossy().into_owned();
+            let leaked =
+                RemoveOnDrop(sentinel.with_file_name(format!("{sentinel_name}-regular.ttf")));
+
+            assert_declared_name_cannot_choose_the_path(format, &format!("../{sentinel_name}"));
+
+            assert!(
+                !leaked.0.exists(),
+                "{format:?} font escaped to {:?}",
+                leaked.0
+            );
+        }
+    }
+
+    #[test]
+    fn embedded_font_absolute_name_stays_in_font_dir() {
+        for format in [crate::config::Format::Pptx, crate::config::Format::Docx] {
+            // The target directory exists, so only the fix can stop the write.
+            let target = RemoveOnDrop(unique_scratch_path("absolute"));
+            std::fs::create_dir(&target.0).unwrap();
+            let declared = target.0.join("escaped");
+
+            assert_declared_name_cannot_choose_the_path(format, &declared.to_string_lossy());
+
+            let leaked: Vec<_> = std::fs::read_dir(&target.0).unwrap().collect();
+            assert!(
+                leaked.is_empty(),
+                "{format:?} font escaped into {:?}",
+                target.0
+            );
+        }
+    }
+
+    #[test]
+    fn embedded_font_with_path_separator_in_its_name_is_still_materialized() {
+        // Family names are free text; one that is not a valid file name must
+        // neither escape nor be dropped.
+        for format in [crate::config::Format::Pptx, crate::config::Format::Docx] {
+            assert_declared_name_cannot_choose_the_path(format, "Brand/Display Sans");
+        }
     }
 
     #[test]

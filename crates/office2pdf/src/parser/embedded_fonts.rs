@@ -31,6 +31,7 @@ pub(crate) enum FontFileFormat {
 }
 
 impl FontFileFormat {
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     fn extension(self) -> &'static str {
         match self {
             Self::Ttf => "ttf",
@@ -70,10 +71,14 @@ struct DocxFontVariantRef {
 }
 
 /// One deobfuscated face carried by an OOXML document.
+///
+/// The document's declared family name is deliberately not kept: it is
+/// untrusted text, and the face's own `name` table is what font discovery
+/// reads.
 #[derive(Debug)]
 struct EmbeddedFontFace {
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
-    filename: String,
+    format: FontFileFormat,
     data: Vec<u8>,
 }
 
@@ -164,8 +169,12 @@ pub(crate) fn extract_embedded_fonts(
     let temp_dir = create_temp_font_dir(prefix)?;
     let mut font_count = 0;
 
-    for face in fonts.faces {
-        if std::fs::write(temp_dir.join(face.filename), face.data).is_ok() {
+    for (index, face) in fonts.faces.into_iter().enumerate() {
+        // Name files by position, never by document text: a declared family
+        // such as `../x` or an absolute path would otherwise steer the write
+        // outside the directory (#2153).
+        let path = temp_dir.join(format!("font-{index:04}.{}", face.format.extension()));
+        if write_new_file(&path, &face.data).is_ok() {
             font_count += 1;
         }
     }
@@ -390,13 +399,15 @@ fn extract_pptx_font_data(data: &[u8]) -> Option<EmbeddedFontData> {
             deobfuscate_font_data(&mut font_data, &key);
 
             // Detect format and retain the deobfuscated bytes.
-            let ext = detect_font_format(&font_data)
-                .map(|f| f.extension())
-                .unwrap_or("ttf");
-
-            let filename = format!("{}-{}.{}", entry.typeface, variant.style, ext);
+            let format = detect_font_format(&font_data).unwrap_or(FontFileFormat::Ttf);
+            tracing::debug!(
+                family = ?entry.typeface,
+                style = %variant.style,
+                ?format,
+                "deobfuscated embedded font face"
+            );
             faces.push(EmbeddedFontFace {
-                filename,
+                format,
                 data: font_data,
             });
         }
@@ -531,13 +542,15 @@ fn extract_docx_font_data(data: &[u8]) -> Option<EmbeddedFontData> {
             deobfuscate_font_data(&mut font_data, &key);
 
             // Detect format and retain the deobfuscated bytes.
-            let ext = detect_font_format(&font_data)
-                .map(|f| f.extension())
-                .unwrap_or("ttf");
-
-            let filename = format!("{}-{}.{}", entry.font_name, variant.style, ext);
+            let format = detect_font_format(&font_data).unwrap_or(FontFileFormat::Ttf);
+            tracing::debug!(
+                family = ?entry.font_name,
+                style = %variant.style,
+                ?format,
+                "deobfuscated embedded font face"
+            );
             faces.push(EmbeddedFontFace {
-                filename,
+                format,
                 data: font_data,
             });
         }
@@ -550,15 +563,36 @@ fn extract_docx_font_data(data: &[u8]) -> Option<EmbeddedFontData> {
 // Helpers
 // =============================================================================
 
+/// Create a fresh directory for one conversion's fonts.
+///
+/// `create_dir` fails on an existing path, so a directory or symlink planted
+/// at the predicted name is never reused. The process id and counter keep
+/// concurrent conversions apart when the clock is coarse.
 #[cfg(not(target_arch = "wasm32"))]
 fn create_temp_font_dir(prefix: &str) -> Option<PathBuf> {
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let unique = SystemTime::now()
+    static NEXT_DIR: AtomicU64 = AtomicU64::new(0);
+    let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system time should be valid")
         .as_nanos();
-    let path = std::env::temp_dir().join(format!("{prefix}-{unique}"));
-    std::fs::create_dir_all(&path).ok()?;
+    let pid = std::process::id();
+    let sequence = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!("{prefix}-{pid}-{nanos}-{sequence}"));
+    std::fs::create_dir(&path).ok()?;
     Some(path)
+}
+
+/// Write a file that must not exist yet, refusing to follow or replace one.
+#[cfg(not(target_arch = "wasm32"))]
+fn write_new_file(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?
+        .write_all(data)
 }
