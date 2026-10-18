@@ -1,0 +1,77 @@
+{
+  "clusters": [
+    {
+      "area_pt2": 200.9088,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 29.76,
+        "x": 44.64,
+        "y": 7.2
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2237"
+        ],
+        "kind": "issue",
+        "note": "The 12pt exact-line `Header` run: office2pdf seats it 3.33pt below Word on the 6pt band top (#2214) and paints Aptos with the Noto Sans stand-in, 8.5% wider with a 1.069em seat against Aptos's 0.939em (#2237)."
+      },
+      "id": "p1-aa602c4a6c51",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 53.9136,
+      "bbox_pt": {
+        "height": 11.52,
+        "width": 7.2,
+        "x": 36.96,
+        "y": 7.2
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2237"
+        ],
+        "kind": "issue",
+        "note": "The 12pt exact-line `Header` run: office2pdf seats it 3.33pt below Word on the 6pt band top (#2214) and paints Aptos with the Noto Sans stand-in, 8.5% wider with a 1.069em seat against Aptos's 0.939em (#2237)."
+      },
+      "id": "p1-64000b5a0019",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 28.5696,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 6.72,
+        "x": 36.48,
+        "y": 38.4
+      },
+      "disposition": {
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "Left stem of `Before`'s B at 600 DPI: ArialMT against metric-compatible Liberation Sans outlines with a 0.02pt anchor offset; the baseline matches Word's 47.27pt."
+      },
+      "id": "p1-565f179a9e62",
+      "region": "top-left"
+    }
+  ],
+  "dpi": 150,
+  "duplicate_disposition_cluster_ids": [],
+  "errors": [],
+  "fuzz_percent": 5,
+  "minimum_area_pt2": 20.0,
+  "page": 1,
+  "passed": true,
+  "renderer_observations": [],
+  "schema_version": 1,
+  "strict": true,
+  "summary": {
+    "dispositioned": 3,
+    "duplicate": 0,
+    "total": 3,
+    "undispositioned": 0,
+    "unknown": 0
+  },
+  "undispositioned_cluster_ids": [],
+  "unknown_disposition_cluster_ids": []
+}
