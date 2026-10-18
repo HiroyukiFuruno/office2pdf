@@ -1,51 +1,328 @@
 {
   "clusters": [
     {
-      "area_pt2": 28.8,
+      "area_pt2": 61.5168,
       "bbox_pt": {
-        "height": 5.28,
+        "height": 13.92,
         "width": 7.2,
-        "x": 36.48,
-        "y": 122.88
+        "x": 36.96,
+        "y": 195.84
       },
       "disposition": {
-        "issue": "#2065",
+        "issue": "#2215",
         "kind": "issue",
-        "note": "Reinspected current GT/output/diff crops after main integration: all three fragments belong to Body marker displaced 2.74788pt downward. Header anchors remain within 0.5pt."
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
       },
-      "id": "p1-6e467b0e627d",
+      "id": "p1-2cf63eb83602",
+      "region": "left"
+    },
+    {
+      "area_pt2": 57.6,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 6.24,
+        "x": 44.64,
+        "y": 197.76
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-9decbaa97c44",
+      "region": "left"
+    },
+    {
+      "area_pt2": 54.6048,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 9.12,
+        "x": 59.04,
+        "y": 184.32
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-fca24e7cda28",
+      "region": "left"
+    },
+    {
+      "area_pt2": 52.5312,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 9.12,
+        "x": 75.84,
+        "y": 184.32
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-2b78ea6834ba",
+      "region": "left"
+    },
+    {
+      "area_pt2": 50.4576,
+      "bbox_pt": {
+        "height": 10.56,
+        "width": 8.64,
+        "x": 36.96,
+        "y": 182.4
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-1eb4af897a19",
+      "region": "left"
+    },
+    {
+      "area_pt2": 49.3056,
+      "bbox_pt": {
+        "height": 14.4,
+        "width": 5.76,
+        "x": 71.04,
+        "y": 195.36
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-ad25113b7a4e",
+      "region": "left"
+    },
+    {
+      "area_pt2": 43.0848,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 6.24,
+        "x": 57.6,
+        "y": 197.76
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-cc6101e145f7",
+      "region": "left"
+    },
+    {
+      "area_pt2": 43.0848,
+      "bbox_pt": {
+        "height": 11.52,
+        "width": 5.76,
+        "x": 64.32,
+        "y": 197.76
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-048518b5ea20",
+      "region": "left"
+    },
+    {
+      "area_pt2": 35.9424,
+      "bbox_pt": {
+        "height": 12.0,
+        "width": 5.76,
+        "x": 51.36,
+        "y": 197.76
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-407d31536942",
+      "region": "left"
+    },
+    {
+      "area_pt2": 33.6384,
+      "bbox_pt": {
+        "height": 9.12,
+        "width": 5.76,
+        "x": 69.12,
+        "y": 184.32
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-6fe5e6c6ad36",
+      "region": "left"
+    },
+    {
+      "area_pt2": 29.952,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 5.28,
+        "x": 49.92,
+        "y": 184.32
+      },
+      "disposition": {
+        "issue": "#2215",
+        "kind": "issue",
+        "note": "Minimum and Second in the table cell sit 2.30pt and 4.50pt high: Word advances these Arial 12pt lines by 16pt where office2pdf advances 13.80pt, in a package with no styles part. Before, the first body line, coincides."
+      },
+      "id": "p1-66e0f861bf32",
+      "region": "left"
+    },
+    {
+      "area_pt2": 29.0304,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 6.72,
+        "x": 36.96,
+        "y": 125.76
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-b9fae063bf70",
       "region": "top-left"
     },
     {
-      "area_pt2": 22.8096,
+      "area_pt2": 28.5696,
       "bbox_pt": {
-        "height": 9.6,
-        "width": 4.8,
-        "x": 58.08,
-        "y": 119.52
-      },
-      "disposition": {
-        "issue": "#2065",
-        "kind": "issue",
-        "note": "Reinspected current GT/output/diff crops after main integration: all three fragments belong to Body marker displaced 2.74788pt downward. Header anchors remain within 0.5pt."
-      },
-      "id": "p1-a714dcf3e15b",
-      "region": "top-left"
-    },
-    {
-      "area_pt2": 20.5056,
-      "bbox_pt": {
-        "height": 4.8,
+        "height": 8.64,
         "width": 6.72,
         "x": 36.48,
-        "y": 116.64
+        "y": 168.48
       },
       "disposition": {
-        "issue": "#2065",
-        "kind": "issue",
-        "note": "Reinspected current GT/output/diff crops after main integration: all three fragments belong to Body marker displaced 2.74788pt downward. Header anchors remain within 0.5pt."
+        "class": "glyph-edge-rasterization",
+        "kind": "accepted-rendering",
+        "note": "The B of Before: GT and output glyphs overlap at the same baseline (dy -0.09pt, dx -0.03pt); the diff crop shows only outline antialiasing between Word's embedded ArialMT and this host's metric-compatible Liberation Sans."
       },
-      "id": "p1-f9c32e09d8a0",
+      "id": "p1-e389e5f5739a",
+      "region": "left"
+    },
+    {
+      "area_pt2": 27.1872,
+      "bbox_pt": {
+        "height": 7.2,
+        "width": 7.68,
+        "x": 36.0,
+        "y": 8.64
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-dec67d946d2f",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 26.0352,
+      "bbox_pt": {
+        "height": 8.64,
+        "width": 5.76,
+        "x": 57.6,
+        "y": 125.76
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-35ae4617eca3",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 25.344,
+      "bbox_pt": {
+        "height": 6.72,
+        "width": 5.76,
+        "x": 44.64,
+        "y": 127.68
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-7b4aeb4aacd7",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 25.344,
+      "bbox_pt": {
+        "height": 6.72,
+        "width": 5.28,
+        "x": 51.36,
+        "y": 127.68
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-2934a6bcbb6c",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 25.1136,
+      "bbox_pt": {
+        "height": 6.72,
+        "width": 5.76,
+        "x": 64.32,
+        "y": 127.68
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-0ac26e7fbc5c",
+      "region": "top-left"
+    },
+    {
+      "area_pt2": 21.6576,
+      "bbox_pt": {
+        "height": 8.16,
+        "width": 5.28,
+        "x": 53.76,
+        "y": 8.16
+      },
+      "disposition": {
+        "issues": [
+          "#2214",
+          "#2215"
+        ],
+        "kind": "issue",
+        "note": "The first-page header word: office2pdf draws it at the band top (baseline 16.27pt) where Word seats it at 134.08pt inside the 160pt exact line (#2214); the face is also Liberation Serif 11pt against Word's Aptos 12pt (#2215). The output-only ink near y=8pt and the GT-only ink near y=126pt are the two halves of that one displaced word."
+      },
+      "id": "p1-5bdd12c4323e",
       "region": "top-left"
     }
   ],
@@ -60,9 +337,9 @@
   "schema_version": 1,
   "strict": true,
   "summary": {
-    "dispositioned": 3,
+    "dispositioned": 19,
     "duplicate": 0,
-    "total": 3,
+    "total": 19,
     "undispositioned": 0,
     "unknown": 0
   },

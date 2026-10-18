@@ -85,3 +85,9 @@ pictures vary frame proportions, rotation and an explicit source crop. A default
 compiled-frame regression checks declared dimensions. Native Word packages and
 PDFs remain external; source-crop and placement defects are tracked separately.
 
+`first_header_exact_line.docx` is the unmodified synthetic
+`cases/first-header-no-minimum-control/input.docx` from
+[docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/first-header-no-minimum-control),
+Apache-2.0. Its first-page header is one 160pt exact line 6pt below the page
+top. Native Word starts the body at 166pt, and a compiled-layout regression
+checks that body baseline.

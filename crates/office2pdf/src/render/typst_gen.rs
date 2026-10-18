@@ -3033,72 +3033,120 @@ fn flow_page_top_margin_pt(
             // On continuation pages, also retain the empty flow paragraphs
             // that follow a page-anchored header overlay; Word reserves their
             // line boxes even though they paint no text.
-            let content_height: Option<f64> = hf_content_height_pt(
-                header,
-                default_text,
-                overlay_bottom.is_some(),
-                size.width - page.margins.left - page.margins.right,
-            );
-            if content_height.is_none() && overlay_bottom.is_none() {
+            let text_width_pt: f64 = size.width - page.margins.left - page.margins.right;
+            let distance_pt: f64 = header.distance_from_edge.unwrap_or(0.0);
+            let content_reach = |line_heights: HfLineHeights| -> Option<f64> {
+                hf_content_height_pt(
+                    header,
+                    default_text,
+                    overlay_bottom.is_some(),
+                    text_width_pt,
+                    line_heights,
+                )
+                .map(|height| distance_pt + height)
+            };
+            // Where the drawn story's natural lines end, and where Word's own
+            // lines end once each states its exact height.
+            let drawn_reach: Option<f64> = content_reach(HfLineHeights::Natural);
+            let word_reach: Option<f64> = content_reach(HfLineHeights::Declared);
+            if drawn_reach.is_none() && word_reach.is_none() && overlay_bottom.is_none() {
                 return None;
             }
-            let flow_reach: f64 = content_height
-                .map(|height| header.distance_from_edge.unwrap_or(0.0) + height)
-                .unwrap_or(0.0);
             let overlay_reach: f64 = overlay_bottom
                 .map(|bottom| {
                     bottom + hf_last_flow_paragraph_height_pt(header, default_text).unwrap_or(0.0)
                 })
                 .unwrap_or(0.0);
-            let reach: f64 = flow_reach.max(overlay_reach);
+            let reach: f64 = drawn_reach.unwrap_or(0.0).max(overlay_reach);
+            let word_reach: f64 = word_reach.unwrap_or(0.0);
             // A story that fits its band is left exactly as it renders today,
             // clamp and all. Growing those too would move the body a fraction
             // of a point on ordinary documents — measured at 0.63pt for a
             // single 12pt Malgun line well inside its band — which is a
             // different change from stopping an overflow, and one no reference
             // export here justifies.
-            if reach <= page.margins.top {
+            if reach.max(word_reach) <= page.margins.top {
                 return None;
             }
             // An overflowing story needs room for the ascent correction as
             // well, or `write_shifted_header_band` clamps the shift straight
             // back off: the two-line Malgun letterhead measured 41.4984pt of
             // content against a 41.5pt band, 0.0016pt of room for a 6.84pt
-            // shift (#629 seats that baseline).
-            Some(reach + header_band_shift_pt(header).unwrap_or(0.0).max(0.0))
+            // shift (#629 seats that baseline). That clamp measures the drawn
+            // story, so the room is kept against its reach. Word starts the
+            // body below its own exact lines without that correction: a 160pt
+            // line 6pt down starts the body at 166pt (issue #2056).
+            Some((reach + header_band_shift_pt(header).unwrap_or(0.0).max(0.0)).max(word_reach))
         })
         .fold(page.margins.top, f64::max)
+}
+
+/// Which line box [`hf_content_height_pt`] gives a header paragraph.
+#[derive(Clone, Copy)]
+enum HfLineHeights {
+    /// The face's natural line, which is what the drawn story lays out.
+    Natural,
+    /// The paragraph's exact `w:spacing w:line` where it states one.
+    Declared,
 }
 
 /// Height a header or footer story's lines take, in points.
 ///
 /// Reserve each measurable wrapped line plus its paragraph border rules.
-/// Empty paragraphs outside the overlay case and paragraph spacing retain
-/// their existing behavior; their drawn and reserved layout needs a separate
-/// correction (issue #2056).
+/// Empty paragraphs outside the overlay case, paragraph spacing and
+/// proportional line spacing retain their existing behavior; their drawn and
+/// reserved layout needs a separate correction (issue #2056).
 fn hf_content_height_pt(
     hf: &HeaderFooter,
     default_text: Option<&TextStyle>,
     include_empty_flow_paragraphs: bool,
     text_width_pt: f64,
+    line_heights: HfLineHeights,
 ) -> Option<f64> {
     let mut total: f64 = 0.0;
     for paragraph in &hf.paragraphs {
+        if include_empty_flow_paragraphs
+            && paragraph.frame.as_ref().is_some_and(is_page_anchored_frame)
+        {
+            continue;
+        }
+        let line_count: usize = hf_paragraph_line_count(paragraph, text_width_pt);
+        let exact_line_pt: Option<f64> = match line_heights {
+            HfLineHeights::Natural => None,
+            HfLineHeights::Declared => hf_paragraph_exact_line_pt(paragraph),
+        };
+        if let Some(line_pt) = exact_line_pt {
+            total += line_count as f64 * line_pt + hf_paragraph_border_extent_pt(paragraph);
+            continue;
+        }
         if include_empty_flow_paragraphs {
-            if paragraph.frame.as_ref().is_some_and(is_page_anchored_frame) {
-                continue;
-            }
             total += hf_paragraph_height_pt(paragraph, default_text, true)?;
         } else {
             total += hf_paragraph_height_pt(paragraph, None, false)?;
         }
-        let extra_lines: usize = hf_paragraph_line_count(paragraph, text_width_pt) - 1;
+        let extra_lines: usize = line_count - 1;
         if extra_lines > 0 {
             total += extra_lines as f64
                 * text::word_line_advance_pt(&hf_paragraph_metric_runs(paragraph))?;
         }
     }
     Some(total)
+}
+
+/// The exact line height a header or footer paragraph with text states.
+///
+/// Word lays every line of such a paragraph out at exactly that height,
+/// whatever its face, so the height needs no face metrics. A paragraph
+/// without text keeps the empty-paragraph measurement instead.
+fn hf_paragraph_exact_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<f64> {
+    match paragraph.style.line_spacing {
+        Some(crate::ir::LineSpacing::Exact(line_pt))
+            if line_pt > 0.0 && !hf_paragraph_metric_runs(paragraph).is_empty() =>
+        {
+            Some(line_pt)
+        }
+        _ => None,
+    }
 }
 
 /// How many lines a header or footer paragraph takes in `width_pt`.
@@ -3233,7 +3281,7 @@ fn hf_paragraph_height_pt(
             inline_box: None,
         });
     }
-    let mut total: f64 = text::word_line_advance_pt(&runs).or_else(|| {
+    let line_pt: f64 = text::word_line_advance_pt(&runs).or_else(|| {
         if !is_empty_flow_paragraph {
             return None;
         }
@@ -3252,22 +3300,29 @@ fn hf_paragraph_height_pt(
             None => font_size_pt,
         })
     })?;
-    if let Some(border) = paragraph.border.as_ref() {
-        for (side, space) in [
-            (border.top.as_ref(), paragraph.border_space.map(|i| i.top)),
-            (
-                border.bottom.as_ref(),
-                paragraph.border_space.map(|i| i.bottom),
-            ),
-        ] {
-            if let Some(side) = side {
-                // An absent `w:space` is the schema's zero, which is what the
-                // rules themselves are drawn with (issue #1824).
-                total += side.width + space.unwrap_or(0.0);
-            }
-        }
-    }
-    Some(total)
+    Some(line_pt + hf_paragraph_border_extent_pt(paragraph))
+}
+
+/// What a header or footer paragraph's top and bottom `w:pBdr` rules and
+/// their `w:space` gaps add to its lines, in points.
+fn hf_paragraph_border_extent_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> f64 {
+    let Some(border) = paragraph.border.as_ref() else {
+        return 0.0;
+    };
+    [
+        (border.top.as_ref(), paragraph.border_space.map(|i| i.top)),
+        (
+            border.bottom.as_ref(),
+            paragraph.border_space.map(|i| i.bottom),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(side, space)| {
+        // An absent `w:space` is the schema's zero, which is what the rules
+        // themselves are drawn with (issue #1824).
+        side.map(|side| side.width + space.unwrap_or(0.0))
+    })
+    .sum()
 }
 
 #[path = "typst_gen_page_borders.rs"]

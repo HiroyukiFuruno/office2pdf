@@ -1,57 +1,56 @@
 # Issue 2056 visual evidence
 
-Authored synthetic fixture: `tests/fixtures/docx/issue-2056-wrapped-header.docx`. Native reference exported on
-2026-10-10 with Microsoft Word 16.113.4 on macOS 26.6.2 (25G83).
-`pdfinfo` reports one 250.08 x 600pt page, Quartz PDFContext, PDF 1.3 for
-Word and one 250 x 600pt page, Typst 0.15.1, PDF 1.7 for the current converter.
+This directory holds the evidence for the second #2056 fix, which reserves a
+header paragraph's exact line height. The wrapped-line evidence from #2057
+remains at merge commit `d65372fb7f0172edc1c8940e947c5cc068743bf6`.
 
-SHA-256 from `shasum -a 256`:
+Fixture: `tests/fixtures/docx/docxide/first_header_exact_line.docx` is
+docxide-pdf's synthetic `cases/first-header-no-minimum-control/input.docx`
+(Apache-2.0, revision `fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed`), unmodified.
+Its first-page header has one paragraph with a 160pt exact line 6pt below the
+page top. The Word reference is that case's `reference.pdf`: `Creator:
+Microsoft Word` (Windows), one 500 x 500pt page. `check_gt_integrity.py
+--source` passes. The output is Typst 0.15.1, PDF 1.7.
 
-- Source: `3604269c9bf69df15a4b43f159828c8dec9b4c8203f42a4bf2dfd8bc9347b4fe`
-- Native GT PDF: `388ad3d11da99ac805a4afc5aa2946617bc9fa0a9c704873048a2ca84a882c5a`
-- Current output PDF: `76400723bd7d29abf9323a11978c53754310a8a67221d8ad73835b05f4e13b1d`
+SHA-256:
 
-The before converter was built from `6a296de889c0119cb59875a96b2292204436d957` with
-`cargo build --locked --profile ci -p office2pdf-cli`. Current output uses
-this PR. Build products and original PDFs are retained outside the worktree.
-Native PDF export timestamps can change the hash on a subsequent export.
+- Source: `7bd704d343e6a18e28af36c0289354c9287ae8657fd96e1e33f27e5d4ae722da`
+- Word reference: `516625f29371787dd86519c797c639e828af11cd58ca11ba31660d8f40d500ba`
+- Before output (main `03ee814e`): `cc696935cf0f518e3eed80fb93f4c7e884c2489b97ced54333cbb6fcf1d1f21f`
+- After output: `f54e2c2f809fc36a112e648b80dc9a3126273bda6946f5144177ad0b1e5f6570`
 
-Reproduction from the repository root (stage inside Word's own container):
+Both CLIs were built with `cargo build --locked --profile ci -p
+office2pdf-cli` in separate target directories. The layout report comes from
+`compare_layout.py --json --audit --fine-shift 0.5`. The page-1 cluster report
+comes from `compare_render.py --dpi 150 --fine-shift 0.5 --strict-clusters`.
+The JPEGs are pdftoppm 150 DPI renders, saved as progressive quality 86
+without metadata.
 
-```sh
-stage="$HOME/Library/Containers/com.microsoft.Word/Data/pr-review-2057"
-mkdir -p "$stage"
-cp tests/fixtures/docx/issue-2056-wrapped-header.docx "$stage/"
-osascript scripts/macos/export_word_pdfs.applescript "$stage/gt" wrapped-header "$stage/issue-2056-wrapped-header.docx"
-cargo run --locked --profile ci -p office2pdf-cli -- tests/fixtures/docx/issue-2056-wrapped-header.docx -o after.pdf
-pdfinfo "$stage/gt/wrapped-header.pdf"
-pdfinfo after.pdf
-shasum -a 256 "$stage/gt/wrapped-header.pdf" after.pdf
-/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' '/Applications/Microsoft Word.app/Contents/Info.plist'
-sw_vers
-```
+Result: Word starts the body at 166pt, the bottom of the exact line. Before the
+fix, `Before` sat on the 36pt margin (baseline 47.26pt against Word's
+177.35pt). After the fix it sits at 177.26pt. The text layer is identical, with
+four lines matched and none missing or extra.
 
-The exported reference was copied to the audit's `gt.pdf`; the current
-converter produced `after.pdf`. Both were passed to `compare_layout.py
---json --audit --fine-shift 0.5` and `compare_render.py --fine-shift 0.5
---strict-clusters` at 150 DPI. JPEGs preserve the rendered pixel dimensions,
-use progressive quality 86 and retain only a reset 150 DPI density.
+Remaining on this page:
 
-Native Word and current output have seven header lines and one body line.
-Before puts the body between header lines 2 and 3; after keeps it below the
-complete header. The text layer is identical. All eight lines match, with no
-missing, extra or changed-wrap lines, visibility or rectangle failures.
+- `Header` baseline 16.27pt against 134.08pt: the drawn story ignores the exact
+  line (#2214).
+- The header face is Liberation Serif 11pt against Aptos 12pt, and the
+  table-cell lines advance 13.8pt against Word's 16pt (`Minimum` -2.30pt,
+  `Second` -4.50pt). Both come from the package having no styles part (#2215).
+  The pitch is the same on main.
 
-Remaining: the body baseline is 128.50788pt against Word's 125.76pt, a
-2.74788pt excess gap (#2065). All three current material cluster IDs belong
-to that displacement and were inspected in matched crops. An independent
-three-paragraph unwrapped control on pre-fix main also has a 2.75256pt body
-gap, so this residual predates the wrapped-line repair. Header baselines stay
-within the 0.5pt audit threshold. No drawings, rules or emphasis styles occur.
+Other files audited on every page:
 
-The PR is limited to wrapped-line reservation and preserving words across
-OOXML run boundaries. Empty header paragraphs and paragraph spacing retain
-their previous behavior and remain unresolved under #2056. A native probe
-confirmed that the first header paragraph retains space-before and adjacent
-after/before gaps collapse; those changes cannot be accepted independently
-of the header's drawn paragraph layout.
+- `cases/first-header-minimum-row` (Word: 2 pages): main gives one page with
+  the 350pt-minimum row on page 1. After the fix there are two pages, page 1's
+  `Before` is within 0.1pt, and the row moves to page 2 as in Word. On page 2
+  the first-page header is drawn again (#2163), and the row sits 129.99pt low
+  because that header, or a first-only story, still sets every page's margin
+  (#2216).
+- `cases/first-header-small-control` (12pt exact line inside its band): output
+  is byte-identical before and after.
+- `cases/first-header-no-minimum-overflow` and `first-header-minimum-overflow`
+  (not reported in #2056): page 1 now matches Word's body start. Their single
+  oversized row already lost 30 of 60 lines on main (#2217). Under the repeated
+  header (#2163, #2216), page 2 now keeps 21 of them.

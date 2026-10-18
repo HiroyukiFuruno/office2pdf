@@ -2,46 +2,77 @@
  "pages": [
   {
    "lines": {
-    "gt": 8,
-    "out": 8,
-    "matched": 8,
+    "gt": 4,
+    "out": 4,
+    "matched": 4,
     "missing": 0,
     "extra": 0,
-    "deviant": 1,
+    "deviant": 3,
     "missing_text": [],
     "extra_text": []
    },
    "baseline": {
-    "mean_abs_dy": 0.39169062499999985,
-    "worst_dy": 2.747879999999995,
-    "worst_dy_signed": 2.747879999999995,
-    "worst_line": "Bodymarker"
+    "mean_abs_dy": 31.17409950000001,
+    "worst_dy": 117.81046799999999,
+    "worst_dy_signed": -117.81046799999999,
+    "worst_line": "Header"
    },
    "dx0": {
-    "mean_abs": 0.0,
-    "worst": 0.0
+    "mean_abs": 0.03999999999999915,
+    "worst": 0.054999999999999716
    },
    "width": {
-    "mean_abs_pct": 0.023412036898630438,
-    "worst_pct": 0.030472560975613294
+    "mean_abs_pct": 4.549248203294432,
+    "worst_pct": 16.974221983420676
    },
    "instances": {
-    "compared": 8,
+    "compared": 4,
     "large_shift_threshold": 5.0,
-    "large_shift_count": 0,
-    "large_shifts": [],
+    "large_shift_count": 1,
+    "large_shifts": [
+     {
+      "label": "Header",
+      "gt_x": 36.025,
+      "gt_y": 134.07999999999998,
+      "out_x": 36.0,
+      "out_y": 16.269532,
+      "dx": -0.02499999999999858,
+      "dy": -117.81046799999999,
+      "width_pct": -16.974221983420676
+     }
+    ],
     "fine_shift_threshold": 0.5,
-    "fine_shift_count": 1,
+    "fine_shift_count": 3,
     "fine_shifts": [
      {
-      "label": "Bodymarker",
-      "gt_x": 36.0,
-      "gt_y": 125.76,
+      "label": "Header",
+      "gt_x": 36.025,
+      "gt_y": 134.07999999999998,
       "out_x": 36.0,
-      "out_y": 128.50788,
-      "dx": 0.0,
-      "dy": 2.747879999999995,
-      "width_pct": -0.010586974713977196
+      "out_y": 16.269532,
+      "dx": -0.02499999999999858,
+      "dy": -117.81046799999999,
+      "width_pct": -16.974221983420676
+     },
+     {
+      "label": "Minimum",
+      "gt_x": 36.525,
+      "gt_y": 193.35000000000002,
+      "out_x": 36.58,
+      "out_y": 191.05469,
+      "dx": 0.054999999999999716,
+      "dy": -2.295310000000029,
+      "width_pct": -0.5883783796638075
+     },
+     {
+      "label": "Second",
+      "gt_x": 36.525,
+      "gt_y": 209.35000000000002,
+      "out_x": 36.58,
+      "out_y": 204.85352,
+      "dx": 0.054999999999999716,
+      "dy": -4.49648000000002,
+      "width_pct": -0.4987893190937044
      }
     ]
    },
@@ -58,8 +89,8 @@
     "mismatches": []
    },
    "pitch": {
-    "pairs": 7,
-    "worst_delta": 2.77700999999999
+    "pairs": 3,
+    "worst_delta": 117.71632799999998
    },
    "wraps": {
     "count": 0,
