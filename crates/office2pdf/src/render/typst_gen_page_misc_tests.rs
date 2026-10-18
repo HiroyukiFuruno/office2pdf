@@ -4677,6 +4677,166 @@ fn a_wrapped_header_paragraph_grows_the_margin_by_its_lines() {
     );
 }
 
+/// A header paragraph whose `w:spacing w:lineRule="exact"` states its line.
+#[cfg(not(target_arch = "wasm32"))]
+fn exact_header_paragraph(
+    text: &str,
+    style: TextStyle,
+    line_pt: f64,
+) -> crate::ir::HeaderFooterParagraph {
+    let mut paragraph = header_text_paragraph(text, style);
+    paragraph.style.line_spacing = Some(crate::ir::LineSpacing::Exact(line_pt));
+    paragraph
+}
+
+/// The top margin of the single flow page `doc_with_header` builds.
+#[cfg(not(target_arch = "wasm32"))]
+fn header_top_margin_pt(
+    header_distance_pt: f64,
+    top_margin_pt: f64,
+    paragraphs: Vec<crate::ir::HeaderFooterParagraph>,
+) -> f64 {
+    let doc = doc_with_header(Some(header_distance_pt), top_margin_pt, paragraphs);
+    let Page::Flow(page) = &doc.pages[0] else {
+        panic!("the helper creates a flow page");
+    };
+    flow_page_top_margin_pt(page, &page.size, None, false)
+}
+
+/// An exact header line taller than its band starts the body below that line.
+///
+/// Word lays an exact line out at its stated height whatever the face, so the
+/// body starts at `w:header` plus that height. docxide-pdf's
+/// `first-header-no-minimum-control` states a 160pt exact line 6pt below the
+/// page top, and Word's reference starts the body at 166pt where the natural
+/// line left it on the 36pt margin. The face cannot change this, so a run
+/// without a resolvable family reserves the same line.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_exact_header_line_taller_than_its_band_grows_the_margin_to_that_line() {
+    for (distance_pt, line_pt, style) in [
+        (6.0, 160.0, arial(12.0)),
+        (10.0, 100.0, arial(8.0)),
+        (6.0, 160.0, TextStyle::default()),
+    ] {
+        let margin_pt: f64 = header_top_margin_pt(
+            distance_pt,
+            36.0,
+            vec![exact_header_paragraph("Header", style.clone(), line_pt)],
+        );
+        assert!(
+            (margin_pt - (distance_pt + line_pt)).abs() < 0.001,
+            "a {line_pt}pt exact line {distance_pt}pt below the page top must start \
+             the body at {}pt, got {margin_pt}pt for {style:?}",
+            distance_pt + line_pt
+        );
+    }
+}
+
+/// An exact header line that fits its band leaves the declared margin alone.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_exact_header_line_that_fits_its_band_leaves_the_margin() {
+    let margin_pt: f64 = header_top_margin_pt(
+        6.0,
+        36.0,
+        vec![exact_header_paragraph("Header", arial(12.0), 12.0)],
+    );
+    assert!(
+        (margin_pt - 36.0).abs() < 0.001,
+        "a 12pt exact line inside a 30pt band must keep the 36pt margin, got {margin_pt}pt"
+    );
+}
+
+/// Every wrapped line of an exact paragraph takes the stated height, and an
+/// unstated paragraph after it keeps its face's natural line.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_exact_header_paragraph_reserves_each_line_it_takes() {
+    let natural_line_pt: Option<f64> =
+        crate::render::typst_gen::text::word_line_advance_pt(&[Run {
+            text: "Header".to_string(),
+            style: arial(12.0),
+            href: None,
+            footnote: None,
+            inline_box: None,
+        }]);
+    let Some(natural_line_pt) = natural_line_pt else {
+        return; // the face is unavailable on this runner
+    };
+    // About ten "Header " words fit the 453.58pt column, so 25 take three
+    // lines; the count is asserted below rather than assumed.
+    let wrapping: String = "Header ".repeat(25);
+    let wrapped_doc = doc_with_header(Some(6.0), 36.0, arial_header_lines(&[wrapping.trim_end()]));
+    assert_eq!(
+        baselines_of(&wrapped_doc, "Header").len(),
+        3,
+        "the header paragraph must wrap to three lines"
+    );
+
+    let wrapped_margin_pt: f64 = header_top_margin_pt(
+        6.0,
+        36.0,
+        vec![exact_header_paragraph(
+            wrapping.trim_end(),
+            arial(12.0),
+            40.0,
+        )],
+    );
+    assert!(
+        (wrapped_margin_pt - (6.0 + 3.0 * 40.0)).abs() < 0.001,
+        "three 40pt exact lines must start the body at 126pt, got {wrapped_margin_pt}pt"
+    );
+
+    let mixed_margin_pt: f64 = header_top_margin_pt(
+        6.0,
+        36.0,
+        vec![
+            exact_header_paragraph("Exact", arial(12.0), 100.0),
+            header_text_paragraph("Natural", arial(12.0)),
+        ],
+    );
+    assert!(
+        (mixed_margin_pt - (6.0 + 100.0 + natural_line_pt)).abs() < 0.001,
+        "a 100pt exact line over a natural {natural_line_pt}pt one must start the \
+         body at {}pt, got {mixed_margin_pt}pt",
+        6.0 + 100.0 + natural_line_pt
+    );
+}
+
+/// docxide-pdf `first-header-no-minimum-control`, unmodified: Word starts the
+/// body below the first-page header's 160pt exact line.
+///
+/// Its reference export puts the Arial 12pt `Before` baseline at 177.35pt,
+/// one Arial line ascent below the 166pt line bottom, where main kept it on
+/// the 36pt margin at 47.26pt.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_exact_first_page_header_line_pushes_the_body_below_it() {
+    let fixture: &[u8] =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/first_header_exact_line.docx");
+    let (document, _warnings) = crate::parser::Parser::parse(
+        &crate::parser::docx::DocxParser,
+        fixture,
+        &crate::config::ConvertOptions::default(),
+    )
+    .expect("the exact-line header fixture should parse");
+    let generated = generate_typst(&document).expect("the fixture should generate");
+    let runs: Vec<crate::render::pdf::PlacedTextRun> =
+        crate::render::pdf::compiled_text_runs(&generated.source, 0)
+            .expect("the fixture's first page should compile");
+    let before: &crate::render::pdf::PlacedTextRun = runs
+        .iter()
+        .find(|run| run.text == "Before")
+        .expect("the first page should contain the body's first line");
+    assert!(
+        (before.baseline_pt - 177.35).abs() < 0.5,
+        "the body's first baseline must sit one Arial ascent below the 166pt \
+         exact header line, where Word puts it at 177.35pt; got {}pt",
+        before.baseline_pt
+    );
+}
+
 /// An inherited floating header table must leave enough room for a continuous
 /// section's first body lines on the page where its rendered break lands.
 #[cfg(not(target_arch = "wasm32"))]
