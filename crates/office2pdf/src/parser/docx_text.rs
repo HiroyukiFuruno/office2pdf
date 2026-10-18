@@ -283,7 +283,8 @@ fn line_spacing_from_json(
         let line = line_val.as_f64()?;
         let rule = json.get("lineRule").and_then(|v| v.as_str());
         match rule {
-            Some("exact") | Some("atLeast") => Some(LineSpacing::Exact(twips_to_pt(line))),
+            Some("exact") => Some(LineSpacing::Exact(twips_to_pt(line))),
+            Some("atLeast") => Some(LineSpacing::AtLeast(twips_to_pt(line))),
             _ => Some(LineSpacing::Proportional(line / 240.0)),
         }
     });

@@ -225,7 +225,10 @@ fn inline_numbering_prefix_len(style: &ParagraphStyle) -> Option<usize> {
 
 fn word_inline_numbering_runs(para: &Paragraph, line_grid_pitch: Option<f64>) -> Option<Vec<Run>> {
     if para.style.line_box.is_some()
-        || matches!(para.style.line_spacing, Some(LineSpacing::Exact(_)))
+        || matches!(
+            para.style.line_spacing,
+            Some(LineSpacing::Exact(_) | LineSpacing::AtLeast(_))
+        )
     {
         return None;
     }
@@ -321,7 +324,9 @@ pub(super) fn generate_paragraph(
     let has_para_style = needs_block_wrapper(style) || line_height_settings.is_some();
     let empty_paragraph_line_height_pt: f64 = if is_empty_paragraph {
         match style.line_spacing {
-            Some(LineSpacing::Exact(points)) if points > 0.0 => points,
+            Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => {
+                points
+            }
             // An absent `w:line` is single spacing, so a paragraph that
             // states none still takes its mark's line, as a proportional one
             // does; a flat 12pt fell 1.8pt short for a 12pt Arial mark.
@@ -726,7 +731,7 @@ pub(super) fn word_line_box_em(
     style: &ParagraphStyle,
     line_grid_pitch: Option<f64>,
 ) -> Option<(f64, f64)> {
-    if let Some(LineSpacing::Exact(points)) = style.line_spacing
+    if let Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) = style.line_spacing
         && points > 0.0
     {
         let family: &str = word_paragraph_metric_family(runs, style)?;
@@ -948,7 +953,7 @@ impl PowerPointHardBreakLineMetrics {
 /// equivalent scale of PowerPoint's plain 1.2em line so it retains the same
 /// baseline-seating model while replacing the advance.
 fn powerpoint_paragraph_line_box_em(runs: &[Run], style: &ParagraphStyle) -> Option<(f64, f64)> {
-    if let Some(LineSpacing::Exact(points)) = style.line_spacing
+    if let Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) = style.line_spacing
         && points > 0.0
         && style.line_box.is_none()
     {
@@ -1368,7 +1373,7 @@ pub(super) fn powerpoint_baseline_snap(
     }
 
     let raw_seat_em: f64 = match style.line_spacing {
-        Some(LineSpacing::Exact(points)) if points > 0.0 => {
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => {
             let families: Vec<&str> = powerpoint_line_families(runs, style);
             let (ascent_em, _descent_em) =
                 crate::render::pdf::powerpoint_line_box_em_for_families(&families)?;
@@ -1853,6 +1858,39 @@ pub(super) fn word_line_advance_pt(runs: &[Run]) -> Option<f64> {
         return None;
     }
     Some(word_natural_line_em(runs, pitch_em) * paragraph_font_size_pt(runs))
+}
+
+/// Share of an exact header line Word puts above the baseline.
+///
+/// Word lays a `w:lineRule="exact"` header line out at its stated height and
+/// seats the baseline four fifths of the way down, whatever the face, so a
+/// line shorter than the face clips the tops of its glyphs. docxide-pdf's
+/// first-page header cases seat Aptos 12pt 128.08pt and 9.50pt below the tops
+/// of a 160pt and a 12pt line, the second shorter than Aptos's 14.65pt natural
+/// line (issue #2214). LibreOffice Writer splits its fixed line height the
+/// same way. Body lines still centre the extra height in [`word_line_box_em`],
+/// although docxide-pdf's `continued-gap-cell-after0-before0` reference seats
+/// a 16pt exact body-cell line 0.8 down too, 0.66pt below ours (recorded in
+/// #1874).
+const WORD_EXACT_LINE_ASCENT_SHARE: f64 = 0.8;
+
+/// The ascent and descent, in points, of one exact header line `line_pt` tall.
+pub(super) fn word_exact_line_box_pt(line_pt: f64) -> (f64, f64) {
+    let ascent_pt: f64 = WORD_EXACT_LINE_ASCENT_SHARE * line_pt;
+    (ascent_pt, line_pt - ascent_pt)
+}
+
+/// The ascent and descent, in points, of one natural header line.
+///
+/// The baseline sits one [`word_header_line_ascent_em`] below the line top, as
+/// [`word_header_band_shift_pt`] seats it, and the rest of
+/// [`word_line_advance_pt`] lies below it. `None` where the face's metrics are
+/// unknown.
+pub(super) fn word_header_line_box_pt(runs: &[Run]) -> Option<(f64, f64)> {
+    let family: &str = east_asian_aware_metric_family(runs)?;
+    let ascent_pt: f64 = word_header_line_ascent_em(runs, family)? * paragraph_font_size_pt(runs);
+    let advance_pt: f64 = word_line_advance_pt(runs)?;
+    Some((ascent_pt, (advance_pt - ascent_pt).max(0.0)))
 }
 
 /// The line advance Word gives this paragraph before any grid is consulted:
@@ -2634,7 +2672,9 @@ pub(super) fn word_cell_line_box(
     let advance_em: f64 = match style.line_spacing {
         None => advance_em,
         Some(LineSpacing::Proportional(factor)) if factor > 0.0 => advance_em * factor,
-        Some(LineSpacing::Exact(points)) if points > 0.0 => points / font_size,
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => {
+            points / font_size
+        }
         // A non-positive rule states nothing usable; Word ignores it.
         Some(_) => advance_em,
     };
@@ -2851,7 +2891,10 @@ pub(super) fn word_cell_line_box(
     if in_top_aligned_floating_text_box
         && vertical_align.unwrap_or(CellVerticalAlign::Top) == CellVerticalAlign::Top
         && sheet_print_scale.is_none()
-        && matches!(style.line_spacing, Some(LineSpacing::Exact(points)) if points > 0.0)
+        && matches!(
+            style.line_spacing,
+            Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0
+        )
         && advance_em > metric_em
     {
         let extra_em: f64 = advance_em - metric_em;
@@ -3491,7 +3534,7 @@ pub(super) fn write_par_settings(
                 let leading = factor * 0.65;
                 let _ = writeln!(out, "  #set par(leading: {}em)", format_f64(leading));
             }
-            LineSpacing::Exact(pts) => {
+            LineSpacing::Exact(pts) | LineSpacing::AtLeast(pts) => {
                 let _ = writeln!(out, "  #set par(leading: {}pt)", format_f64(*pts));
             }
         }

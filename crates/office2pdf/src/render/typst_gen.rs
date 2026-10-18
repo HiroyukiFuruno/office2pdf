@@ -2984,7 +2984,7 @@ fn flow_header_value(
                     "block(width: 100%, height: {}pt)[#place(top, block(width: 100%)[",
                     format_f64(band)
                 );
-                generate_flow_hf_content(&mut out, header, ctx);
+                generate_flow_header_content(&mut out, header, ctx);
                 out.push_str("])]");
             }
         }
@@ -2998,7 +2998,7 @@ fn flow_header_value(
     } else {
         out.push('[');
     }
-    generate_flow_hf_content(&mut out, header, ctx);
+    generate_flow_header_content(&mut out, header, ctx);
     out.push(']');
     FlowHeaderValue {
         markup: out,
@@ -3066,9 +3066,14 @@ fn flow_page_top_margin_pt(
                 )
                 .map(|height| distance_pt + height)
             };
-            // Where the drawn story's natural lines end, and where Word's own
-            // lines end once each states its exact height.
-            let drawn_reach: Option<f64> = content_reach(HfLineHeights::Natural);
+            // Where the drawn story's lines end, and where Word's own lines
+            // end once each states its exact height.
+            let drawn_lines: HfLineHeights = if header_story_draws_line_boxes(header) {
+                HfLineHeights::Boxed
+            } else {
+                HfLineHeights::Natural
+            };
+            let drawn_reach: Option<f64> = content_reach(drawn_lines);
             let word_reach: Option<f64> = content_reach(HfLineHeights::Declared);
             if drawn_reach.is_none() && word_reach.is_none() && overlay_bottom.is_none() {
                 return None;
@@ -3105,9 +3110,12 @@ fn flow_page_top_margin_pt(
 /// Which line box [`hf_content_height_pt`] gives a header paragraph.
 #[derive(Clone, Copy)]
 enum HfLineHeights {
-    /// The face's natural line, which is what the drawn story lays out.
+    /// The face's natural line, which is what the joined drawn story lays out.
     Natural,
-    /// The paragraph's exact `w:spacing w:line` where it states one.
+    /// An exact line at its stated height and any other at the face's natural
+    /// line, which is what a story drawn as Word's line boxes lays out.
+    Boxed,
+    /// The paragraph's exact or at-least `w:spacing w:line` where it states one.
     Declared,
 }
 
@@ -3135,17 +3143,18 @@ fn hf_content_height_pt(
         }
         if !include_empty_flow_paragraphs && hf_paragraph_is_empty_flow_line(paragraph) {
             total += match line_heights {
-                HfLineHeights::Natural => 0.0,
+                HfLineHeights::Natural | HfLineHeights::Boxed => 0.0,
                 HfLineHeights::Declared => hf_empty_paragraph_line_pt(paragraph, default_text)?,
             };
             continue;
         }
         let line_count: usize = hf_paragraph_line_count(paragraph, text_width_pt);
-        let exact_line_pt: Option<f64> = match line_heights {
+        let stated_line_pt: Option<f64> = match line_heights {
             HfLineHeights::Natural => None,
-            HfLineHeights::Declared => hf_paragraph_exact_line_pt(paragraph),
+            HfLineHeights::Boxed => hf_paragraph_exact_line_pt(paragraph),
+            HfLineHeights::Declared => hf_paragraph_declared_line_pt(paragraph),
         };
-        if let Some(line_pt) = exact_line_pt {
+        if let Some(line_pt) = stated_line_pt {
             total += line_count as f64 * line_pt + hf_paragraph_border_extent_pt(paragraph);
             continue;
         }
@@ -3163,21 +3172,34 @@ fn hf_content_height_pt(
     Some(total)
 }
 
-/// The exact line height a header or footer paragraph with text states.
+/// The line height a header or footer paragraph with text states, exact or
+/// at least.
 ///
-/// Word lays every line of such a paragraph out at exactly that height,
+/// Word lays every line of an exact paragraph out at exactly that height,
 /// whatever its face, so the height needs no face metrics. An empty flow
 /// paragraph is measured by [`hf_empty_paragraph_line_pt`] instead, which
 /// honours an exact line as well. One holding only a picture or a positioned
 /// tab still takes the natural-line path, which cannot measure it (issue
 /// #2164).
-fn hf_paragraph_exact_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<f64> {
+///
+/// TODO(at-least lines): an at-least height is only a floor under the face's
+/// natural line, but the top-margin measure still takes it as the line itself.
+fn hf_paragraph_declared_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<f64> {
     match paragraph.style.line_spacing {
-        Some(crate::ir::LineSpacing::Exact(line_pt))
+        Some(crate::ir::LineSpacing::Exact(line_pt) | crate::ir::LineSpacing::AtLeast(line_pt))
             if line_pt > 0.0 && !hf_paragraph_metric_runs(paragraph).is_empty() =>
         {
             Some(line_pt)
         }
+        _ => None,
+    }
+}
+
+/// The height a header or footer paragraph with text states as an exact
+/// line, as [`hf_paragraph_declared_line_pt`] reads it.
+fn hf_paragraph_exact_line_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<f64> {
+    match paragraph.style.line_spacing {
+        Some(crate::ir::LineSpacing::Exact(_)) => hf_paragraph_declared_line_pt(paragraph),
         _ => None,
     }
 }
@@ -3202,7 +3224,11 @@ fn hf_empty_paragraph_line_pt(
     default_text: Option<&TextStyle>,
 ) -> Option<f64> {
     match paragraph.style.line_spacing {
-        Some(crate::ir::LineSpacing::Exact(line_pt)) if line_pt > 0.0 => Some(line_pt),
+        Some(crate::ir::LineSpacing::Exact(line_pt) | crate::ir::LineSpacing::AtLeast(line_pt))
+            if line_pt > 0.0 =>
+        {
+            Some(line_pt)
+        }
         _ => hf_paragraph_height_pt(paragraph, default_text, true),
     }
 }
@@ -3351,7 +3377,9 @@ fn hf_paragraph_height_pt(
             .reduce(f64::max)
             .unwrap_or(crate::defaults::TYPST_DEFAULT_FONT_SIZE_PT);
         Some(match paragraph.style.line_spacing {
-            Some(crate::ir::LineSpacing::Exact(height)) => height.max(0.0),
+            Some(
+                crate::ir::LineSpacing::Exact(height) | crate::ir::LineSpacing::AtLeast(height),
+            ) => height.max(0.0),
             Some(crate::ir::LineSpacing::Proportional(multiplier)) => {
                 (font_size_pt * multiplier).max(0.0)
             }
@@ -3940,7 +3968,9 @@ fn hf_paragraph_story_height_pt(paragraph: &crate::ir::HeaderFooterParagraph) ->
         return height;
     }
     match paragraph.style.line_spacing {
-        Some(crate::ir::LineSpacing::Exact(height)) => height.max(0.0),
+        Some(crate::ir::LineSpacing::Exact(height) | crate::ir::LineSpacing::AtLeast(height)) => {
+            height.max(0.0)
+        }
         Some(crate::ir::LineSpacing::Proportional(multiplier)) => (11.0 * multiplier).max(0.0),
         None => 11.0,
     }
@@ -3983,6 +4013,77 @@ fn generate_stacked_hf_paragraphs(out: &mut String, hf: &HeaderFooter, ctx: &mut
     }
 }
 
+/// Write a header story's content, as Word's own line boxes where it has an
+/// exact line.
+fn generate_flow_header_content(out: &mut String, header: &HeaderFooter, ctx: &mut GenCtx) {
+    if header_story_draws_line_boxes(header) {
+        generate_line_boxed_header_paragraphs(out, header, ctx);
+    } else {
+        generate_flow_hf_content(out, header, ctx);
+    }
+}
+
+/// Whether a header story is drawn as Word's own line boxes.
+///
+/// Only a story with an exact line needs them, and only when every paragraph
+/// it emits has a box to give: a natural line whose face does not resolve
+/// keeps the joined story's estimates. A ruled story keeps its stacked form,
+/// which seats each rule against the face's natural line (issue #1824).
+fn header_story_draws_line_boxes(header: &HeaderFooter) -> bool {
+    let mut emitted = header
+        .paragraphs
+        .iter()
+        .filter(|paragraph| hf_paragraph_is_emitted(paragraph));
+    !hf_story_rules_a_paragraph(header)
+        && emitted
+            .clone()
+            .any(|paragraph| hf_paragraph_exact_line_pt(paragraph).is_some())
+        && emitted.all(|paragraph| hf_paragraph_line_box_pt(paragraph).is_some())
+}
+
+/// The ascent and descent, in points, Word gives each line of a header
+/// paragraph: its exact line where it states one, otherwise its face's
+/// natural line.
+fn hf_paragraph_line_box_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Option<(f64, f64)> {
+    match hf_paragraph_exact_line_pt(paragraph) {
+        Some(line_pt) => Some(text::word_exact_line_box_pt(line_pt)),
+        None => text::word_header_line_box_pt(&hf_paragraph_metric_runs(paragraph)),
+    }
+}
+
+/// Emit a header story as one block per paragraph, each line in Word's box.
+///
+/// The joined story cannot draw an exact line: its one leading and the band
+/// shift seat every line one face ascent down and advance it by the face's
+/// natural line, so a 160pt exact line's text sat one face ascent below the
+/// band top where Word seats it 128pt down (issue #2214). Stating each line's
+/// ascent and descent as the text edges, with no leading, has Typst lay Word's
+/// boxes out directly. The first baseline then sits its own ascent below the
+/// band top, so the story takes no band shift, and each line advances by its
+/// own height.
+fn generate_line_boxed_header_paragraphs(
+    out: &mut String,
+    header: &HeaderFooter,
+    ctx: &mut GenCtx,
+) {
+    for paragraph in &header.paragraphs {
+        if !hf_paragraph_is_emitted(paragraph) {
+            continue;
+        }
+        out.push_str("#block(width: 100%, above: 0pt, below: 0pt)[");
+        if let Some((ascent_pt, descent_pt)) = hf_paragraph_line_box_pt(paragraph) {
+            let _ = write!(
+                out,
+                "#set text(top-edge: {}pt, bottom-edge: -{}pt)\n#set par(leading: 0pt)\n",
+                format_f64(ascent_pt),
+                format_f64(descent_pt)
+            );
+        }
+        generate_hf_styled_paragraph(out, paragraph, ctx);
+        out.push_str("]\n");
+    }
+}
+
 /// Whether [`generate_flow_hf_content`] writes this paragraph into the story.
 ///
 /// Page-anchored frames are drawn separately in the page background, and an
@@ -4018,8 +4119,12 @@ const MIN_HEADER_BAND_SHIFT_PT: f64 = 0.02;
 /// the one whose top the header distance pins. `None` when that paragraph gives
 /// nothing to measure: no styled text at all, a family that does not resolve,
 /// or an image, whose height rather than the text's would set the compiler's
-/// line ascent.
+/// line ascent. Also `None` for a story drawn as Word's line boxes, whose
+/// first line seats its own baseline (issue #2214).
 fn header_band_shift_pt(hf: &HeaderFooter) -> Option<f64> {
+    if header_story_draws_line_boxes(hf) {
+        return None;
+    }
     let first: &crate::ir::HeaderFooterParagraph =
         hf.paragraphs.iter().find(|p| hf_paragraph_is_emitted(p))?;
     if first
@@ -4090,7 +4195,7 @@ fn write_shifted_header_band(
     // Keep float noise (595.28 - 70.85 - 70.85) out of the emitted source.
     let text_width: f64 = (text_width * 100.0).round() / 100.0;
     out.push_str("context { let header_content = block(width: 100%)[");
-    generate_flow_hf_content(out, header, ctx);
+    generate_flow_header_content(out, header, ctx);
     let _ = write!(
         out,
         "]; block(width: 100%, height: {band}pt)[#place(top, dy: calc.min({shift}pt, calc.max(0pt, {band}pt - measure(header_content, width: {text_width}pt).height)), header_content)] }}",
@@ -6772,7 +6877,9 @@ fn estimate_single_line_height_pt(paragraph: &Paragraph) -> f64 {
     let default_line_height_pt: f64 = max_font_size_pt * 1.2;
 
     match paragraph.style.line_spacing {
-        Some(LineSpacing::Exact(points)) => default_line_height_pt.max(points),
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) => {
+            default_line_height_pt.max(points)
+        }
         Some(LineSpacing::Proportional(factor)) => {
             default_line_height_pt.max(max_font_size_pt * factor)
         }
@@ -7113,7 +7220,7 @@ fn powerpoint_paragraph_line_advance_pt(
         .unwrap_or(crate::render::pdf::POWERPOINT_LINE_HEIGHT_FACTOR * fallback_font_size_pt);
     match paragraph_style.line_spacing {
         Some(LineSpacing::Proportional(factor)) if factor > 0.0 => plain_line_height_pt * factor,
-        Some(LineSpacing::Exact(points)) if points > 0.0 => points,
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => points,
         _ => plain_line_height_pt,
     }
 }

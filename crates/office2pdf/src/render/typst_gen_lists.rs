@@ -281,7 +281,7 @@ fn paragraph_line_height(paragraph: &Paragraph) -> f64 {
 
     match paragraph.style.line_spacing {
         Some(LineSpacing::Proportional(factor)) => font_size * factor.max(0.0),
-        Some(LineSpacing::Exact(points)) => points.max(0.0),
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) => points.max(0.0),
         None => font_size,
     }
 }
@@ -344,7 +344,7 @@ fn paragraph_uses_full_line_box(paragraph: &Paragraph) -> bool {
     let line_spacing_is_in_the_box: bool = match paragraph.style.line_spacing {
         None => true,
         Some(LineSpacing::Proportional(factor)) => factor > 0.0,
-        Some(LineSpacing::Exact(_)) => false,
+        Some(LineSpacing::Exact(_) | LineSpacing::AtLeast(_)) => false,
     };
     line_spacing_is_in_the_box && paragraph.style.line_box.is_none()
 }
@@ -724,7 +724,10 @@ fn alignment_matches(left: Option<Alignment>, right: Option<Alignment>) -> bool 
 fn line_spacing_eq(left: LineSpacing, right: LineSpacing) -> bool {
     match (left, right) {
         (LineSpacing::Proportional(l), LineSpacing::Proportional(r)) => f64_approx_eq(l, r),
-        (LineSpacing::Exact(l), LineSpacing::Exact(r)) => f64_approx_eq(l, r),
+        (
+            LineSpacing::Exact(l) | LineSpacing::AtLeast(l),
+            LineSpacing::Exact(r) | LineSpacing::AtLeast(r),
+        ) => f64_approx_eq(l, r),
         _ => false,
     }
 }
@@ -966,7 +969,7 @@ fn pptx_blank_list_item_advance_pt(paragraph: &Paragraph) -> f64 {
         .unwrap_or(crate::defaults::TYPST_DEFAULT_FONT_SIZE_PT * 1.2);
     match paragraph.style.line_spacing {
         Some(LineSpacing::Proportional(factor)) if factor > 0.0 => plain_advance_pt * factor,
-        Some(LineSpacing::Exact(points)) if points > 0.0 => points,
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => points,
         _ => plain_advance_pt,
     }
 }
@@ -1263,7 +1266,9 @@ fn fixed_text_list_line_gap_pt(style: &ParagraphStyle, list: &List) -> Option<f6
         Some(LineSpacing::Proportional(factor)) if factor > 1.0 => {
             Some((font_size_pt * (factor - 1.0)).max(0.0))
         }
-        Some(LineSpacing::Exact(points)) => Some((points - font_size_pt).max(0.0)),
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) => {
+            Some((points - font_size_pt).max(0.0))
+        }
         _ => None,
     }
 }
@@ -1286,7 +1291,7 @@ fn fixed_text_list_leading_pt(style: &ParagraphStyle, list: &List) -> f64 {
         Some(LineSpacing::Proportional(factor)) if factor > 0.0 => {
             (font_size_pt * TYPST_DEFAULT_LEADING_EM * factor).max(0.0)
         }
-        Some(LineSpacing::Exact(points)) => points.max(0.0),
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) => points.max(0.0),
         _ => font_size_pt * TYPST_DEFAULT_LEADING_EM,
     }
 }
@@ -1311,7 +1316,7 @@ fn fixed_text_list_powerpoint_line(list: &List) -> Option<(String, f64)> {
     let plain_advance_pt: f64 = powerpoint_line_box_pt(&paragraph.runs)?;
     let advance_pt: f64 = match paragraph.style.line_spacing {
         Some(LineSpacing::Proportional(factor)) if factor > 0.0 => plain_advance_pt * factor,
-        Some(LineSpacing::Exact(points)) if points > 0.0 => points,
+        Some(LineSpacing::Exact(points) | LineSpacing::AtLeast(points)) if points > 0.0 => points,
         _ => plain_advance_pt,
     };
     Some((settings, advance_pt))

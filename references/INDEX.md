@@ -25,6 +25,7 @@ Curated open-source projects relevant to office2pdf's architecture (OOXML → IR
 | [pandoc](https://github.com/jgm/pandoc) | Haskell | Universal converter (DOCX reader + Typst writer) | [pandoc.md](pandoc.md) |
 | [mammoth.js](https://github.com/mwilliamson/mammoth.js) | JS | DOCX → semantic HTML | [mammoth.md](mammoth.md) |
 | [ONLYOFFICE Document Server](https://github.com/ONLYOFFICE/DocumentServer) | Mixed | DOCX document editing and section layout | [onlyoffice.md](onlyoffice.md) |
+| [LibreOffice Writer](https://github.com/LibreOffice/core/blob/022c34f162f94d59499ec48e48edbfd075f583b0/sw/source/core/text/itrform2.cxx#L2445-L2469) | C++ | Exact and at-least line heights | [libreoffice-writer-line-height.md](libreoffice-writer-line-height.md) |
 
 ## Typst & PDF Generation
 

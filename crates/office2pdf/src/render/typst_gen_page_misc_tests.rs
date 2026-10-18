@@ -5005,6 +5005,206 @@ fn an_exact_header_paragraph_reserves_each_line_it_takes() {
     );
 }
 
+/// Word's baseline for an exact line, as a share of the line below its top.
+#[cfg(not(target_arch = "wasm32"))]
+const WORD_EXACT_LINE_BASELINE_SHARE: f64 = 0.8;
+
+/// An exact header line seats its baseline four fifths of the way down.
+///
+/// Word puts the baseline of a `w:lineRule="exact"` line 0.8 of the stated
+/// height below the line's top, whatever the face and whether the line is
+/// taller or shorter than the face's own. docxide-pdf's
+/// `first-header-no-minimum-control` and `first-header-small-control` set
+/// Aptos 12pt in a 160pt and a 12pt line, and Word seats it 128.08pt and
+/// 9.50pt below `w:header`; the 12pt line is shorter than Aptos's 14.65pt
+/// natural line. The drawn story gave the line no box and seated it one face
+/// ascent down, 12.83pt, whatever the height (issue #2214).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_exact_header_line_seats_its_baseline_at_four_fifths_of_the_line() {
+    for (distance_pt, line_pt, style) in [
+        (6.0, 160.0, arial(12.0)),
+        (6.0, 12.0, arial(12.0)),
+        (20.0, 40.0, arial(8.0)),
+        (10.0, 30.0, TextStyle::default()),
+    ] {
+        let doc = doc_with_header(
+            Some(distance_pt),
+            36.0,
+            vec![exact_header_paragraph("Header", style.clone(), line_pt)],
+        );
+        let baseline_pt: f64 = *baselines_of(&doc, "Header")
+            .first()
+            .expect("the header line is placed");
+        let expected_pt: f64 = distance_pt + WORD_EXACT_LINE_BASELINE_SHARE * line_pt;
+        assert!(
+            (baseline_pt - expected_pt).abs() < 0.05,
+            "a {line_pt}pt exact line {distance_pt}pt below the page top must seat \
+             its baseline at {expected_pt}pt, got {baseline_pt}pt for {style:?}"
+        );
+    }
+}
+
+/// Exact header lines advance by their stated heights, and a natural line
+/// beside them keeps Word's own ascent and advance.
+///
+/// Word stacks each line box under the one before it: an exact line is its
+/// stated height with the baseline at 0.8 of it, and an unstated line is the
+/// face's natural line with the baseline one line ascent down.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn exact_header_lines_advance_by_their_stated_heights() {
+    let Some(natural_line_pt) = natural_header_line_pt(arial(12.0)) else {
+        return; // the face is unavailable on this runner
+    };
+    let ascent_pt: f64 = 12.0 * arial_header_line_ascent_em();
+    let share: f64 = WORD_EXACT_LINE_BASELINE_SHARE;
+    // About ten "Header " words fit the 453.58pt column, so 25 take three
+    // lines; the expectations below count them.
+    let wrapping: String = "Header ".repeat(25);
+    let wrapped_lines = |top_pt: f64| -> Vec<f64> {
+        (0..3)
+            .map(|line| top_pt + 40.0 * line as f64 + share * 40.0)
+            .collect()
+    };
+    let mut centred = exact_header_paragraph("Second", arial(12.0), 20.0);
+    centred.style.alignment = Some(Alignment::Center);
+
+    type Expected = Vec<(&'static str, Vec<f64>)>;
+    let stories: [(&str, Vec<crate::ir::HeaderFooterParagraph>, Expected); 5] = [
+        (
+            "a wrapped exact paragraph",
+            vec![exact_header_paragraph(
+                wrapping.trim_end(),
+                arial(12.0),
+                40.0,
+            )],
+            vec![("Header", wrapped_lines(6.0))],
+        ),
+        (
+            "two exact paragraphs, the second centred",
+            vec![exact_header_paragraph("First", arial(12.0), 30.0), centred],
+            vec![
+                ("First", vec![6.0 + share * 30.0]),
+                ("Second", vec![36.0 + share * 20.0]),
+            ],
+        ),
+        (
+            "an exact line over a natural one",
+            vec![
+                exact_header_paragraph("Exact", arial(12.0), 100.0),
+                header_text_paragraph("Natural", arial(12.0)),
+            ],
+            vec![
+                ("Exact", vec![6.0 + share * 100.0]),
+                ("Natural", vec![106.0 + ascent_pt]),
+            ],
+        ),
+        (
+            "a natural line over an exact one",
+            vec![
+                header_text_paragraph("Natural", arial(12.0)),
+                exact_header_paragraph("Exact", arial(12.0), 50.0),
+            ],
+            vec![
+                ("Natural", vec![6.0 + ascent_pt]),
+                ("Exact", vec![6.0 + natural_line_pt + share * 50.0]),
+            ],
+        ),
+        (
+            "a natural line over a wrapped exact paragraph",
+            vec![
+                header_text_paragraph("Natural", arial(12.0)),
+                exact_header_paragraph(wrapping.trim_end(), arial(12.0), 40.0),
+            ],
+            vec![
+                ("Natural", vec![6.0 + ascent_pt]),
+                ("Header", wrapped_lines(6.0 + natural_line_pt)),
+            ],
+        ),
+    ];
+    for (label, paragraphs, expectations) in stories {
+        let doc = doc_with_header(Some(6.0), 36.0, paragraphs);
+        for (text, expected) in expectations {
+            let baselines: Vec<f64> = baselines_of(&doc, text);
+            assert!(
+                baselines.len() == expected.len()
+                    && baselines
+                        .iter()
+                        .zip(&expected)
+                        .all(|(baseline, expected)| (baseline - expected).abs() < 0.05),
+                "{label}: {text:?} must sit at {expected:?}, got {baselines:?}"
+            );
+        }
+    }
+}
+
+/// An at-least header line shorter than its face keeps the face's line.
+///
+/// `w:lineRule="atLeast"` states a minimum, so a 12pt floor under Arial's
+/// 13.8pt line changes nothing: the baseline stays one line ascent down, where
+/// the exact rule would put it at 9.6pt, whether or not an exact line elsewhere
+/// draws the story as line boxes.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_at_least_header_line_below_its_face_keeps_the_natural_seat() {
+    let ascent_pt: f64 = 12.0 * arial_header_line_ascent_em();
+    let at_least = |text: &str| {
+        let mut paragraph = header_text_paragraph(text, arial(12.0));
+        paragraph.style.line_spacing = Some(crate::ir::LineSpacing::AtLeast(12.0));
+        paragraph
+    };
+    for (label, paragraphs, expected_pt) in [
+        ("alone", vec![at_least("Floor")], 6.0 + ascent_pt),
+        (
+            "under an exact line",
+            vec![
+                exact_header_paragraph("Exact", arial(12.0), 30.0),
+                at_least("Floor"),
+            ],
+            36.0 + ascent_pt,
+        ),
+    ] {
+        let doc = doc_with_header(Some(6.0), 36.0, paragraphs);
+        let baseline_pt: f64 = *baselines_of(&doc, "Floor")
+            .first()
+            .expect("the at-least line is placed");
+        assert!(
+            (baseline_pt - expected_pt).abs() < 0.05,
+            "{label}: the 12pt at-least line must keep Arial's seat at {expected_pt}pt, \
+             got {baseline_pt}pt"
+        );
+    }
+}
+
+/// docxide-pdf `first-header-no-minimum-control` and
+/// `first-header-small-control`, unmodified: Word's references seat the
+/// first-page header's `Header` at 134.08pt and 15.50pt, 0.8 of its 160pt and
+/// 12pt exact line below the 6pt `w:header` (issue #2214).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn exact_first_page_header_lines_sit_on_words_baselines() {
+    let fixtures: [(&[u8], f64); 2] = [
+        (
+            include_bytes!("../../../../tests/fixtures/docx/docxide/first_header_exact_line.docx"),
+            134.08,
+        ),
+        (
+            include_bytes!(
+                "../../../../tests/fixtures/docx/docxide/first_header_small_control.docx"
+            ),
+            15.50,
+        ),
+    ];
+    for (fixture, word_baseline_pt) in fixtures {
+        let baseline_pt: f64 = docx_fixture_baseline_pt(fixture, 0, "Header");
+        assert!(
+            (baseline_pt - word_baseline_pt).abs() < 0.15,
+            "`Header` must sit on Word's {word_baseline_pt}pt baseline, got {baseline_pt}pt"
+        );
+    }
+}
+
 /// A header paragraph with no content, whose paragraph mark resolves to `mark`.
 #[cfg(not(target_arch = "wasm32"))]
 fn empty_header_paragraph(mark: TextStyle) -> crate::ir::HeaderFooterParagraph {
