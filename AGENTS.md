@@ -123,6 +123,7 @@ python3 scripts/compare_render.py GT.pdf OUTPUT.pdf --page N --dpi 150 \
 
 - `scripts/issue_loop.sh` starts fresh Claude attempts; instructions live in `scripts/issue_loop_prompt.md`. Use `--expect-user developer0hye`, `autofix-skip` for trackers, `scripts/issue_loop_watch.py` for activity, and `scripts/issue_loop_history.py` for past runs' outcomes and transcripts. See the runner for options and stop/retry behavior.
 - In headless sessions, wait for CI in the foreground and complete the PR lifecycle before ending the turn. Runner progress does not prove completion.
+- Never merge over a failing check, even one that also fails on `main`; the runner works a `main-red` issue before its queue.
 
 ## Release Procedure
 

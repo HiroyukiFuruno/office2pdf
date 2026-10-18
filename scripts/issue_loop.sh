@@ -17,11 +17,16 @@
 #   scripts/issue_loop.sh --usage-limit-reason LOG  # why a run counted as rate-limited
 #   scripts/issue_loop.sh --print-prompt N          # issue #N's next prompt, minus the
 #                                                   # merged-PR preflight note
+#   scripts/issue_loop.sh --print-next-issue        # the issue the next run takes; files a
+#                                                   # main-red issue first if main is red
 #
 # Stop it gracefully with `touch target/issue-loop-logs/STOP` (finishes the current
 # issue first) or Ctrl+C. Each run's prompt, report, outcome and full transcript land
 # in target/issue-loop-logs/runs/ (see scripts/issue_loop_history.py), and the next
 # attempt at the same issue is pointed at them.
+#
+# A failing check on main is worked first: the loop files a `main-red` issue for it
+# when none is open and takes that before the rest of the queue.
 #
 # Requirements: `claude` (logged in), `gh` (authenticated with push access), jq via gh.
 set -u
@@ -31,6 +36,7 @@ REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
 
 BLOCKED_LABEL="autofix-blocked"   # set by the loop when attempts fail; excluded from the queue
 SKIP_LABEL="autofix-skip"         # set by a human on umbrella/tracker issues; excluded too
+MAIN_RED_LABEL="main-red"         # tracks a failing check on main; worked before the queue
 QUEUE_LABEL=""                    # optional: restrict the queue to one label
 PROMPT_FILE="$SCRIPT_DIR/issue_loop_prompt.md"
 LOG_DIR="$REPO_ROOT/target/issue-loop-logs"
@@ -47,6 +53,7 @@ ONCE=0
 MAX_ISSUES=0
 USAGE_LIMIT_LOG=""                # diagnostic: report why one run counted as rate-limited
 PRINT_PROMPT=""                   # diagnostic: print one issue's next prompt and exit
+PRINT_NEXT_ISSUE=0                # diagnostic: pick (and file, if main is red) the next issue
 REFLECT_EVERY=0                   # 0 = never run the prompt-improvement proposer
 HISTORY="$SCRIPT_DIR/issue_loop_history.py"
 
@@ -68,6 +75,7 @@ while (( $# )); do
     --min-free-gb) shift; MIN_FREE_GB="${1:-0}" ;;
     --usage-limit-reason) shift; USAGE_LIMIT_LOG="${1:-}" ;;
     --print-prompt) shift; PRINT_PROMPT="${1:-}" ;;
+    --print-next-issue) PRINT_NEXT_ISSUE=1 ;;
     --reflect-every) shift; REFLECT_EVERY="${1:-0}" ;;
     -h|--help) usage ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
@@ -147,7 +155,43 @@ cd "$REPO_ROOT" || exit 1
 # Available space in GiB, portably: -P forces one line per filesystem, -k fixes the block size.
 free_gb() { df -Pk "$REPO_ROOT" | awk 'NR==2 {print int($4/1048576)}'; }
 
+# Workflows whose runs on main's current head failed, comma-separated; empty when green.
+main_failures() {
+  local sha
+  sha="$(gh api 'repos/{owner}/{repo}/commits/main' --jq .sha 2>/dev/null)"
+  [[ -z "$sha" ]] && return 0
+  gh run list --commit "$sha" --json workflowName,conclusion \
+    --jq '[.[] | select(.conclusion == "failure") | .workflowName] | unique | join(", ")' 2>/dev/null
+}
+
+# A failing check on main fails every pull request too, and from 2026-10-16 runs
+# merged past an inherited cargo-deny failure for two days. So the issue tracking a
+# red main comes first, filed here when none is open. A blocked one is not refiled:
+# a duplicate would only be retried forever.
+pick_main_red_issue() {
+  local any failing created
+  any="$(gh issue list --state open --label "$MAIN_RED_LABEL" --json number \
+    --jq 'sort_by(.number) | .[0].number // empty' 2>/dev/null)"
+  if [[ -n "$any" ]]; then
+    gh issue list --state open \
+      --search "sort:created-asc label:$MAIN_RED_LABEL -label:$BLOCKED_LABEL" \
+      --json number --jq '.[0].number // empty' 2>/dev/null
+    return 0
+  fi
+  failing="$(main_failures)"
+  [[ -z "$failing" ]] && return 0
+  gh label create "$MAIN_RED_LABEL" --force --color D93F0B \
+    --description "issue-loop: a check fails on main; worked before the queue" >/dev/null 2>&1 || true
+  created="$(gh issue create --label "$MAIN_RED_LABEL" --title "main is failing: $failing" \
+    --body "issue-loop: the latest runs on main fail: $failing. Every pull request inherits these failures and none may merge over them, so this is worked before the rest of the queue. Fix main through a pull request, then close this issue." 2>/dev/null)"
+  [[ -n "$created" ]] && echo "${created##*/}"
+  return 0
+}
+
 pick_issue() {
+  local red
+  red="$(pick_main_red_issue)"
+  [[ -n "$red" ]] && { echo "$red"; return 0; }
   local search="sort:created-asc"
   [[ -n "$BLOCKED_LABEL" ]] && search="$search -label:$BLOCKED_LABEL"
   [[ -n "$SKIP_LABEL" ]] && search="$search -label:$SKIP_LABEL"
@@ -223,6 +267,11 @@ record_run() {
 if [[ -n "$PRINT_PROMPT" ]]; then
   build_prompt "$PRINT_PROMPT"
   exit $?
+fi
+
+if (( PRINT_NEXT_ISSUE )); then
+  pick_issue
+  exit 0
 fi
 
 for tool in claude gh git; do
