@@ -7,6 +7,9 @@ replace those documents.
 - Test-driven: write the failing test first, then the minimal fix, then refactor. The
   test must pin the general rule, not the one input from the issue.
 - Sign off every commit (`git commit -s`) with the repository's configured identity.
+- Merge only when every check on the pull request passes, including one that also
+  fails on `main`: an inherited failure is a red main to fix first (the `main-red`
+  issue), never a reason to merge. Read the full `gh pr checks` output, unfiltered.
 - Delegate the read-only documentation freshness audit and wait for `PASS:` before
   **every** commit, not only the one that opens the pull request.
 - Layout and rendering claims need measurement, not inspection: use
