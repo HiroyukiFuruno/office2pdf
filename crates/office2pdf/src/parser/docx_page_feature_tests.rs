@@ -2782,3 +2782,134 @@ fn a_header_rule_hangs_below_its_line_without_moving_it() {
         "the ruled header lines sit at {ruled_first}pt and {ruled_second}pt, native Word at 52.56pt and 66.24pt"
     );
 }
+
+const FRAME_TEST_STYLES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/></w:rPr></w:rPrDefault>
+    <w:pPrDefault/>
+  </w:docDefaults>
+</w:styles>"#;
+
+/// The body flow's paragraphs across every section, as their text: an empty
+/// paragraph, which the renderer lays out as a blank line, shows as `""`.
+fn body_flow_paragraph_texts(body_xml: &str) -> Vec<String> {
+    let data: Vec<u8> = build_docx_with_raw_styles(FRAME_TEST_STYLES, body_xml);
+    let (doc, _warnings) = DocxParser
+        .parse(&data, &ConvertOptions::default())
+        .expect("document parses");
+    doc.pages
+        .iter()
+        .filter_map(|page| match page {
+            Page::Flow(flow) | Page::FlowContinuous(flow) => Some(&flow.content),
+            _ => None,
+        })
+        .flatten()
+        .filter_map(|block| match block {
+            Block::Paragraph(paragraph) => Some(
+                paragraph
+                    .runs
+                    .iter()
+                    .map(|run| run.text.as_str())
+                    .collect::<String>(),
+            ),
+            _ => None,
+        })
+        .collect()
+}
+
+/// An empty paragraph in a `w:framePr` frame of its own, between two lines.
+/// The mark carries a 14pt `w:rPr` and an empty run, as docxide-pdf's
+/// `empty-frame-control` does, and optionally the section properties that
+/// make it its section's last paragraph.
+fn empty_frame_paragraph_body(frame_xml: &str, section_xml: &str) -> String {
+    format!(
+        r#"<w:p><w:r><w:t>Before</w:t></w:r></w:p>
+<w:p><w:pPr>{frame_xml}<w:rPr><w:sz w:val="28"/></w:rPr>{section_xml}</w:pPr><w:r><w:rPr><w:sz w:val="28"/></w:rPr></w:r></w:p>
+<w:p><w:r><w:t>After</w:t></w:r></w:p>"#
+    )
+}
+
+/// Word lifts a paragraph whose `w:framePr` positions it out of the body flow
+/// into a frame, so an empty one paints nothing and leaves no line behind.
+/// Word's exports of docxide-pdf's `empty-frame-control` and
+/// `cont-first-first-fits` advance the next text as if the paragraph were
+/// absent, whether or not it also ends a section (issue #2161).
+#[test]
+fn an_empty_positioned_frame_paragraph_leaves_no_body_line() {
+    let positioning_frames: [&str; 3] = [
+        r#"<w:framePr w:w="4659" w:wrap="auto" w:hAnchor="text" w:x="1701"/>"#,
+        r#"<w:framePr w:wrap="around" w:vAnchor="page" w:hAnchor="page" w:x="8000" w:y="2000"/>"#,
+        r#"<w:framePr w:w="2000" w:hAnchor="margin" w:xAlign="right"/>"#,
+    ];
+    let section_marks: [&str; 2] = [
+        "",
+        r#"<w:sectPr><w:type w:val="continuous"/><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>"#,
+    ];
+    for frame_xml in positioning_frames {
+        for section_xml in section_marks {
+            assert_eq!(
+                body_flow_paragraph_texts(&empty_frame_paragraph_body(frame_xml, section_xml)),
+                ["Before", "After"],
+                "an empty paragraph in {frame_xml} {section_xml} must not take a body line"
+            );
+        }
+    }
+}
+
+/// The frames Word does not lift out of the flow keep the empty paragraph's
+/// line: one stating only its wrap, an inline one, one that keeps text off
+/// its sides, and one with a stated height. So does an empty paragraph inside
+/// a frame it shares with its neighbours, where it is a line of the frame's
+/// own text.
+#[test]
+fn an_empty_paragraph_keeps_its_line_when_its_frame_stays_in_the_flow() {
+    let in_flow_frames: [&str; 5] = [
+        r#"<w:framePr w:wrap="auto"/>"#,
+        r#"<w:framePr w:w="4659" w:wrap="auto" w:hAnchor="text" w:x="1701" w:yAlign="inline"/>"#,
+        r#"<w:framePr w:w="4659" w:wrap="notBeside" w:hAnchor="text" w:x="1701"/>"#,
+        r#"<w:framePr w:w="4659" w:wrap="none" w:hAnchor="text" w:x="1701"/>"#,
+        r#"<w:framePr w:w="4659" w:h="600" w:hRule="exact" w:wrap="auto" w:hAnchor="text" w:x="1701"/>"#,
+    ];
+    for frame_xml in in_flow_frames {
+        assert_eq!(
+            body_flow_paragraph_texts(&empty_frame_paragraph_body(frame_xml, "")),
+            ["Before", "", "After"],
+            "an empty paragraph in {frame_xml} must keep its line"
+        );
+    }
+
+    let shared_frame: &str = r#"<w:framePr w:w="4659" w:wrap="auto" w:hAnchor="text" w:x="1701"/>"#;
+    let shared_frame_body: String = format!(
+        r#"<w:p><w:pPr>{shared_frame}</w:pPr><w:r><w:t>Street</w:t></w:r></w:p>
+<w:p><w:pPr>{shared_frame}</w:pPr></w:p>
+<w:p><w:pPr>{shared_frame}</w:pPr><w:r><w:t>City</w:t></w:r></w:p>"#
+    );
+    assert_eq!(
+        body_flow_paragraph_texts(&shared_frame_body),
+        ["Street", "", "City"],
+        "an empty paragraph sharing its frame with its neighbours is one of the frame's lines"
+    );
+
+    // A table whose cell paragraphs carry the frame sits in it too, so an
+    // empty paragraph beside it with the same `w:framePr` is a line of that
+    // framed table's frame, on either side.
+    let framed_table: String = format!(
+        r#"<w:tbl><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc><w:p><w:pPr>{shared_frame}</w:pPr><w:r><w:t>Cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#
+    );
+    let empty_framed: String = format!(r#"<w:p><w:pPr>{shared_frame}</w:pPr></w:p>"#);
+    assert_eq!(
+        body_flow_paragraph_texts(&format!(
+            r#"{framed_table}{empty_framed}<w:p><w:r><w:t>After</w:t></w:r></w:p>"#
+        )),
+        ["", "After"],
+        "an empty paragraph after a table in its frame is one of the frame's lines"
+    );
+    assert_eq!(
+        body_flow_paragraph_texts(&format!(
+            r#"<w:p><w:r><w:t>Before</w:t></w:r></w:p>{empty_framed}{framed_table}"#
+        )),
+        ["Before", ""],
+        "an empty paragraph before a table in its frame is one of the frame's lines"
+    );
+}

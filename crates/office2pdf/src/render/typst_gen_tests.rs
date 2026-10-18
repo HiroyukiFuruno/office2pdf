@@ -599,6 +599,68 @@ fn continuous_section_start_does_not_add_typst_paragraph_spacing() {
     );
 }
 
+/// A continuous break leaves the next section on the same page, so it is no
+/// page top: Word keeps the first paragraph's stated `w:before` there. Its
+/// export of docxide-pdf's `cont-first-first-fits` advances 24pt before plus
+/// a 16pt exact line, where the gap used to be dropped (issue #2161).
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn continuous_section_start_keeps_a_stated_space_before() {
+    let advance = |space_before: Option<f64>| -> f64 {
+        let exact_line = |text: &str, space_before: Option<f64>| -> Block {
+            let mut block: Block = make_paragraph(text);
+            let Block::Paragraph(paragraph) = &mut block else {
+                unreachable!();
+            };
+            paragraph.style.line_spacing = Some(LineSpacing::Exact(16.0));
+            paragraph.style.space_before = space_before;
+            block
+        };
+        let section = |content: Vec<Block>| -> FlowPage {
+            let Page::Flow(mut page) = make_flow_page(content) else {
+                unreachable!();
+            };
+            page.size = PageSize {
+                width: 300.0,
+                height: 300.0,
+            };
+            page.margins = Margins {
+                top: 20.0,
+                bottom: 20.0,
+                left: 20.0,
+                right: 20.0,
+            };
+            page
+        };
+        let document: Document = make_doc(vec![
+            Page::Flow(section(vec![exact_line("before", None)])),
+            Page::FlowContinuous(section(vec![exact_line("after", space_before)])),
+        ]);
+        let output: TypstOutput = generate_typst(&document).expect("Typst should generate");
+        let placed = crate::render::pdf::compiled_text_runs(&output.source, 0)
+            .unwrap_or_else(|error| panic!("compile failed: {error}\n{}", output.source));
+        let baseline = |needle: &str| -> f64 {
+            placed
+                .iter()
+                .find(|run| run.text == needle)
+                .unwrap_or_else(|| panic!("missing {needle:?} in {placed:?}"))
+                .baseline_pt
+        };
+        baseline("after") - baseline("before")
+    };
+
+    let unspaced: f64 = advance(None);
+    for space_before in [24.0, 12.0] {
+        let spaced: f64 = advance(Some(space_before));
+        assert!(
+            (spaced - unspaced - space_before).abs() < 0.01,
+            "a {space_before}pt w:before at a continuous section start must move the \
+             paragraph down {space_before}pt, moved {}pt",
+            spaced - unspaced
+        );
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn continuous_section_columns_start_without_typst_block_spacing() {
