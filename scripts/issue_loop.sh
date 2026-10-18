@@ -227,6 +227,15 @@ You are running unattended in this repository. Your task is GitHub issue #${n} a
 
 Hard rules: never commit or push to the default branch directly, and never force-push.
 EOF
+  # Stated per host because a Mac can export native PDFs; without it, every run on
+  # Linux rediscovered the gap with disk-wide searches for a native export. Only an
+  # external corpus the issue names (docxide-pdf's references) is worth looking in.
+  local host
+  host="$(uname -s 2>/dev/null)"
+  if [[ "$host" != Darwin ]]; then
+    printf '\nHost: this machine runs %s, which cannot run Microsoft Office, so it cannot export a native Office PDF. One exists here only where the repository commits it or in an external reference corpus the issue names (such as the reference.pdf files of a docxide-pdf checkout; check the producer with pdfinfo): look there, never search the rest of the filesystem.\n' \
+      "${host:-an unknown system}"
+  fi
   if [[ -n "$PROMPT_FILE" && -f "$PROMPT_FILE" ]]; then
     printf '\nRepository-specific instructions:\n\n'
     cat "$PROMPT_FILE"
