@@ -2024,6 +2024,22 @@ fn a_theme_major_heading_draws_the_light_member_where_office_ships_it() {
     );
 }
 
+/// A face the document embeds is the face the PDF draws: Word and the
+/// docxide-pdf case8 reference both paint the obfuscated Press Start 2P, and
+/// no host ships it, so a wrong deobfuscation key silently fell back to a
+/// substitute (issue #2200).
+#[test]
+fn an_embedded_obfuscated_face_draws_its_runs() {
+    let result = office2pdf::convert(fixture_path("issue_2200_embedded_press_start_2p.docx"))
+        .expect("conversion should succeed");
+    let names = embedded_base_font_names(&result.pdf);
+    assert_eq!(
+        names,
+        ["PressStart2P-Regular"],
+        "the only run must draw in the embedded face"
+    );
+}
+
 #[test]
 fn conflicting_unicode_docx_part_names_are_rejected() {
     let bytes = load_fixture("poi/unicode-path.docx");

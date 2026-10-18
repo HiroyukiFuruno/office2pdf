@@ -168,6 +168,19 @@ limitations under the License.
 - **File:** `docx/wasm_embedded_cjk.docx` contains a glyph-subsetted Regular
   instance of `NotoSansSC[wght].ttf` as an OOXML-obfuscated embedded font.
 
+### Press Start 2P
+
+- **Source:** <https://github.com/google/fonts/tree/main/ofl/pressstart2p>
+- **License:** SIL Open Font License 1.1
+- **Copyright:** Copyright 2012 The Press Start 2P Project Authors, with
+  Reserved Font Name "Press Start 2P"
+- **License text:** `licenses/PressStart2P-OFL.txt`
+- **File:** `docx/issue_2200_embedded_press_start_2p.docx` carries, byte for
+  byte, the obfuscated `word/fonts/font20.odttf` of docxide-pdf
+  `tests/fixtures/cases/case8/input.docx` (Apache-2.0,
+  <https://github.com/sverrejb/docxide-pdf>, revision `1bb140b6`) under its
+  original `w:fontKey`. The package's XML parts are original.
+
 ---
 
 ## MIT License
