@@ -363,6 +363,34 @@ crops and signed stretch rectangles before shape clipping. Unavailable linked ca
 and unsupported per-path painting produce warnings.
 Header/footer and hyperlinked diagrams are not yet imported.
 
+## Unattended issue runner
+
+With Git, Python 3, authenticated `gh` with repository write access, and the selected
+agent CLI logged in, run a single attempt from a trusted repository:
+
+```sh
+scripts/issue_loop.sh --agent codex --expect-user developer0hye --max-issues 1
+scripts/issue_loop_watch.py --agent codex --dump 20
+```
+
+Claude remains the default. Both agents start fresh per issue and use the same
+queue, prior-attempt history, main-check preflight, and optional `--reflect-every N`
+prompt-improvement proposer; reflection opens a PR for review and must not merge it.
+The Codex adapter uses CLI authentication, structured reports and JSONL events,
+with `--max-runtime 7200` seconds by default instead of Claude's `--max-turns`.
+`--model NAME` selects either CLI's model. The default Codex sandbox is
+`danger-full-access` with approvals disabled; `--codex-sandbox` can restrict it.
+
+Each attempt keeps its prompt, report and outcome, plus the transcript and exact
+session ID when emitted by the CLI,
+under `target/issue-loop-logs/runs/issue-N/`; Codex also writes live `events.jsonl`
+and `events.stderr.log`. Inspect past runs with `scripts/issue_loop_history.py list`.
+API failures abort rather than indicate an empty queue; Codex setup failures stop
+without blocking an issue, and timeouts stop its process group. A final report is
+not completion proof: the runner checks GitHub issue/PR state for progress, while
+the agent must complete and verify CI, merge and cleanup under `AGENTS.md`.
+See `scripts/issue_loop.sh --help` for limits, paths and stop behavior.
+
 ## Contributing files
 
 Before attaching files to help improve office2pdf, complete a security review
