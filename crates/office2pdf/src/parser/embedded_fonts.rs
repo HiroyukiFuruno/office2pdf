@@ -262,18 +262,19 @@ fn detect_font_format(data: &[u8]) -> Option<FontFileFormat> {
 /// recover what detection does not recognise, but a missing magic usually
 /// means the key or the part is wrong and the face will not load.
 fn deobfuscated_face(data: Vec<u8>, family: &str, style: &str) -> EmbeddedFontFace {
+    // The family is the document's own text; `?` escapes it in both log lines.
     let format = match detect_font_format(&data) {
         Some(format) => format,
         None => {
             tracing::warn!(
-                family,
+                family = ?family,
                 style,
                 "deobfuscated embedded font has no sfnt magic; the face may not load"
             );
             FontFileFormat::Ttf
         }
     };
-    tracing::debug!(family, style, ?format, "deobfuscated embedded font face");
+    tracing::debug!(family = ?family, style, ?format, "deobfuscated embedded font face");
     EmbeddedFontFace { format, data }
 }
 
