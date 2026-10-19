@@ -2308,6 +2308,7 @@ fn parse_flow_pages(data: &[u8]) -> Vec<FlowPage> {
 }
 
 /// The concatenated text of every run the compiled document places on a page.
+#[cfg(not(target_arch = "wasm32"))]
 fn compiled_page_text(data: &[u8], page_index: usize) -> String {
     let (document, _warnings) = DocxParser
         .parse(data, &ConvertOptions::default())
@@ -2322,6 +2323,7 @@ fn compiled_page_text(data: &[u8], page_index: usize) -> String {
         .collect()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_title_page_without_a_first_story_prints_neither_running_story_on_page_one() {
     // Word's references for a one-section document with `w:titlePg` and only
@@ -2545,6 +2547,7 @@ fn a_title_page_section_links_its_first_stories_to_the_previous_section() {
     );
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_continuous_sections_later_pages_leave_its_first_story_out_of_the_margin() {
     // A continuous section sets its page up again after each page break it
