@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::ir::{
-    Block, List, ListItem, ListKind, ListLevelStyle, ListMarkerSuffix, Paragraph, ParagraphStyle,
-    Run, TabAlignment, TabLeader, TabStop, TextStyle,
+    Block, List, ListItem, ListKind, ListLevelStyle, ListMarkerSuffix, NumberingPattern, Paragraph,
+    ParagraphStyle, Run, TabAlignment, TabLeader, TabStop, TextStyle,
 };
 
 /// Numbering info extracted from a paragraph's numPr.
@@ -79,23 +79,26 @@ fn level_kind(number_format: &str) -> ListKind {
     }
 }
 
-fn typst_counter_symbol(number_format: &str) -> Option<&'static str> {
+fn counter_symbol(number_format: &str) -> Option<char> {
     match number_format {
-        "decimal" | "decimalZero" => Some("1"),
-        "lowerLetter" => Some("a"),
-        "upperLetter" => Some("A"),
-        "lowerRoman" => Some("i"),
-        "upperRoman" => Some("I"),
+        "decimal" | "decimalZero" => Some('1'),
+        "lowerLetter" => Some('a'),
+        "upperLetter" => Some('A'),
+        "lowerRoman" => Some('i'),
+        "upperRoman" => Some('I'),
         _ => None,
     }
 }
 
-fn build_typst_numbering_pattern(
+/// Keeps lvlText's literal text apart from its counters; the renderer
+/// decides whether Typst can read them back from one pattern string.
+fn build_numbering_pattern(
     level_text: &str,
     current_level: u32,
     levels: &BTreeMap<u32, RawListLevel>,
-) -> Option<(String, bool)> {
-    let mut pattern: String = String::new();
+) -> Option<(NumberingPattern, bool)> {
+    let mut pieces: Vec<(String, char)> = Vec::new();
+    let mut literal: String = String::new();
     let mut chars = level_text.chars().peekable();
     let mut saw_current_level: bool = false;
     let mut saw_parent_level: bool = false;
@@ -113,18 +116,18 @@ fn build_typst_numbering_pattern(
             }
 
             if digits.is_empty() {
-                pattern.push(ch);
+                literal.push(ch);
                 continue;
             }
 
             let referenced_level: u32 = digits.parse::<u32>().ok()?.checked_sub(1)?;
             let referenced = levels.get(&referenced_level)?;
             let symbol = if levels.get(&current_level)?.uses_legal_numbering {
-                "1"
+                '1'
             } else {
-                typst_counter_symbol(&referenced.number_format)?
+                counter_symbol(&referenced.number_format)?
             };
-            pattern.push_str(symbol);
+            pieces.push((std::mem::take(&mut literal), symbol));
             if referenced_level == current_level {
                 saw_current_level = true;
             } else if referenced_level < current_level {
@@ -133,20 +136,29 @@ fn build_typst_numbering_pattern(
             continue;
         }
 
-        pattern.push(ch);
+        literal.push(ch);
     }
 
-    if !saw_current_level {
+    // A lvlText without placeholders is static text on every item, as
+    // `format_inline_number` prints it; only a label of other levels gains
+    // the current counter.
+    if !saw_current_level && !pieces.is_empty() {
         let current = levels.get(&current_level)?;
         let symbol = if current.uses_legal_numbering {
-            "1"
+            '1'
         } else {
-            typst_counter_symbol(&current.number_format)?
+            counter_symbol(&current.number_format)?
         };
-        pattern.insert_str(0, symbol);
+        pieces.insert(0, (String::new(), symbol));
     }
 
-    Some((pattern, saw_parent_level))
+    Some((
+        NumberingPattern {
+            pieces,
+            suffix: literal,
+        },
+        saw_parent_level,
+    ))
 }
 
 fn extract_raw_level(
@@ -261,7 +273,7 @@ fn resolve_numbering(
         .map(|(level_index, level)| {
             let kind = level_kind(&level.number_format);
             let (numbering_pattern, full_numbering) = if kind == ListKind::Ordered {
-                build_typst_numbering_pattern(&level.level_text, *level_index, &raw_levels)
+                build_numbering_pattern(&level.level_text, *level_index, &raw_levels)
                     .map(|(pattern, full)| (Some(pattern), full))
                     .unwrap_or((None, false))
             } else {

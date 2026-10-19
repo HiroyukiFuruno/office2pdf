@@ -26,8 +26,8 @@ fn test_text_box_auto_numbered_paragraphs_group_into_list() {
     assert_eq!(
         list.level_styles
             .get(&0)
-            .and_then(|style| style.numbering_pattern.as_deref()),
-        Some("1.")
+            .and_then(|style| style.numbering_pattern.as_ref()),
+        Some(&NumberingPattern::parse("1."))
     );
     assert_eq!(list.items[0].content[0].runs[0].text, "First");
     assert_eq!(list.items[1].content[0].runs[0].text, "Second");
@@ -402,8 +402,8 @@ fn test_text_box_auto_numbered_paragraph_start_override_sets_list_start() {
     assert_eq!(
         list.level_styles
             .get(&0)
-            .and_then(|style| style.numbering_pattern.as_deref()),
-        Some("A.")
+            .and_then(|style| style.numbering_pattern.as_ref()),
+        Some(&NumberingPattern::parse("A."))
     );
 }
 
@@ -489,8 +489,8 @@ fn test_text_box_auto_numbered_paragraph_extracts_hanging_indent() {
     assert_eq!(
         list.level_styles
             .get(&0)
-            .and_then(|style| style.numbering_pattern.as_deref()),
-        Some("1)")
+            .and_then(|style| style.numbering_pattern.as_ref()),
+        Some(&NumberingPattern::parse("1)"))
     );
 }
 
@@ -516,7 +516,7 @@ fn test_text_box_auto_numbered_paragraph_resolves_marker_style_from_text() {
         other => panic!("Expected List block, got {other:?}"),
     };
     let style = list.level_styles.get(&0).expect("Expected level 0 style");
-    assert_eq!(style.numbering_pattern.as_deref(), Some("1)"));
+    assert_eq!(style.numbering_pattern, Some(NumberingPattern::parse("1)")));
     assert_eq!(style.marker_text, None);
     assert_eq!(
         style

@@ -1364,12 +1364,46 @@ pub enum ListKind {
     Unordered,
 }
 
+/// An ordered list label: literal text around counters.
+///
+/// Typst reads every counting symbol in a numbering pattern string (`1`, `a`,
+/// `A`, `i`, `I`, `*`, ...) as a counter, so literal label text cannot share
+/// that string: Word's `1.%1` printed `2` instead of `1.2` (issue #2221).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NumberingPattern {
+    /// Each counter's numbering symbol (`1`, `a`, `A`, `i` or `I`), after
+    /// the literal text that precedes it.
+    pub pieces: Vec<(String, char)>,
+    /// Literal text after the last counter.
+    pub suffix: String,
+}
+
+impl NumberingPattern {
+    /// Reads a pattern in which every `1`, `a`, `A`, `i` and `I` is a counter
+    /// and every other character is literal text.
+    pub fn parse(pattern: &str) -> Self {
+        let mut pieces: Vec<(String, char)> = Vec::new();
+        let mut literal: String = String::new();
+        for character in pattern.chars() {
+            if matches!(character, '1' | 'a' | 'A' | 'i' | 'I') {
+                pieces.push((std::mem::take(&mut literal), character));
+            } else {
+                literal.push(character);
+            }
+        }
+        Self {
+            pieces,
+            suffix: literal,
+        }
+    }
+}
+
 /// Numbering configuration for a specific list level.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListLevelStyle {
     pub kind: ListKind,
-    /// Optional Typst numbering pattern derived from Word's lvlText/numFmt.
-    pub numbering_pattern: Option<String>,
+    /// Optional label pattern derived from Word's lvlText/numFmt.
+    pub numbering_pattern: Option<NumberingPattern>,
     /// Whether parent numbers should be shown for nested ordered lists.
     pub full_numbering: bool,
     /// Optional concrete marker text for unordered PPTX bullet lists.

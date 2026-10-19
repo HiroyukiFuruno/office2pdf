@@ -14,10 +14,11 @@ use crate::ir::{
     Alignment, ArrowHead, BaselineShiftEm, Block, BorderLineStyle, BorderSide, CellBorder,
     CellVerticalAlign, Chart, Color, Document, FixedElement, FixedElementKind, FixedPage,
     GradientFill, ImageClipShape, ImageCrop, ImageData, ImageFormat, Insets, LineCap, LineJoin,
-    LineSpacing, List, ListItem, ListKind, ListLevelStyle, Page, PageSize, PairKerning, Paragraph,
-    ParagraphStyle, PatternFill, PatternPreset, Run, Shadow, Shape, ShapeKind, SmartArt,
-    SmartArtNode, StyleSheet, TabAlignment, TabLeader, TabStop, Table, TableBorderPaintModel,
-    TableCell, TableRow, TextBoxData, TextBoxVerticalAlign, TextDirection, TextStyle, TopBevel,
+    LineSpacing, List, ListItem, ListKind, ListLevelStyle, NumberingPattern, Page, PageSize,
+    PairKerning, Paragraph, ParagraphStyle, PatternFill, PatternPreset, Run, Shadow, Shape,
+    ShapeKind, SmartArt, SmartArtNode, StyleSheet, TabAlignment, TabLeader, TabStop, Table,
+    TableBorderPaintModel, TableCell, TableRow, TextBoxData, TextBoxVerticalAlign, TextDirection,
+    TextStyle, TopBevel,
 };
 use crate::parser::Parser;
 use crate::parser::smartart;
@@ -183,7 +184,7 @@ fn default_pptx_table_cell_padding() -> Insets {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PptxAutoNumbering {
     level: u32,
-    numbering_pattern: Option<String>,
+    numbering_pattern: Option<NumberingPattern>,
     start_at: Option<u32>,
 }
 
@@ -249,9 +250,9 @@ impl PptxListMarker {
         }
     }
 
-    fn numbering_pattern(&self) -> Option<&str> {
+    fn numbering_pattern(&self) -> Option<&NumberingPattern> {
         match self {
-            Self::Ordered { auto_numbering, .. } => auto_numbering.numbering_pattern.as_deref(),
+            Self::Ordered { auto_numbering, .. } => auto_numbering.numbering_pattern.as_ref(),
             Self::Unordered { .. } => None,
         }
     }
@@ -338,7 +339,7 @@ impl PendingPptxList {
     fn push(&mut self, paragraph: Paragraph, marker: PptxListMarker) {
         let level: u32 = marker.level();
         let start_at: Option<u32> = marker.start_at();
-        let numbering_pattern: Option<String> = marker.numbering_pattern().map(str::to_string);
+        let numbering_pattern: Option<NumberingPattern> = marker.numbering_pattern().cloned();
         let marker_text: Option<String> = marker.marker_text().map(str::to_string);
         let marker_style: Option<TextStyle> = marker.marker_style().cloned();
         if !pptx_paragraph_is_blank_list_item(&paragraph) {

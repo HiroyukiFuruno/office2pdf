@@ -1368,10 +1368,10 @@ pub(super) fn parse_pptx_auto_numbering(
     e: &quick_xml::events::BytesStart,
     level: u32,
 ) -> PptxAutoNumbering {
-    let numbering_pattern: Option<String> = get_attr_str(e, b"type")
+    let numbering_pattern: Option<NumberingPattern> = get_attr_str(e, b"type")
         .as_deref()
         .and_then(pptx_auto_numbering_pattern)
-        .map(str::to_string);
+        .map(NumberingPattern::parse);
     let start_at: Option<u32> = get_attr_i64(e, b"startAt").and_then(|value| value.try_into().ok());
 
     PptxAutoNumbering {
