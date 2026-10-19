@@ -3958,6 +3958,234 @@ fn docx_wide_numbering_tab_keeps_continuation_lines_at_declared_indent() {
     }
 }
 
+/// The level-1 geometry and tab grid a list-body tab probe runs on, in points
+/// from the 90pt left margin, and the level's `w:suff`.
+#[cfg(not(target_arch = "wasm32"))]
+struct ListBodyTabGrid<'a> {
+    body_origin: f64,
+    hanging: f64,
+    interval: f64,
+    stops: &'a [f64],
+    suffix: &'a str,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl ListBodyTabGrid<'_> {
+    /// Word's next stop strictly past `pen`: the first custom stop ahead of
+    /// it, otherwise the next multiple of the default interval.
+    fn next_stop(&self, pen: f64) -> f64 {
+        self.stops
+            .iter()
+            .copied()
+            .find(|stop| *stop > pen + 0.01)
+            .unwrap_or_else(|| {
+                ((pen + 0.01) / self.interval).floor() * self.interval + self.interval
+            })
+    }
+}
+
+/// Every `(n)` item's body begins with `leading_tabs` tabs, then `first`;
+/// `second` follows one more tab when given. Word counts tab stops from the
+/// margin, so the pen starts at the body origin, or where a wide marker's
+/// suffix tab already left it, and each tab moves it to the next stop.
+#[cfg(not(target_arch = "wasm32"))]
+fn assert_list_body_tabs(
+    data: &[u8],
+    grid: &ListBodyTabGrid<'_>,
+    leading_tabs: usize,
+    first: &str,
+    second: Option<&str>,
+) {
+    const MARGIN: f64 = 90.0;
+    let (document, _) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let text = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let glyphs = crate::render::pdf::compiled_glyph_runs(&source.source, 0, true).unwrap();
+    let width = |label: &str| {
+        glyphs
+            .iter()
+            .find(|run| run.text == label)
+            .unwrap_or_else(|| panic!("no glyph run {label:?} in {glyphs:?}"))
+            .width_pt()
+    };
+    let mut checked = 0;
+    for marker in text.iter().filter(|run| run.text.starts_with('(')) {
+        let on_marker_line = |label: &str| {
+            text.iter()
+                .find(|run| {
+                    run.text.starts_with(label)
+                        && (run.baseline_pt - marker.baseline_pt).abs() < 0.01
+                })
+                .unwrap_or_else(|| panic!("no {label:?} beside {}: {text:?}", marker.text))
+        };
+        let marker_end = marker.left_pt + width(&marker.text) - MARGIN;
+        let mut pen = match grid.suffix {
+            "space" => marker_end + compiled_numbering_separator_width(marker.font_size_pt),
+            "nothing" => marker_end,
+            _ if marker_end < grid.body_origin - 0.01 => grid.body_origin,
+            _ => grid.next_stop(marker_end),
+        };
+        for _ in 0..leading_tabs {
+            pen = grid.next_stop(pen);
+        }
+        let body = on_marker_line(first);
+        assert!(
+            (body.left_pt - (MARGIN + pen)).abs() < 0.01,
+            "{} ends at {marker_end}; {first:?} at {}, expected {}: {text:?}",
+            marker.text,
+            body.left_pt,
+            MARGIN + pen
+        );
+        if let Some(second) = second {
+            let expected = MARGIN + grid.next_stop(body.left_pt + width(first) - MARGIN);
+            let after = on_marker_line(second);
+            assert!(
+                (after.left_pt - expected).abs() < 0.01,
+                "{}: {second:?} at {}, expected {expected}",
+                marker.text,
+                after.left_pt
+            );
+        }
+        let marker_origin = MARGIN + grid.body_origin - grid.hanging;
+        assert!((marker.left_pt - marker_origin).abs() < 0.01, "{marker:?}");
+        checked += 1;
+    }
+    assert_eq!(checked, 4);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_list_body_tabs_advance_from_the_body_origin_on_margin_stops() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    let level_one = |data: &[u8], edit: &dyn Fn(&str) -> String| {
+        rewrite_numbering_part(data, |xml| {
+            let (prefix, child) = xml.split_once("<w:lvl w:ilvl=\"1\">").unwrap();
+            format!("{prefix}<w:lvl w:ilvl=\"1\">{}", edit(child))
+        })
+    };
+    let with_body = |data: &[u8], body: &str| {
+        rewrite_docx_part(data, "word/document.xml", |xml| {
+            xml.replace("<w:t>Continuous item</w:t>", body)
+        })
+    };
+    let on_grid = ListBodyTabGrid {
+        body_origin: 36.0,
+        hanging: 18.0,
+        interval: 36.0,
+        stops: &[],
+        suffix: "tab",
+    };
+    for start in [7, 998] {
+        let data = rewrite_numbering_part(base, |xml| {
+            xml.replace(
+                "<w:start w:val=\"7\"/>",
+                &format!("<w:start w:val=\"{start}\"/>"),
+            )
+        });
+        let one = with_body(&data, "<w:tab/><w:t>Continuous item</w:t>");
+        assert_list_body_tabs(&one, &on_grid, 1, "Continuous item", None);
+        let two = with_body(&data, "<w:tab/><w:tab/><w:t>Continuous item</w:t>");
+        assert_list_body_tabs(&two, &on_grid, 2, "Continuous item", None);
+        let shorter = rewrite_docx_part(&one, "word/settings.xml", |xml| {
+            xml.replace(
+                "<w:defaultTabStop w:val=\"720\"/>",
+                "<w:defaultTabStop w:val=\"480\"/>",
+            )
+        });
+        let shorter_grid = ListBodyTabGrid {
+            interval: 24.0,
+            ..on_grid
+        };
+        assert_list_body_tabs(&shorter, &shorter_grid, 1, "Continuous item", None);
+        // A custom stop ahead of the pen wins over the default grid.
+        let custom = level_one(&one, &|child| {
+            child.replacen(
+                "<w:pPr>",
+                "<w:pPr><w:tabs><w:tab w:val=\"left\" w:pos=\"1260\"/></w:tabs>",
+                1,
+            )
+        });
+        let custom_grid = ListBodyTabGrid {
+            stops: &[63.0],
+            ..on_grid
+        };
+        assert_list_body_tabs(&custom, &custom_grid, 1, "Continuous item", None);
+        // A body origin off the default grid, with a custom stop the pen has
+        // already reached there: the tab skips it for the next default stop.
+        let off_grid = level_one(&one, &|child| {
+            child.replacen(
+                "<w:pPr><w:ind w:left=\"720\" w:hanging=\"360\"/>",
+                "<w:pPr><w:tabs><w:tab w:val=\"left\" w:pos=\"1152\"/></w:tabs><w:ind w:left=\"1152\" w:hanging=\"432\"/>",
+                1,
+            )
+        });
+        let off_grid_geometry = ListBodyTabGrid {
+            body_origin: 57.6,
+            hanging: 21.6,
+            interval: 36.0,
+            stops: &[57.6],
+            suffix: "tab",
+        };
+        assert_list_body_tabs(&off_grid, &off_grid_geometry, 1, "Continuous item", None);
+        // A space or no separator leaves the pen just past the marker, on
+        // either side of the body origin, and the tab measures from there.
+        for suffix in ["space", "nothing"] {
+            let suffixed = level_one(&one, &|child| {
+                child.replacen(
+                    "<w:lvlText",
+                    &format!("<w:suff w:val=\"{suffix}\"/><w:lvlText"),
+                    1,
+                )
+            });
+            let suffixed_grid = ListBodyTabGrid { suffix, ..on_grid };
+            assert_list_body_tabs(&suffixed, &suffixed_grid, 1, "Continuous item", None);
+        }
+        // A tab inside the body measures the text before it from the same
+        // origin.
+        let inner = with_body(&data, "<w:t>Continuous</w:t><w:tab/><w:t>item</w:t>");
+        assert_list_body_tabs(&inner, &on_grid, 0, "Continuous", Some("item"));
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_list_body_tab_keeps_continuation_lines_at_declared_indent() {
+    let base =
+        include_bytes!("../../../../tests/fixtures/docx/docxide/numbering_wide_markers.docx");
+    // Every item starts with one tab; the last one's body also wraps.
+    let data = rewrite_docx_part(base, "word/document.xml", |xml| {
+        let (prefix, suffix) = xml.rsplit_once("<w:t>Continuous item</w:t>").unwrap();
+        format!(
+            "{prefix}<w:t>Continuous item with a long explanation after a leading tab. This sentence continues across several physical lines to test wrapping at the declared left margin.</w:t>{suffix}"
+        )
+        .replace("<w:t>Continuous item", "<w:tab/><w:t>Continuous item")
+    });
+    let grid = ListBodyTabGrid {
+        body_origin: 36.0,
+        hanging: 18.0,
+        interval: 36.0,
+        stops: &[],
+        suffix: "tab",
+    };
+    assert_list_body_tabs(&data, &grid, 1, "Continuous item", None);
+    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    let first = runs
+        .iter()
+        .find(|run| run.text.starts_with("Continuous item with"))
+        .unwrap();
+    let continuations: Vec<_> = runs
+        .iter()
+        .filter(|run| run.baseline_pt > first.baseline_pt + 1.0)
+        .collect();
+    assert!(continuations.len() >= 2, "{continuations:?}");
+    for line in continuations {
+        assert!((line.left_pt - 126.0).abs() < 0.01, "{line:?}");
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn compiled_numbering_separator_width(size: f64) -> f64 {
     // Shape an isolated space between non-ligating glyphs: character offsets

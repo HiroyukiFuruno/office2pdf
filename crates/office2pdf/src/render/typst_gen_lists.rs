@@ -1716,32 +1716,62 @@ fn write_list_item_trailing_gap(
     let _ = write!(out, "#v({}pt)", format_f64(gap));
 }
 
-/// Emits an item's paragraphs.
+/// Emits one of an item's paragraphs.
 ///
 /// Each paragraph decides its own Hangul breaking from its own style — its
 /// effective `w:wordWrap` and its indents — but against the *list's* fixed
 /// line box: whatever [`generate_list_with_spacing_model`] put in force on the
 /// wrapper is what a framed eojeol has to restore inside itself (issue #626).
-fn write_list_item_content(
+///
+/// `tab_origin`, a Typst length expression, is where the paragraph's first
+/// line starts from the margin. With it, a tab advances to the paragraph's
+/// next stop, as in a Word body paragraph (issue #2223); without it, a tab
+/// stays literal whitespace, which Typst collapses.
+fn write_list_paragraph_runs(
     out: &mut String,
-    item: &crate::ir::ListItem,
+    para: &Paragraph,
     wrap: &ListEojeolWrap,
+    tab_origin: Option<&str>,
     ctx: &mut super::GenCtx,
 ) -> Result<(), ConvertError> {
-    for para in &item.content {
-        super::text::generate_runs_with_context(
-            out,
-            &para.runs,
-            paragraph_eojeol_wrap(
-                wrap.breaks_hangul_at_eojeol,
-                &para.style,
-                wrap.line_box_em,
-                wrap.available_measure_pt,
-            ),
-            ctx,
-        )?;
+    let eojeol_wrap = paragraph_eojeol_wrap(
+        wrap.breaks_hangul_at_eojeol,
+        &para.style,
+        wrap.line_box_em,
+        wrap.available_measure_pt,
+    );
+    let Some(tab_origin) = tab_origin else {
+        return super::text::generate_runs_with_context(out, &para.runs, eojeol_wrap, ctx);
+    };
+    let default_tab_width_pt =
+        paragraph_default_tab_width_pt(&para.style, ctx.default_tab_width_pt);
+    super::text::generate_runs_with_tabs_from_origin_context(
+        out,
+        &para.runs,
+        para.style.tab_stops.as_deref(),
+        default_tab_width_pt,
+        tab_origin,
+        eojeol_wrap,
+        ctx,
+    )
+}
+
+/// The Typst binding [`write_word_numbering_suffix_advance`] leaves holding
+/// where the first body line starts, measured from the margin.
+const WORD_BODY_ORIGIN: &str = "word_body_origin";
+
+/// The suffix and indent by which [`write_word_numbering_suffix_advance`]
+/// places an item's first body line, or `None` when it leaves that line at the
+/// list's nominal body origin.
+fn word_numbering_suffix_placement(
+    kind: ListKind,
+    paragraph_style: &ParagraphStyle,
+) -> Option<(ListMarkerSuffix, ListIndentGeometry)> {
+    let suffix = paragraph_style.numbering_suffix?;
+    if suffix == ListMarkerSuffix::Tab && kind != ListKind::Ordered {
+        return None;
     }
-    Ok(())
+    Some((suffix, paragraph_list_indent(paragraph_style)?))
 }
 
 /// What a list's items need to decide their Hangul line breaking (issue #626).
@@ -1762,6 +1792,12 @@ pub(super) struct ListEojeolWrap {
 /// Word's suffix positions only the first body line; continuation lines keep
 /// the declared indent. Follow docxide-pdf's `list_label::text_hanging`: measure
 /// the styled marker, then use a space, no gap, or the source/default tab.
+///
+/// A body containing tabs comes in as `tabbed_body`, emitted with
+/// [`WORD_BODY_ORIGIN`] as its tab origin. It is written inside this scope,
+/// after the binding, because a body tab starts from wherever the suffix left
+/// the pen: past a wide marker that is the stop the suffix reached.
+#[allow(clippy::too_many_arguments)]
 fn write_word_numbering_suffix_advance(
     out: &mut String,
     style: &EffectiveListStyle<'_>,
@@ -1769,14 +1805,10 @@ fn write_word_numbering_suffix_advance(
     paragraph_style: &ParagraphStyle,
     numbers: &[u32],
     default_tab_width_pt: f64,
+    tabbed_body: Option<&str>,
 ) {
-    let Some(suffix) = paragraph_style.numbering_suffix else {
-        return;
-    };
-    if suffix == ListMarkerSuffix::Tab && style.kind != ListKind::Ordered {
-        return;
-    }
-    let Some(indent) = paragraph_list_indent(paragraph_style) else {
+    let Some((suffix, indent)) = word_numbering_suffix_placement(style.kind, paragraph_style)
+    else {
         return;
     };
     let (bullet_text, explicit_marker_style) = if style.kind == ListKind::Unordered {
@@ -1816,7 +1848,7 @@ fn write_word_numbering_suffix_advance(
             "]; let word_marker_end = {}pt + measure(word_list_marker).width; ",
             format_f64(indent.marker_origin_pt)
         );
-        if suffix == ListMarkerSuffix::Space {
+        let body_start = if suffix == ListMarkerSuffix::Space {
             // Native Word uses Arial for this generated separator at the
             // marker's size, even when the marker declares another family.
             let separator_style = TextStyle {
@@ -1828,17 +1860,37 @@ fn write_word_numbering_suffix_advance(
             write_text_params(out, &separator_style);
             out.push_str(")[");
             out.push_str(r#"#" ""#);
-            out.push_str("]]; h(word_marker_end + measure(word_list_space).width - ");
+            out.push_str("]]; ");
+            "word_marker_end + measure(word_list_space).width"
         } else {
-            out.push_str("h(word_marker_end - ");
+            "word_marker_end"
+        };
+        if let Some(body) = tabbed_body {
+            let _ = write!(
+                out,
+                "let {WORD_BODY_ORIGIN} = {body_start}; h({WORD_BODY_ORIGIN} - {}pt); [{body}] }}",
+                format_f64(body_origin_pt)
+            );
+        } else {
+            let _ = write!(out, "h({body_start} - {}pt) }}", format_f64(body_origin_pt));
         }
-        let _ = write!(out, "{}pt) }}", format_f64(body_origin_pt));
         return;
     }
     let _ = write!(
         out,
-        "]; let word_marker_end = {}pt + measure(word_list_marker).width; if word_marker_end >= {}pt - 0.01pt {{ let word_body_tab = ",
-        format_f64(indent.marker_origin_pt),
+        "]; let word_marker_end = {}pt + measure(word_list_marker).width; ",
+        format_f64(indent.marker_origin_pt)
+    );
+    if tabbed_body.is_some() {
+        let _ = write!(
+            out,
+            "let {WORD_BODY_ORIGIN} = {}pt; ",
+            format_f64(body_origin_pt)
+        );
+    }
+    let _ = write!(
+        out,
+        "if word_marker_end >= {}pt - 0.01pt {{ let word_body_tab = ",
         format_f64(body_origin_pt)
     );
     let mut stops: Vec<f64> = paragraph_style
@@ -1869,11 +1921,19 @@ fn write_word_numbering_suffix_advance(
     for _ in 0..stop_count {
         out.push_str(" }");
     }
-    let _ = write!(
-        out,
-        "; h(calc.max(0pt, word_body_tab - {}pt)) }} }}",
-        format_f64(body_origin_pt)
-    );
+    if let Some(body) = tabbed_body {
+        let _ = write!(
+            out,
+            "; {WORD_BODY_ORIGIN} = calc.max({origin}pt, word_body_tab); h({WORD_BODY_ORIGIN} - {origin}pt) }}; [{body}] }}",
+            origin = format_f64(body_origin_pt)
+        );
+    } else {
+        let _ = write!(
+            out,
+            "; h(calc.max(0pt, word_body_tab - {}pt)) }} }}",
+            format_f64(body_origin_pt)
+        );
+    }
 }
 
 /// Recursively generate list items, grouping consecutive items at the same or deeper level.
@@ -1940,17 +2000,54 @@ fn generate_list_items(
         if let Some(snap) = eojeol_wrap.baseline_snap {
             snap.write_open(out);
         }
-        if uses_word_suffixes && let Some(paragraph) = item.content.first() {
-            write_word_numbering_suffix_advance(
-                out,
-                &style,
-                marker_fallback.as_ref(),
-                &paragraph.style,
-                &item_numbers,
-                ctx.default_tab_width_pt,
-            );
+        let mut paragraphs = item.content.iter();
+        if let Some(paragraph) = paragraphs.next() {
+            // Word counts a body tab's stops from the margin, as in any
+            // paragraph, so the body's tabs measure from where its first line
+            // starts. A slide list keeps its own tab handling.
+            let body_origin_pt: Option<f64> = (eojeol_wrap.breaks_hangul_at_eojeol
+                && super::text::paragraph_contains_tabs(&paragraph.runs))
+            .then(|| paragraph_list_indent(&paragraph.style))
+            .flatten()
+            .map(|indent| indent.marker_origin_pt + indent.marker_width_pt);
+            if uses_word_suffixes
+                && word_numbering_suffix_placement(style.kind, &paragraph.style).is_some()
+            {
+                let tabbed_body: Option<String> = match body_origin_pt {
+                    Some(_) => {
+                        let mut body = String::new();
+                        write_list_paragraph_runs(
+                            &mut body,
+                            paragraph,
+                            eojeol_wrap,
+                            Some(WORD_BODY_ORIGIN),
+                            ctx,
+                        )?;
+                        Some(body)
+                    }
+                    None => None,
+                };
+                write_word_numbering_suffix_advance(
+                    out,
+                    &style,
+                    marker_fallback.as_ref(),
+                    &paragraph.style,
+                    &item_numbers,
+                    ctx.default_tab_width_pt,
+                    tabbed_body.as_deref(),
+                );
+                if tabbed_body.is_none() {
+                    write_list_paragraph_runs(out, paragraph, eojeol_wrap, None, ctx)?;
+                }
+            } else {
+                let tab_origin: Option<String> =
+                    body_origin_pt.map(|origin| format!("{}pt", format_f64(origin)));
+                write_list_paragraph_runs(out, paragraph, eojeol_wrap, tab_origin.as_deref(), ctx)?;
+            }
         }
-        write_list_item_content(out, item, eojeol_wrap, ctx)?;
+        for paragraph in paragraphs {
+            write_list_paragraph_runs(out, paragraph, eojeol_wrap, None, ctx)?;
+        }
         if eojeol_wrap.baseline_snap.is_some() {
             out.push(']');
         }
