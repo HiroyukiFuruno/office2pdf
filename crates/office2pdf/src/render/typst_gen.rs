@@ -3030,6 +3030,10 @@ fn flow_header_value(
 /// top margin also reserves its bottom and any following empty header line
 /// boxes, as Word does (issue #1995).
 ///
+/// A continuation page is one a continuous section sets up again after a page
+/// break it holds. It is never the section's first page, so it reserves only
+/// the default story (issue #2224).
+///
 /// Otherwise `w:top` is left alone, so the common case emits exactly what it
 /// always did. When a header face cannot be measured, its nonempty text cannot
 /// contribute a guessed height. Empty flow lines after a known overlay still
@@ -3038,17 +3042,19 @@ fn flow_page_top_margin_pt(
     page: &FlowPage,
     size: &PageSize,
     default_text: Option<&TextStyle>,
-    reserve_page_anchored_header_shapes: bool,
+    continuation_page: bool,
 ) -> f64 {
     // One margin serves the whole section, so where `w:titlePg` gives the first
     // page its own story both have to fit it — taking the default story alone
     // would leave a taller first-page header overprinting page one, which is
     // the same defect one page in (#846 added that second story).
-    [page.header.as_ref(), page.first_header.as_ref()]
+    let first_header: Option<&HeaderFooter> =
+        page.first_header.as_ref().filter(|_| !continuation_page);
+    [page.header.as_ref(), first_header]
         .into_iter()
         .flatten()
         .filter_map(|header| {
-            let overlay_bottom: Option<f64> = reserve_page_anchored_header_shapes
+            let overlay_bottom: Option<f64> = continuation_page
                 .then(|| page_anchored_header_shape_bottom_pt(header, size, page.margins.top))
                 .flatten();
             // A story of nothing but empty paragraphs still has their lines
@@ -3437,7 +3443,7 @@ fn write_flow_page_setup(
     out: &mut String,
     page: &FlowPage,
     size: &PageSize,
-    reserve_page_anchored_header_shapes: bool,
+    continuation_page: bool,
     ctx: &mut GenCtx,
 ) -> Result<(), ConvertError> {
     ctx.active_page_size = Some(*size);
@@ -3467,7 +3473,7 @@ fn write_flow_page_setup(
         page,
         size,
         ctx.document_default_text.as_ref(),
-        reserve_page_anchored_header_shapes,
+        continuation_page,
     );
     let _ = write!(
         out,
@@ -3483,7 +3489,9 @@ fn write_flow_page_setup(
     // A section with `<w:titlePg/>` draws a different story on its first page,
     // so the header value becomes a choice made per page rather than one block
     // (issue #846). Both variants share the band and ascent, which come from
-    // the section's own margins, so they are built the same way.
+    // the section's own margins, so they are built the same way. The choice
+    // follows the declared first story even when it has no text: page one
+    // then shows nothing, not the default story (issue #2224).
     let default_header = page
         .header
         .as_ref()
@@ -3504,7 +3512,7 @@ fn write_flow_page_setup(
         if default_value.wants_zero_ascent || first_value.wants_zero_ascent {
             out.push_str(", header-ascent: 0pt");
         }
-        match first_header {
+        match page.first_header {
             Some(_) => {
                 let _ = write!(
                     out,
@@ -3539,7 +3547,7 @@ fn write_flow_page_setup(
         if default_value.wants_zero_descent || first_value.wants_zero_descent {
             out.push_str(", footer-descent: 0pt");
         }
-        match first_footer {
+        match page.first_footer {
             Some(_) => {
                 let _ = write!(
                     out,

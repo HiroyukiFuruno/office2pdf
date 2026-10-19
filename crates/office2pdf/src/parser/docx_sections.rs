@@ -35,6 +35,20 @@ pub(super) struct SectionHeaderFooterInputs<'a> {
     pub(super) assets: &'a HeaderFooterAssets,
     pub(super) inherited_header: Option<&'a HeaderFooter>,
     pub(super) inherited_footer: Option<&'a HeaderFooter>,
+    /// The `first` stories the previous section passes on, whether or not it
+    /// showed them (issue #2224).
+    pub(super) inherited_first: &'a LinkedFirstStories,
+}
+
+/// A section's `first` header and footer as the next section links to them.
+///
+/// A section that omits a header or footer type links to the previous
+/// section's story of that type. This holds for `first` even through a section
+/// without `w:titlePg`, which keeps the story without showing it (issue #2224).
+#[derive(Debug, Clone, Default)]
+pub(super) struct LinkedFirstStories {
+    pub(super) header: Option<HeaderFooter>,
+    pub(super) footer: Option<HeaderFooter>,
 }
 
 /// What a header or footer paragraph resolves its unstated paragraph
@@ -425,7 +439,7 @@ pub(super) fn build_flow_page_from_section(
     overrides: SectionOverrides,
     styles: HeaderFooterStyleContext<'_>,
     warnings: &mut Vec<ConvertWarning>,
-) -> FlowPage {
+) -> (FlowPage, LinkedFirstStories) {
     let (size, margins) = extract_page_setup(section_prop);
     let doc_default_style: Option<&ResolvedStyle> = styles.style_map.get(DOC_DEFAULT_STYLE_ID);
     let mut content = group_into_lists(elements, numberings);
@@ -492,20 +506,39 @@ pub(super) fn build_flow_page_from_section(
     }
     // The first-page stories take the same edge distance and default style the
     // whole-section ones do; only which story is chosen differs (issue #846).
-    let mut first_header = extract_docx_first_header(section_prop, header_footer.assets, styles);
-    if let Some(first_header) = &mut first_header {
+    let mut linked_first_header = extract_docx_first_header(
+        section_prop,
+        header_footer.assets,
+        styles,
+        header_footer.inherited_first.header.as_ref(),
+    );
+    if let Some(first_header) = &mut linked_first_header {
         first_header.distance_from_edge = Some(twips_to_pt(section_prop.page_margin.header));
         apply_doc_default_text_style(first_header, doc_default_style);
         resolve_hf_table_page_positions(first_header, &size, &margins, false);
     }
-    let mut first_footer = extract_docx_first_footer(section_prop, header_footer.assets, styles);
-    if let Some(first_footer) = &mut first_footer {
+    let mut linked_first_footer = extract_docx_first_footer(
+        section_prop,
+        header_footer.assets,
+        styles,
+        header_footer.inherited_first.footer.as_ref(),
+    );
+    if let Some(first_footer) = &mut linked_first_footer {
         first_footer.distance_from_edge = Some(twips_to_pt(section_prop.page_margin.footer));
         apply_doc_default_text_style(first_footer, doc_default_style);
         resolve_hf_table_page_positions(first_footer, &size, &margins, true);
     }
+    // `w:titlePg` shows those stories on the section's first page. Where none
+    // is linked, that page is blank: Word's references print no header or
+    // footer there, not the default one (issue #2224).
+    let first_header: Option<HeaderFooter> = section_prop
+        .title_pg
+        .then(|| linked_first_header.clone().unwrap_or_default());
+    let first_footer: Option<HeaderFooter> = section_prop
+        .title_pg
+        .then(|| linked_first_footer.clone().unwrap_or_default());
 
-    FlowPage {
+    let flow_page = FlowPage {
         size,
         margins,
         content,
@@ -522,7 +555,14 @@ pub(super) fn build_flow_page_from_section(
             .or_else(|| extract_column_layout_from_section_property(section_prop)),
         line_grid_pitch: extract_line_grid_pitch(section_prop),
         line_grid_snaps_lines: line_grid_snaps_lines(section_prop),
-    }
+    };
+    (
+        flow_page,
+        LinkedFirstStories {
+            header: linked_first_header,
+            footer: linked_first_footer,
+        },
+    )
 }
 
 /// Resolve floating table anchors against the section that defines the story.
@@ -1087,20 +1127,21 @@ fn append_story_sdt_children<'a>(
     }
 }
 
-/// The `first` variant of a section's header, where `<w:titlePg/>` asks for one.
+/// The `first` variant of a section's header: the section's own, else the one
+/// the previous section links on.
 ///
 /// Unlike [`extract_docx_header`] this does not fall back to the other
 /// variants: `w:titlePg` names the first-page story specifically, and standing
 /// the default in for it would draw page one the same as the rest rather than
-/// differently, which is the bug (issue #846).
-pub(super) fn extract_docx_first_header(
+/// differently, which is the bug (issue #846). Nor does it ask for
+/// `w:titlePg`, which only decides whether this section shows the story; a
+/// later section links to it either way (issue #2224).
+fn extract_docx_first_header(
     section_prop: &docx_rs::SectionProperty,
     assets: &HeaderFooterAssets,
     styles: HeaderFooterStyleContext<'_>,
+    inherited_first_header: Option<&HeaderFooter>,
 ) -> Option<HeaderFooter> {
-    if !section_prop.title_pg {
-        return None;
-    }
     section_prop
         .first_header_reference
         .as_ref()
@@ -1113,17 +1154,16 @@ pub(super) fn extract_docx_first_header(
                     convert_docx_header(header, &ImageMap::new(), &[], &[], styles)
                 })
         })
+        .or_else(|| inherited_first_header.cloned())
 }
 
 /// The `first` variant of a section's footer, under the same rule.
-pub(super) fn extract_docx_first_footer(
+fn extract_docx_first_footer(
     section_prop: &docx_rs::SectionProperty,
     assets: &HeaderFooterAssets,
     styles: HeaderFooterStyleContext<'_>,
+    inherited_first_footer: Option<&HeaderFooter>,
 ) -> Option<HeaderFooter> {
-    if !section_prop.title_pg {
-        return None;
-    }
     section_prop
         .first_footer_reference
         .as_ref()
@@ -1136,6 +1176,7 @@ pub(super) fn extract_docx_first_footer(
                     convert_docx_footer(footer, &ImageMap::new(), &[], &[], &[], styles)
                 })
         })
+        .or_else(|| inherited_first_footer.cloned())
 }
 
 /// Extract the default header, linking it to the preceding section when omitted.

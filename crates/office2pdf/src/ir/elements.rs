@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use super::style::{Alignment, Color, ParagraphStyle, TabLeader, TextStyle};
 
 /// Header or footer content for flow pages and worksheets.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HeaderFooter {
     pub paragraphs: Vec<HeaderFooterParagraph>,
     /// Distance in points from the page edge, when the source states one.
