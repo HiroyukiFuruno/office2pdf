@@ -2091,39 +2091,34 @@ fn a_first_header_without_title_pg_is_not_used() {
     // Triangulation: Word only honours the `first` story when `w:titlePg` asks
     // for it, so its mere presence must not split the section.
     //
-    // Driven off `SectionProperty` rather than a built document because
-    // `docx_rs`'s `first_header` sets `title_pg` for you — its sibling is
-    // named `first_header_without_title_pg` precisely because the two are
-    // separable in the format even though that builder couples them.
-    let story = || {
-        docx_rs::Header::new().add_paragraph(
-            docx_rs::Paragraph::new().add_run(docx_rs::Run::new().add_text("Cover banner")),
+    // Written as raw XML because `docx_rs`'s `first_header` sets `title_pg`
+    // for you — its sibling is named `first_header_without_title_pg` precisely
+    // because the two are separable in the format even though that builder
+    // couples them.
+    let package = |title_pg: bool| {
+        build_docx_with_section_stories(
+            &format!(
+                r#"<w:p><w:r><w:t>Body text</w:t></w:r></w:p>{}"#,
+                section_properties_xml(&[("headerReference", "first", "rIdCover")], title_pg)
+            ),
+            &[("rIdCover", "header", "Cover banner")],
         )
     };
-    let assets = super::sections::HeaderFooterAssets::default();
-    let style_map = super::StyleMap::new();
-    let theme_fonts = super::ThemeFonts::default();
-    let styles = super::sections::HeaderFooterStyleContext {
-        style_map: &style_map,
-        theme_fonts: &theme_fonts,
-        paragraph_property_defaults_are_declared: false,
-    };
 
-    let declared = docx_rs::SectionProperty::new().first_header(story(), "rId9");
-    assert!(
-        declared.title_pg,
-        "the builder is expected to set title_pg here; if this fails the \
-         coupling changed and the test below proves nothing"
-    );
-    assert!(
-        super::sections::extract_docx_first_header(&declared, &assets, styles).is_some(),
+    let declared = parse_flow_page(&package(true));
+    assert_eq!(
+        declared
+            .first_header
+            .as_ref()
+            .map(header_footer_text)
+            .as_deref(),
+        Some("Cover banner"),
         "titlePg with a first story resolves it"
     );
 
-    let undeclared = docx_rs::SectionProperty::new().first_header_without_title_pg(story(), "rId9");
-    assert!(!undeclared.title_pg);
+    let undeclared = parse_flow_page(&package(false));
     assert!(
-        super::sections::extract_docx_first_header(&undeclared, &assets, styles).is_none(),
+        undeclared.first_header.is_none(),
         "a first story without titlePg is not a first-page story"
     );
 }
@@ -2181,6 +2176,435 @@ fn a_section_with_only_a_first_page_header_still_emits_it() {
     assert!(
         source.contains("Cover only") || source.contains("Cover banner"),
         "a first-only header must still reach the page setup, got:\n{source}"
+    );
+}
+
+// ----- A `w:titlePg` page without its own `first` story (issue #2224) -----
+
+/// A package whose `document.xml` body is written verbatim, with one header or
+/// footer part per `(relationship id, "header" | "footer", story text)` and one
+/// story paragraph per line of that text.
+///
+/// Raw XML because docx-rs's builder can neither close a section mid-body nor
+/// set `w:titlePg` without also stating a `first` story.
+fn build_docx_with_section_stories(body_xml: &str, stories: &[(&str, &str, &str)]) -> Vec<u8> {
+    use std::io::Write;
+    use zip::ZipWriter;
+    use zip::write::FileOptions;
+
+    let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+    let opts = FileOptions::default();
+
+    let overrides: String = stories
+        .iter()
+        .map(|(id, kind, _)| {
+            format!(
+                r#"<Override PartName="/word/{id}.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.{kind}+xml"/>"#
+            )
+        })
+        .collect();
+    zip.start_file("[Content_Types].xml", opts).unwrap();
+    zip.write_all(
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  {overrides}
+</Types>"#
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    zip.start_file("_rels/.rels", opts).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>"#,
+    )
+    .unwrap();
+
+    let relationships: String = stories
+        .iter()
+        .map(|(id, kind, _)| {
+            format!(
+                r#"<Relationship Id="{id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{kind}" Target="{id}.xml"/>"#
+            )
+        })
+        .collect();
+    zip.start_file("word/_rels/document.xml.rels", opts)
+        .unwrap();
+    zip.write_all(
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{relationships}</Relationships>"#
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    for (id, kind, text) in stories {
+        let root: &str = if *kind == "header" { "hdr" } else { "ftr" };
+        let paragraphs: String = text
+            .split('\n')
+            .map(|line| format!("<w:p><w:r><w:t>{line}</w:t></w:r></w:p>"))
+            .collect();
+        zip.start_file(format!("word/{id}.xml"), opts).unwrap();
+        zip.write_all(
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:{root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">{paragraphs}</w:{root}>"#
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+    }
+
+    zip.start_file("word/document.xml", opts).unwrap();
+    zip.write_all(
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>{body_xml}</w:body>
+</w:document>"#
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+
+    zip.finish().unwrap().into_inner()
+}
+
+/// A section's `w:sectPr`: its story references, then `w:titlePg` if asked.
+fn section_properties_xml(references: &[(&str, &str, &str)], title_pg: bool) -> String {
+    let references: String = references
+        .iter()
+        .map(|(element, story_type, id)| {
+            format!(r#"<w:{element} w:type="{story_type}" r:id="{id}"/>"#)
+        })
+        .collect();
+    let title_pg: &str = if title_pg { "<w:titlePg/>" } else { "" };
+    format!(
+        r#"<w:sectPr>{references}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/>{title_pg}</w:sectPr>"#
+    )
+}
+
+/// Every section's flow page, in document order.
+fn parse_flow_pages(data: &[u8]) -> Vec<FlowPage> {
+    let (doc, _warnings) = DocxParser
+        .parse(data, &ConvertOptions::default())
+        .expect("document parses");
+    doc.pages
+        .iter()
+        .map(|page| match page {
+            Page::Flow(flow) | Page::FlowContinuous(flow) => flow.clone(),
+            other => panic!("expected a flow page, got {other:?}"),
+        })
+        .collect()
+}
+
+/// The concatenated text of every run the compiled document places on a page.
+fn compiled_page_text(data: &[u8], page_index: usize) -> String {
+    let (document, _warnings) = DocxParser
+        .parse(data, &ConvertOptions::default())
+        .expect("document parses");
+    let source = crate::internal::generate_typst(&document)
+        .expect("document generates")
+        .source;
+    crate::render::pdf::compiled_text_runs(&source, page_index)
+        .expect("document compiles")
+        .into_iter()
+        .map(|run| run.text)
+        .collect()
+}
+
+#[test]
+fn a_title_page_without_a_first_story_prints_neither_running_story_on_page_one() {
+    // Word's references for a one-section document with `w:titlePg` and only
+    // `default` references leave page one's header and footer blank and print
+    // them from page two on (docxide-pdf `k4_regulations_synthesis_document`,
+    // `mongolian_human_rights_law`). Page one used to take the default story.
+    let section = section_properties_xml(
+        &[
+            ("headerReference", "default", "rIdHead"),
+            ("footerReference", "default", "rIdFoot"),
+        ],
+        true,
+    );
+    let data = build_docx_with_section_stories(
+        &format!(
+            r#"<w:p><w:r><w:t>Cover page</w:t></w:r></w:p>
+<w:p><w:r><w:br w:type="page"/><w:t>Second page</w:t></w:r></w:p>{section}"#
+        ),
+        &[
+            ("rIdHead", "header", "Running head"),
+            ("rIdFoot", "footer", "Running foot"),
+        ],
+    );
+
+    let page_one = compiled_page_text(&data, 0);
+    assert!(page_one.contains("Cover page"), "page one: {page_one:?}");
+    assert!(
+        !page_one.contains("Running head") && !page_one.contains("Running foot"),
+        "a title page with no first story prints no running story, got {page_one:?}"
+    );
+    let page_two = compiled_page_text(&data, 1);
+    assert!(
+        page_two.contains("Running head") && page_two.contains("Running foot"),
+        "later pages keep the default stories, got {page_two:?}"
+    );
+}
+
+#[test]
+fn a_title_page_without_a_first_story_resolves_a_blank_one() {
+    // The parser side of the rule above: `w:titlePg` with no `first`
+    // reference anywhere in the chain is a first-page story with no content,
+    // which is not the same as having no first-page story at all.
+    let section = section_properties_xml(
+        &[
+            ("headerReference", "default", "rIdHead"),
+            ("footerReference", "default", "rIdFoot"),
+        ],
+        true,
+    );
+    let data = build_docx_with_section_stories(
+        &format!(r#"<w:p><w:r><w:t>Body</w:t></w:r></w:p>{section}"#),
+        &[
+            ("rIdHead", "header", "Running head"),
+            ("rIdFoot", "footer", "Running foot"),
+        ],
+    );
+
+    let page = parse_flow_page(&data);
+    for (name, story) in [
+        ("header", page.first_header.as_ref()),
+        ("footer", page.first_footer.as_ref()),
+    ] {
+        let story = story.unwrap_or_else(|| panic!("titlePg must resolve a first {name}"));
+        assert!(
+            story.paragraphs.is_empty() && story.shapes.is_empty(),
+            "the first {name} is blank, got {:?}",
+            header_footer_text(story)
+        );
+    }
+    assert_eq!(
+        page.header.as_ref().map(header_footer_text).as_deref(),
+        Some("Running head")
+    );
+    assert_eq!(
+        page.footer.as_ref().map(header_footer_text).as_deref(),
+        Some("Running foot")
+    );
+
+    // Without `w:titlePg` nothing changes: every page takes the default.
+    let section = section_properties_xml(
+        &[
+            ("headerReference", "default", "rIdHead"),
+            ("footerReference", "default", "rIdFoot"),
+        ],
+        false,
+    );
+    let data = build_docx_with_section_stories(
+        &format!(r#"<w:p><w:r><w:t>Body</w:t></w:r></w:p>{section}"#),
+        &[
+            ("rIdHead", "header", "Running head"),
+            ("rIdFoot", "footer", "Running foot"),
+        ],
+    );
+    let page = parse_flow_page(&data);
+    assert!(page.first_header.is_none() && page.first_footer.is_none());
+}
+
+#[test]
+fn a_title_page_section_links_its_first_stories_to_the_previous_section() {
+    // ECMA-376 links each header/footer type to the previous section's story
+    // of the same type when a section omits it, and Word's references for
+    // docxide-pdf `cont-first-*` show the inherited `first` header on the
+    // second section's first page (issue #2254). So a later title-page section
+    // without `first` references takes the earlier section's, and only the
+    // first section in a chain without one falls to a blank story.
+    let stories: &[(&str, &str, &str)] = &[
+        ("rIdCoverHead", "header", "Cover head"),
+        ("rIdCoverFoot", "footer", "Cover foot"),
+        ("rIdHead", "header", "Running head"),
+        ("rIdFoot", "footer", "Running foot"),
+        ("rIdOwnHead", "header", "Own cover head"),
+    ];
+    let defaults = [
+        ("headerReference", "default", "rIdHead"),
+        ("footerReference", "default", "rIdFoot"),
+    ];
+    let with_cover = section_properties_xml(
+        &[
+            ("headerReference", "first", "rIdCoverHead"),
+            ("footerReference", "first", "rIdCoverFoot"),
+            defaults[0],
+            defaults[1],
+        ],
+        true,
+    );
+    let two_sections = |first_section: &str, second_section: &str| {
+        build_docx_with_section_stories(
+            &format!(
+                r#"<w:p><w:pPr>{first_section}</w:pPr><w:r><w:t>One</w:t></w:r></w:p>
+<w:p><w:r><w:t>Two</w:t></w:r></w:p>{second_section}"#
+            ),
+            stories,
+        )
+    };
+    let first_texts = |page: &FlowPage| {
+        (
+            page.first_header.as_ref().map(header_footer_text),
+            page.first_footer.as_ref().map(header_footer_text),
+        )
+    };
+
+    // No references of its own: both first stories come from section one.
+    let pages = parse_flow_pages(&two_sections(
+        &with_cover,
+        &section_properties_xml(&[], true),
+    ));
+    assert_eq!(
+        first_texts(&pages[1]),
+        (
+            Some("Cover head".to_string()),
+            Some("Cover foot".to_string())
+        )
+    );
+
+    // Only the default references: the omitted `first` types still link.
+    let pages = parse_flow_pages(&two_sections(
+        &with_cover,
+        &section_properties_xml(&defaults, true),
+    ));
+    assert_eq!(
+        first_texts(&pages[1]),
+        (
+            Some("Cover head".to_string()),
+            Some("Cover foot".to_string())
+        )
+    );
+
+    // A stated `first` header wins over the link; the omitted footer links.
+    let pages = parse_flow_pages(&two_sections(
+        &with_cover,
+        &section_properties_xml(&[("headerReference", "first", "rIdOwnHead")], true),
+    ));
+    assert_eq!(
+        first_texts(&pages[1]),
+        (
+            Some("Own cover head".to_string()),
+            Some("Cover foot".to_string())
+        )
+    );
+
+    // Nothing earlier to link to: section two's first page is blank.
+    let pages = parse_flow_pages(&two_sections(
+        &section_properties_xml(&defaults, true),
+        &section_properties_xml(&defaults, true),
+    ));
+    assert_eq!(
+        first_texts(&pages[1]),
+        (Some(String::new()), Some(String::new()))
+    );
+
+    // The link runs through sections that do not show their first stories: a
+    // section without `w:titlePg` still passes on the one it states, and one
+    // with no references passes on what it linked to.
+    let without_title_pg = section_properties_xml(
+        &[
+            ("headerReference", "first", "rIdCoverHead"),
+            ("footerReference", "first", "rIdCoverFoot"),
+            defaults[0],
+            defaults[1],
+        ],
+        false,
+    );
+    let pages = parse_flow_pages(&build_docx_with_section_stories(
+        &format!(
+            r#"<w:p><w:pPr>{without_title_pg}</w:pPr><w:r><w:t>One</w:t></w:r></w:p>
+<w:p><w:pPr>{}</w:pPr><w:r><w:t>Two</w:t></w:r></w:p>
+<w:p><w:r><w:t>Three</w:t></w:r></w:p>{}"#,
+            section_properties_xml(&[], false),
+            section_properties_xml(&[], true),
+        ),
+        stories,
+    ));
+    assert_eq!(first_texts(&pages[0]), (None, None));
+    assert_eq!(first_texts(&pages[1]), (None, None));
+    assert_eq!(
+        first_texts(&pages[2]),
+        (
+            Some("Cover head".to_string()),
+            Some("Cover foot".to_string())
+        )
+    );
+}
+
+#[test]
+fn a_continuous_sections_later_pages_leave_its_first_story_out_of_the_margin() {
+    // A continuous section sets its page up again after each page break it
+    // holds. That page is never the section's first, so it shows the default
+    // header, and the body starts under that story alone. A linked first story
+    // taller than its band used to lower the body there too, once a title-page
+    // section without its own `first` reference linked one (issue #2224).
+    let continuous_section = |title_pg: bool| {
+        section_properties_xml(&[], title_pg)
+            .replace("<w:sectPr>", r#"<w:sectPr><w:type w:val="continuous"/>"#)
+    };
+    let package = |title_pg: bool| {
+        build_docx_with_section_stories(
+            &format!(
+                r#"<w:p><w:pPr>{}</w:pPr><w:r><w:t>Cover body</w:t></w:r></w:p>
+<w:p><w:r><w:t>Before the break</w:t></w:r></w:p>
+<w:p><w:r><w:br w:type="page"/><w:t>After the break</w:t></w:r></w:p>{}"#,
+                section_properties_xml(
+                    &[
+                        ("headerReference", "first", "rIdTall"),
+                        ("headerReference", "default", "rIdHead"),
+                    ],
+                    true,
+                ),
+                continuous_section(title_pg),
+            ),
+            &[
+                (
+                    "rIdTall",
+                    "header",
+                    "Cover one\nCover two\nCover three\nCover four\nCover five",
+                ),
+                ("rIdHead", "header", "Running head"),
+            ],
+        )
+    };
+    let after_break_baseline = |title_pg: bool| {
+        let (document, _warnings) = DocxParser
+            .parse(&package(title_pg), &ConvertOptions::default())
+            .expect("document parses");
+        let source = crate::internal::generate_typst(&document)
+            .expect("document generates")
+            .source;
+        let runs = crate::render::pdf::compiled_text_runs(&source, 1).expect("document compiles");
+        assert!(
+            runs.iter().any(|run| run.text.contains("Running head")),
+            "the continuation page shows the default header, got {runs:?}"
+        );
+        runs.iter()
+            .find(|run| run.text.contains("After the break"))
+            .map(|run| run.baseline_pt)
+            .unwrap_or_else(|| panic!("no body line on the continuation page: {runs:?}"))
+    };
+
+    let linked = after_break_baseline(true);
+    let control = after_break_baseline(false);
+    assert!(
+        (linked - control).abs() < 0.01,
+        "the linked first story moved the continuation page's body from \
+         {control}pt to {linked}pt"
     );
 }
 

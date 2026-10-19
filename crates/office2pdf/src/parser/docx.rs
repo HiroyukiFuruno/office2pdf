@@ -44,8 +44,8 @@ use self::media::{
 #[cfg(test)]
 use self::sections::extract_page_size;
 use self::sections::{
-    HeaderFooterAssets, HeaderFooterStyleContext, SectionHeaderFooterInputs, SectionOverrides,
-    build_flow_page_from_section, build_header_footer_assets,
+    HeaderFooterAssets, HeaderFooterStyleContext, LinkedFirstStories, SectionHeaderFooterInputs,
+    SectionOverrides, build_flow_page_from_section, build_header_footer_assets,
 };
 #[cfg(test)]
 use self::styles::parse_ligatures_value;
@@ -546,6 +546,10 @@ impl Parser for DocxParser {
             .unwrap_or_default();
         let mut elements: Vec<TaggedElement> = Vec::new();
         let mut pages: Vec<Page> = Vec::new();
+        // Each section's `first` stories as the next section links to them,
+        // kept apart from `pages` because a section without `w:titlePg` passes
+        // them on without showing them (issue #2224).
+        let mut linked_first_stories = LinkedFirstStories::default();
         let mut section_layout_index: usize = 0;
         for (idx, child) in docx.document.children.iter().enumerate() {
             // A removed paragraph mark merges into the next paragraph; zero-width
@@ -659,7 +663,7 @@ impl Parser for DocxParser {
                     Page::Flow(flow_page) | Page::FlowContinuous(flow_page) => Some(flow_page),
                     _ => None,
                 });
-                let flow_page: crate::ir::FlowPage = build_flow_page_from_section(
+                let (flow_page, section_first_stories) = build_flow_page_from_section(
                     section_prop,
                     std::mem::take(&mut elements),
                     &numberings,
@@ -667,6 +671,7 @@ impl Parser for DocxParser {
                         assets: &header_footer_assets,
                         inherited_header: previous_flow_page.and_then(|page| page.header.as_ref()),
                         inherited_footer: previous_flow_page.and_then(|page| page.footer.as_ref()),
+                        inherited_first: &linked_first_stories,
                     },
                     SectionOverrides {
                         column_layout,
@@ -681,6 +686,7 @@ impl Parser for DocxParser {
                     header_footer_styles,
                     &mut warnings,
                 );
+                linked_first_stories = section_first_stories;
                 pages.push(
                     if section_prop.section_type == Some(docx_rs::SectionType::Continuous) {
                         Page::FlowContinuous(flow_page)
@@ -705,7 +711,7 @@ impl Parser for DocxParser {
             Page::Flow(flow_page) | Page::FlowContinuous(flow_page) => Some(flow_page),
             _ => None,
         });
-        let final_flow_page: crate::ir::FlowPage = build_flow_page_from_section(
+        let (final_flow_page, _) = build_flow_page_from_section(
             &docx.document.section_property,
             elements,
             &numberings,
@@ -713,6 +719,7 @@ impl Parser for DocxParser {
                 assets: &header_footer_assets,
                 inherited_header: previous_flow_page.and_then(|page| page.header.as_ref()),
                 inherited_footer: previous_flow_page.and_then(|page| page.footer.as_ref()),
+                inherited_first: &linked_first_stories,
             },
             SectionOverrides {
                 column_layout: final_column_layout,
