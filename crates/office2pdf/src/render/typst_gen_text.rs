@@ -489,6 +489,7 @@ pub(super) fn generate_paragraph(
                 runs,
                 style.tab_stops.as_deref(),
                 paragraph_tab_width_pt,
+                None,
                 eojeol_wrap,
                 None,
                 style.line_spacing,
@@ -4064,6 +4065,7 @@ fn generate_word_runs_with_tabs_in_context(
         runs,
         tab_stops,
         default_tab_width_pt,
+        None,
         eojeol_wrap,
         metrics.map(RunLineMetrics::Word),
         style.line_spacing,
@@ -4090,12 +4092,16 @@ fn word_inline_drawing_spacing_pt(run: &Run, line_spacing: Option<LineSpacing>) 
     word_line_advance_pt(std::slice::from_ref(run)).unwrap_or(0.0) * (proportion - 1.0)
 }
 
+/// `tab_origin` is a Typst length expression for where the runs' first line
+/// starts, measured from the origin the stops count from; `None` measures
+/// from the runs' own start.
 #[allow(clippy::too_many_arguments)]
 fn generate_runs_with_tabs_and_metrics_in_context(
     out: &mut String,
     runs: &[Run],
     tab_stops: Option<&[TabStop]>,
     default_tab_width_pt: f64,
+    tab_origin: Option<&str>,
     eojeol_wrap: EojeolWrap,
     run_line_metrics: Option<RunLineMetrics<'_>>,
     inline_drawing_line_spacing: Option<LineSpacing>,
@@ -4118,6 +4124,7 @@ fn generate_runs_with_tabs_and_metrics_in_context(
         &segments,
         tab_stops,
         default_tab_width_pt,
+        tab_origin,
         |out, index| {
             generate_runs_with_metrics_in_context(
                 out,
@@ -4136,6 +4143,7 @@ fn write_measured_tab_segments_with_result(
     segment_runs: &[Vec<Run>],
     tab_stops: Option<&[TabStop]>,
     default_tab_width_pt: f64,
+    tab_origin: Option<&str>,
     mut write_segment: impl FnMut(&mut String, usize) -> Result<(), ConvertError>,
 ) -> Result<(), ConvertError> {
     out.push_str("#context {\n");
@@ -4150,7 +4158,14 @@ fn write_measured_tab_segments_with_result(
             continue;
         }
 
-        write_tab_segment_bindings(out, index, segment, tab_stops, default_tab_width_pt);
+        write_tab_segment_bindings(
+            out,
+            index,
+            segment,
+            tab_stops,
+            default_tab_width_pt,
+            tab_origin,
+        );
     }
 
     let _ = writeln!(out, "  tab_prefix_{}", segment_runs.len() - 1);
@@ -4180,6 +4195,32 @@ pub(super) fn generate_runs_with_tabs_context(
         runs,
         tab_stops,
         default_tab_width_pt,
+        None,
+        eojeol_wrap,
+        None,
+        None,
+        ctx,
+    )
+}
+
+/// As [`generate_runs_with_tabs_context`], for runs whose first line starts
+/// `tab_origin` (a Typst length expression) past the origin the stops count
+/// from, such as a Word list item's body after its marker.
+pub(super) fn generate_runs_with_tabs_from_origin_context(
+    out: &mut String,
+    runs: &[Run],
+    tab_stops: Option<&[TabStop]>,
+    default_tab_width_pt: f64,
+    tab_origin: &str,
+    eojeol_wrap: EojeolWrap,
+    ctx: &mut super::GenCtx,
+) -> Result<(), ConvertError> {
+    generate_runs_with_tabs_and_metrics_in_context(
+        out,
+        runs,
+        tab_stops,
+        default_tab_width_pt,
+        Some(tab_origin),
         eojeol_wrap,
         None,
         None,
@@ -4302,7 +4343,7 @@ pub(super) fn write_measured_tab_segments(
             continue;
         }
 
-        write_tab_segment_bindings(out, index, segment, tab_stops, default_tab_width_pt);
+        write_tab_segment_bindings(out, index, segment, tab_stops, default_tab_width_pt, None);
     }
 
     let _ = writeln!(out, "  tab_prefix_{}", segment_runs.len() - 1);
@@ -4346,12 +4387,19 @@ fn write_tab_segment_bindings(
     segment: &[Run],
     tab_stops: Option<&[TabStop]>,
     default_tab_width_pt: f64,
+    tab_origin: Option<&str>,
 ) {
-    let _ = writeln!(
+    let _ = write!(
         out,
         "  let tab_prefix_width_{index} = measure(tab_prefix_{}).width",
         index - 1
     );
+    // The stops and the default grid count from the origin, not from where
+    // these runs begin, so the pen is the measured prefix past that origin.
+    if let Some(origin) = tab_origin {
+        let _ = write!(out, " + {origin}");
+    }
+    out.push('\n');
     let _ = writeln!(
         out,
         "  let tab_segment_width_{index} = measure(tab_segment_{index}).width"
@@ -4391,7 +4439,7 @@ fn write_tab_segment_bindings(
     );
 }
 
-fn paragraph_contains_tabs(runs: &[Run]) -> bool {
+pub(super) fn paragraph_contains_tabs(runs: &[Run]) -> bool {
     runs.iter().any(|run| run.text.contains('\t'))
 }
 

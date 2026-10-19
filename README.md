@@ -289,7 +289,9 @@ suppress markers and numbering indents when they name the same/later level;
 root flags are ignored. Wide numbered markers with tab suffixes advance the
 first body line to default or custom left tab stops. Space/nothing suffixes
 place list text after the marker, including inline numbers; continuations keep
-their indent.
+their indent. Tabs in a list item's first paragraph, when it has a hanging
+indent, advance from where its text starts to the paragraph's next stop,
+counted from the margin.
 
 DOCX section body text supports top, centered and bottom page alignment,
 including paragraph after-spacing and page breaks. Continuous sections use their
