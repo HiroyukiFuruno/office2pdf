@@ -4157,7 +4157,7 @@ fn docx_list_body_tab_keeps_continuation_lines_at_declared_indent() {
     let data = rewrite_docx_part(base, "word/document.xml", |xml| {
         let (prefix, suffix) = xml.rsplit_once("<w:t>Continuous item</w:t>").unwrap();
         format!(
-            "{prefix}<w:t>Continuous item with a long explanation after a leading tab. This sentence continues across several physical lines to test wrapping at the declared left margin.</w:t>{suffix}"
+            "{prefix}<w:t>Continuous item with a long explanation after a leading tab about the final wide numbering marker and the paragraph continuation origin. This sentence continues across several physical lines to test wrapping at the declared left margin.</w:t>{suffix}"
         )
         .replace("<w:t>Continuous item", "<w:tab/><w:t>Continuous item")
     });
@@ -4169,20 +4169,41 @@ fn docx_list_body_tab_keeps_continuation_lines_at_declared_indent() {
         suffix: "tab",
     };
     assert_list_body_tabs(&data, &grid, 1, "Continuous item", None);
-    let (document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
-    let source = crate::render::typst_gen::generate_typst(&document).unwrap();
-    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
-    let first = runs
-        .iter()
-        .find(|run| run.text.starts_with("Continuous item with"))
-        .unwrap();
-    let continuations: Vec<_> = runs
-        .iter()
-        .filter(|run| run.baseline_pt > first.baseline_pt + 1.0)
-        .collect();
-    assert!(continuations.len() >= 2, "{continuations:?}");
-    for line in continuations {
-        assert!((line.left_pt - 126.0).abs() < 0.01, "{line:?}");
+    // Check the requested face and the narrower CI fallback, which fits more
+    // of the body on each line.
+    for family in [None, Some("Libertinus Serif")] {
+        let (mut document, _) = DocxParser.parse(&data, &ConvertOptions::default()).unwrap();
+        if let Some(family) = family {
+            for page in &mut document.pages {
+                if let crate::ir::Page::Flow(flow) = page {
+                    for block in &mut flow.content {
+                        if let Block::List(list) = block {
+                            for item in &mut list.items {
+                                for paragraph in &mut item.content {
+                                    for run in &mut paragraph.runs {
+                                        run.style.font_family = Some(family.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let source = crate::render::typst_gen::generate_typst(&document).unwrap();
+        let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+        let first = runs
+            .iter()
+            .find(|run| run.text.starts_with("Continuous item with"))
+            .unwrap();
+        let continuations: Vec<_> = runs
+            .iter()
+            .filter(|run| run.baseline_pt > first.baseline_pt + 1.0)
+            .collect();
+        assert!(continuations.len() >= 2, "{family:?}: {continuations:?}");
+        for line in continuations {
+            assert!((line.left_pt - 126.0).abs() < 0.01, "{family:?}: {line:?}");
+        }
     }
 }
 
