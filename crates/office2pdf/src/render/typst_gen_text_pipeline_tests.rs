@@ -941,6 +941,7 @@ fn a_legacy_justified_table_paragraph_fills_the_cell_measure() {
     };
     let table: Table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![cell],
             height: None,
             minimum_height: None,
@@ -1082,6 +1083,7 @@ fn a_sheet_cell_keeps_syllable_breaking() {
 fn a_docx_table_cell_keeps_each_hangul_eojeol_whole() {
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![make_text_cell(EOJEOL_SENTENCE)],
             height: None,
@@ -1816,6 +1818,7 @@ fn a_docx_table_cell_breaks_only_an_overlong_latin_token() {
     };
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![cell],
             height: Some(333.808),
             minimum_height: None,
@@ -2086,6 +2089,7 @@ fn a_token_wider_than_its_column_is_not_framed() {
     }
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![make_text_cell_styled(
                 &format!("주 {long_token}"),
@@ -2119,6 +2123,7 @@ fn the_same_token_is_framed_when_the_column_can_hold_it() {
     let long_token: String = "가나다라마바사아자차카타파하가나다라마바".to_string();
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![make_text_cell_styled(
                 &format!("주 {long_token}"),
@@ -3196,6 +3201,7 @@ fn sheet_page_with_aligned_cell(
         margins: Margins::default(),
         table: Table {
             rows: vec![TableRow {
+                cant_split: false,
                 cells: vec![TableCell {
                     content: vec![content],
                     ..TableCell::default()
@@ -4074,6 +4080,7 @@ fn test_centred_sheet_line_seat_is_scoped_to_fitting_single_lines() {
 
     let word_table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![TableCell {
                 content: vec![Block::Paragraph(Paragraph {
                     style: ParagraphStyle {

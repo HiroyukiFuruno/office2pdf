@@ -297,6 +297,7 @@ fn make_simple_table(rows: Vec<Vec<&str>>) -> Table {
         rows: rows
             .into_iter()
             .map(|cells| TableRow {
+                cant_split: false,
                 minimum_height: None,
                 cells: cells
                     .into_iter()
@@ -1117,6 +1118,7 @@ fn generated_source_for_run_style(style: TextStyle) -> String {
 fn test_table_cell_vertical_align_center() {
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![TableCell {
                 content: vec![Block::Paragraph(Paragraph {
@@ -1176,6 +1178,7 @@ fn test_generate_run_highlight_with_bold() {
 fn test_table_cell_vertical_align_bottom() {
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![TableCell {
                 content: vec![Block::Paragraph(Paragraph {

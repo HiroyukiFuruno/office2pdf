@@ -447,6 +447,7 @@ fn test_fixed_page_without_background_color() {
 fn test_fixed_page_table_element() {
     let table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             minimum_height: None,
             cells: vec![
                 TableCell {
@@ -6182,6 +6183,7 @@ fn centered_sheet_page(centers: bool, column_widths: Vec<f64>) -> Page {
         },
         table: Table {
             rows: vec![TableRow {
+                cant_split: false,
                 minimum_height: None,
                 cells: column_widths.iter().map(|_| TableCell::default()).collect(),
                 height: None,
@@ -6465,6 +6467,7 @@ fn sheet_with_a_picture_over_a_filled_panel() -> Page {
     ];
 
     let panel_row = |height_pt: f64| TableRow {
+        cant_split: false,
         minimum_height: None,
         height: Some(height_pt),
         cells: vec![TableCell {
@@ -6674,6 +6677,7 @@ fn gift_drawing_origin_probe_with_chart(
     };
     sheet.table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![TableCell::default()],
             height: Some(20.0),
             minimum_height: None,

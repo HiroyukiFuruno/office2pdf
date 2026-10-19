@@ -1526,6 +1526,9 @@ pub struct TableRow {
     /// this tall and grows past it for taller content, which separates it from
     /// [`Self::height`] (issues #965 and #1253).
     pub minimum_height: Option<f64>,
+    /// Word's `w:cantSplit`: the row moves whole to the next page rather
+    /// than continuing there (issue #2217).
+    pub cant_split: bool,
 }
 
 /// Glyphs the parser records in [`TableCell::icon_text`] for Excel's arrow

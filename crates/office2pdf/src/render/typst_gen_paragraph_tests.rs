@@ -734,6 +734,7 @@ fn test_legacy_justified_latin_table_cell_uses_first_fit_breaker() {
     };
     let table: Table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![TableCell {
                 content: vec![Block::Paragraph(paragraph)],
                 ..TableCell::default()
@@ -772,6 +773,7 @@ fn test_word_2013_justified_latin_table_cell_keeps_the_optimized_breaker() {
     };
     let table: Table = Table {
         rows: vec![TableRow {
+            cant_split: false,
             cells: vec![TableCell {
                 content: vec![Block::Paragraph(paragraph)],
                 ..TableCell::default()
