@@ -113,10 +113,11 @@ for value in "$MAX_ISSUES" "$MIN_FREE_GB" "$REFLECT_EVERY"; do
 done
 
 # Prints a short reason when a run really hit a usage limit, and nothing when it
-# did not. Only the CLI's own result/error text and its non-JSON output can carry
-# that message. Reading the raw log instead matches the telemetry around it: a
-# --verbose stream-json init event lists the `usage-credits` slash command, and
-# every turn emits a `rate_limit_event` whose status is normally `allowed_warning`.
+# did not. Only the CLI's structured `api_error` verdict, its own result/error
+# text and its non-JSON output are evidence. Reading the raw log instead matches
+# the telemetry around it: a --verbose stream-json init event lists the
+# `usage-credits` slash command, and every turn emits a `rate_limit_event` whose
+# status is normally `allowed_warning`.
 usage_limit_reason() {
   python3 - "$1" <<'USAGE_LIMIT_PY'
 import json
@@ -165,6 +166,11 @@ for event in events:
             print("rate_limit_event status=%s" % status)
             raise SystemExit(0)
         continue
+    # The CLI's own verdict on a refused run. Its message wording changes ("hit
+    # your weekly limit" matched no pattern on 2026-10-19), so prefer this field.
+    if event.get("api_error") == "usage_limit_reached":
+        print("api_error=usage_limit_reached status=%s" % event.get("api_error_status"))
+        raise SystemExit(0)
     if event.get("type") == "turn.failed":
         error = event.get("error")
         if isinstance(error, dict) and isinstance(error.get("message"), str):
