@@ -3124,7 +3124,7 @@ fn flow_page_top_margin_pt(
 /// Which line box [`hf_content_height_pt`] gives a header paragraph.
 #[derive(Clone, Copy)]
 enum HfLineHeights {
-    /// The face's natural line, which is what the joined drawn story lays out.
+    /// The face's natural line, which is what the flowed drawn story lays out.
     Natural,
     /// An exact line at its stated height and any other at the face's natural
     /// line, which is what a story drawn as Word's line boxes lays out.
@@ -3851,38 +3851,61 @@ fn page_relative_hf_table_y(
 }
 
 fn generate_flow_hf_content(out: &mut String, hf: &HeaderFooter, ctx: &mut GenCtx) {
-    // The story's paragraphs are joined by a `\\` line break below, so they are
-    // one Typst paragraph and `par(leading:)` is what separates their lines.
-    // Typst advances a line by `top-edge + bottom-edge + leading`, and the story
-    // set no leading, so it took the 0.65em default: an 8pt Arial header advanced
-    // 10.9305pt where Word advances 9.1992pt. Stating the remainder after the
-    // edges leaves the first baseline — seated against the top edge by #629 —
+    // `par(leading:)` is what separates a paragraph's lines. Typst advances a
+    // line by `top-edge + bottom-edge + leading`, and the story set no leading,
+    // so it took the 0.65em default: an 8pt Arial header advanced 10.9305pt
+    // where Word advances 9.1992pt. Stating the remainder after the edges
+    // leaves the first baseline — seated against the top edge by #629 —
     // exactly where it was, and corrects only the advance between lines (#735).
     //
-    // Set once for the story rather than per paragraph: wrapping each paragraph
-    // in its own content block makes it a block, and Typst then puts
-    // `par(spacing:)` between them — a different and much larger gap.
-    // A ruled paragraph is block-level, which splits the joined story into
-    // separate Typst paragraphs with the default paragraph gap between them —
-    // the second line of a ruled header landed 20pt low, over the first body
-    // line, and the taller measured story clamped the band shift away and
-    // lifted the first line 2.49pt (issue #1824). Such a story is laid out as
-    // the stack of blocks it already is, each carrying Word's own line box, so
-    // the flow advances by Word's line and needs no shift to seat it.
+    // Word advances to the next paragraph's line by the same pitch, so the
+    // story's paragraphs are separate Typst paragraphs whose `par(spacing:)`
+    // is that leading too. Joining them with `\` line breaks into one Typst
+    // paragraph did not survive a stated `w:jc`, a stop-placed tab, an indent
+    // or a right `w:ptab`: each wraps its paragraph in a block-level element,
+    // which split the story around it, and the line break became an empty
+    // paragraph with the default paragraph gap on both sides. Two `jc="both"`
+    // tabbed footer lines Word draws 13.52pt apart came out 46.6pt apart, the
+    // upper one over the last body line (issue #2222). A block that states no
+    // spacing of its own takes `par(spacing:)`, so the leading separates every
+    // paragraph whatever wraps it.
+    //
+    // A ruled paragraph also reserves its rules and their `w:space` gaps,
+    // which no leading expresses. When the story was still joined by line
+    // breaks, the second line of a ruled header landed 20pt low, over the
+    // first body line, and the taller measured story clamped the band shift
+    // away and lifted the first line 2.49pt (issue #1824). Such a story is
+    // laid out as the stack of blocks it already is, each carrying Word's own
+    // line box, so the flow advances by Word's line and needs no shift to
+    // seat it.
     if hf_story_rules_a_paragraph(hf) {
         generate_stacked_hf_paragraphs(out, hf, ctx);
         return;
     }
-    if let Some(leading) = hf
+    let mut emitted = hf
         .paragraphs
         .iter()
-        .find(|paragraph| hf_paragraph_is_emitted(paragraph))
-        .and_then(|paragraph| {
-            let runs: Vec<Run> = hf_paragraph_metric_runs(paragraph);
-            text::word_hf_line_leading_pt(&runs, 0.0)
-        })
-    {
+        .filter(|paragraph| hf_paragraph_is_emitted(paragraph));
+    let has_several_paragraphs: bool = emitted.clone().nth(1).is_some();
+    let leading: Option<f64> = emitted.next().and_then(|paragraph| {
+        let runs: Vec<Run> = hf_paragraph_metric_runs(paragraph);
+        text::word_hf_line_leading_pt(&runs, 0.0)
+    });
+    if let Some(leading) = leading {
         let _ = writeln!(out, "#set par(leading: {}pt)", format_f64(leading));
+    }
+    if has_several_paragraphs {
+        // Typst's own 0.65em leading where the face's metrics are unknown.
+        let spacing: String = leading.map_or_else(
+            || "0.65em".to_string(),
+            |leading| format!("{}pt", format_f64(leading)),
+        );
+        let _ = writeln!(out, "#set par(spacing: {spacing})");
+        // A story taller than its band overflows it, as Word lets it, but a
+        // breakable block would rather shrink the gap above it to fit: two
+        // indented 11pt Arial footer lines in a 21.6pt band advanced 11.70pt
+        // against the 14.98pt of two plain ones (issue #2222).
+        out.push_str("#set block(breakable: false)\n");
     }
     let mut is_first: bool = true;
     for paragraph in &hf.paragraphs {
@@ -3890,7 +3913,7 @@ fn generate_flow_hf_content(out: &mut String, hf: &HeaderFooter, ctx: &mut GenCt
             continue;
         }
         if !is_first {
-            out.push_str("\\\n");
+            out.push_str("\n#parbreak()\n");
         }
         generate_hf_styled_paragraph(out, paragraph, ctx);
         is_first = false;
@@ -4009,7 +4032,7 @@ fn hf_story_rules_a_paragraph(hf: &HeaderFooter) -> bool {
 /// The height is stated rather than left to the content because the text cell
 /// carries Typst's cap-height top edge, which is shorter than Word's line by
 /// the seat the band shift already corrects for the story's first baseline.
-/// Stating it keeps every baseline exactly where the joined story form puts
+/// Stating it keeps every baseline exactly where the flowed story form puts
 /// it — [`hf_content_height_pt`] measures the band against these same terms —
 /// and only moves what the rule adds.
 fn generate_stacked_hf_paragraphs(out: &mut String, hf: &HeaderFooter, ctx: &mut GenCtx) {
@@ -4041,7 +4064,7 @@ fn generate_flow_header_content(out: &mut String, header: &HeaderFooter, ctx: &m
 ///
 /// Only a story with an exact line needs them, and only when every paragraph
 /// it emits has a box to give: a natural line whose face does not resolve
-/// keeps the joined story's estimates. A ruled story keeps its stacked form,
+/// keeps the flowed story's estimates. A ruled story keeps its stacked form,
 /// which seats each rule against the face's natural line (issue #1824).
 fn header_story_draws_line_boxes(header: &HeaderFooter) -> bool {
     let mut emitted = header
@@ -4067,7 +4090,7 @@ fn hf_paragraph_line_box_pt(paragraph: &crate::ir::HeaderFooterParagraph) -> Opt
 
 /// Emit a header story as one block per paragraph, each line in Word's box.
 ///
-/// The joined story cannot draw an exact line: its one leading and the band
+/// The flowed story cannot draw an exact line: its one leading and the band
 /// shift seat every line one face ascent down and advance it by the face's
 /// natural line, so a 160pt exact line's text sat one face ascent below the
 /// band top where Word seats it 128pt down (issue #2214). Stating each line's
@@ -4911,9 +4934,15 @@ fn generate_hf_styled_paragraph(
         // Header/footer alignment uses the paragraph's own line measure, just
         // like body paragraphs. Keeping signed indents lets a negative Word
         // indent expand that measure into the corresponding margin.
+        //
+        // The block states no spacing, so in a story of several paragraphs it
+        // takes the story's `par(spacing:)` and advances by Word's pitch like
+        // the paragraphs around it (issue #2222). The other callers wrap it
+        // alone, where Typst trims that spacing; worksheet sections state no
+        // indent.
         let _ = write!(
             out,
-            "#block(width: 100%, above: 0pt, below: 0pt, inset: (left: {}pt, right: {}pt))[",
+            "#block(width: 100%, inset: (left: {}pt, right: {}pt))[",
             format_f64(indent_left),
             format_f64(indent_right)
         );
