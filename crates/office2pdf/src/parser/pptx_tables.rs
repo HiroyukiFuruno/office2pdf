@@ -575,6 +575,7 @@ impl<'a> PptxTableParser<'a> {
             None
         };
         self.rows.push(TableRow {
+            cant_split: false,
             // DrawingML `a:tr/@h` seeds the row's height, but PowerPoint lets
             // taller cell content grow past it. Keep it as the same floor the
             // renderer already uses for Word's at-least rows instead of a

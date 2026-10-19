@@ -1,9 +1,12 @@
 use std::cell::Cell;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub(in super::super) struct TableHeaderInfo {
     pub(in super::super) repeat_rows: usize,
     pub(in super::super) is_visual_rtl: bool,
+    /// Each `w:tr`'s `w:cantSplit`, in document order. docx-rs drops the
+    /// element, so the flag is read from the story XML here (issue #2217).
+    pub(in super::super) cant_split_rows: Vec<bool>,
 }
 
 pub(in super::super) struct TableHeaderContext {
@@ -22,7 +25,7 @@ impl TableHeaderContext {
     pub(in super::super) fn consume_next(&self) -> TableHeaderInfo {
         let index = self.cursor.get();
         self.cursor.set(index + 1);
-        self.headers.get(index).copied().unwrap_or_default()
+        self.headers.get(index).cloned().unwrap_or_default()
     }
 }
 
@@ -34,6 +37,7 @@ struct TableHeaderScanState {
     saw_body_row: bool,
     in_table_properties: bool,
     is_visual_rtl: bool,
+    cant_split_rows: Vec<bool>,
 }
 
 #[cfg(test)]
@@ -66,6 +70,7 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                         saw_body_row: false,
                         in_table_properties: false,
                         is_visual_rtl: false,
+                        cant_split_rows: Vec::new(),
                     });
                 }
                 b"tblPr" => {
@@ -77,6 +82,7 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                     if let Some(state) = stack.last_mut() {
                         state.in_row = true;
                         state.current_row_is_header = false;
+                        state.cant_split_rows.push(false);
                     }
                 }
                 b"tblHeader" => {
@@ -85,6 +91,15 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                         && on_off_element_is_enabled(element)
                     {
                         state.current_row_is_header = true;
+                    }
+                }
+                b"cantSplit" => {
+                    if let Some(state) = stack.last_mut()
+                        && state.in_row
+                        && on_off_element_is_enabled(element)
+                        && let Some(cant_split) = state.cant_split_rows.last_mut()
+                    {
+                        *cant_split = true;
                     }
                 }
                 b"bidiVisual" => {
@@ -104,6 +119,7 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                     if let Some(state) = stack.last_mut() {
                         state.in_row = true;
                         state.current_row_is_header = false;
+                        state.cant_split_rows.push(false);
                         finalize_table_header_row(state);
                     }
                 }
@@ -113,6 +129,15 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                         && on_off_element_is_enabled(element)
                     {
                         state.current_row_is_header = true;
+                    }
+                }
+                b"cantSplit" => {
+                    if let Some(state) = stack.last_mut()
+                        && state.in_row
+                        && on_off_element_is_enabled(element)
+                        && let Some(cant_split) = state.cant_split_rows.last_mut()
+                    {
+                        *cant_split = true;
                     }
                 }
                 b"bidiVisual" => {
@@ -140,6 +165,7 @@ fn scan_table_headers_impl(xml: &str) -> Vec<TableHeaderInfo> {
                     if let Some(state) = stack.pop() {
                         headers[state.table_index].repeat_rows = state.repeat_rows;
                         headers[state.table_index].is_visual_rtl = state.is_visual_rtl;
+                        headers[state.table_index].cant_split_rows = state.cant_split_rows;
                     }
                 }
                 _ => {}

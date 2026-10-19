@@ -143,6 +143,10 @@ struct GenCtx {
     flow_border_layers: [bool; 2],
     has_flow_line_numbering: bool,
     in_flow_body: bool,
+    /// The section body is written straight into the page flow, with no
+    /// single-frame wrapper around it, so a table row there can continue on
+    /// the next page (issue #2217).
+    flow_body_is_breakable: bool,
     flow_page_alignments: Vec<crate::ir::PageVerticalAlignment>,
     flow_alignment_index: usize,
     flow_current_alignment: crate::ir::PageVerticalAlignment,
@@ -163,6 +167,9 @@ struct GenCtx {
     next_sheet_drawing_layer_id: usize,
     next_excel_fill_id: usize,
     table_depth: usize,
+    /// The table being written is a block of a breakable section body, so
+    /// its rows may continue on the next page (issue #2217).
+    table_rows_may_split: bool,
     /// Active section's Word document-grid line pitch, in points.
     line_grid_pitch: Option<f64>,
     /// `w:defaultTabStop` from the document settings, in points.
@@ -289,6 +296,7 @@ impl GenCtx {
             flow_border_layers: [false; 2],
             has_flow_line_numbering: false,
             in_flow_body: false,
+            flow_body_is_breakable: false,
             flow_page_alignments: Vec::new(),
             flow_alignment_index: 0,
             flow_current_alignment: crate::ir::PageVerticalAlignment::Top,
@@ -303,6 +311,7 @@ impl GenCtx {
             next_sheet_drawing_layer_id: 0,
             next_excel_fill_id: 0,
             table_depth: 0,
+            table_rows_may_split: false,
             table_uses_powerpoint_line_box: false,
             line_grid_pitch: None,
             row_east_asian: RowEastAsianMetrics {
@@ -841,6 +850,7 @@ fn generate_flow_page(
         let mut adjusted = first.clone();
         adjusted.style.space_before = None;
         let _ = writeln!(out, "#v({}pt, weak: false)", format_f64(gap));
+        ctx.flow_body_is_breakable = true;
         generate_block(out, &Block::Paragraph(adjusted), ctx)?;
         if section_content.len() > 1 {
             out.push('\n');
@@ -868,11 +878,15 @@ fn generate_flow_page(
     } else {
         let has_continuous_frame: bool =
             begins_continuously && write_continuous_flow_frame_open(out, page, ctx);
+        // The continuous-section frame is a `#move`, which lays its body out
+        // as one frame that cannot continue on the next page.
+        ctx.flow_body_is_breakable = !has_continuous_frame;
         generate_blocks(out, &section_content, ctx)?;
         if has_continuous_frame {
             write_continuous_flow_frame_close(out);
         }
     }
+    ctx.flow_body_is_breakable = false;
     ctx.in_flow_body = false;
     ctx.preserve_page_after_spacing = false;
     reset_flow_body_alignment(out, ctx);
@@ -5932,7 +5946,14 @@ fn generate_block_inner(
             // table's own `auto` gaps vanish against the wrapper's edges, where
             // the same routine drops weak spacing that no frame precedes.
             out.push_str("#block(width: 100%, above: 0pt, below: 0pt)[\n");
+            // Only a table written straight into a breakable section body
+            // meets a page break itself. A table inside a placed, boxed or
+            // otherwise single-frame container keeps its rows whole: Typst
+            // stacks a split row's remainder on its first part there.
+            let enclosing_rows_may_split: bool = ctx.table_rows_may_split;
+            ctx.table_rows_may_split = ctx.flow_body_is_breakable && ctx.block_depth == 1;
             let result = generate_table(out, table, ctx);
+            ctx.table_rows_may_split = enclosing_rows_may_split;
             out.push_str("]\n");
             result
         }

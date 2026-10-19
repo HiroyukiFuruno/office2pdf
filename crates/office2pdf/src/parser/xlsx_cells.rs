@@ -3980,6 +3980,7 @@ pub(super) fn build_rows_for_range(
         let height: Option<f64> = printed_row_height(sheet, row_idx, row_wraps_past_one_line, ctx);
 
         rows.push(TableRow {
+            cant_split: false,
             cells,
             height,
             minimum_height: None,

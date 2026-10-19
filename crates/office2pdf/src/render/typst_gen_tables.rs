@@ -372,6 +372,16 @@ fn generate_table_rows(
         // shared by every cell that needs a vertical band length (issue #619
         // review, remediation 3).
         let mut row_frame_estimate_cache: Option<Option<f64>> = None;
+        // Word continues a row on the next page unless `w:cantSplit` keeps it
+        // whole. A nested table stays whole inside its outer cell. A floor
+        // stays whole too: its strut is a single frame, and Typst leaves a
+        // blank page and stacks the row's lines when that frame is taller
+        // than a page body.
+        // TODO(#2217): continue a floored row whose content outgrows a page.
+        let row_may_split: bool = ctx.table_rows_may_split
+            && ctx.table_depth == 1
+            && !row.cant_split
+            && row.minimum_height.is_none();
         let mut col_pos: usize = 0;
         for (cell_index, cell) in row.cells.iter().enumerate() {
             if cell.col_span == 0 || cell.row_span == 0 {
@@ -445,6 +455,7 @@ fn generate_table_rows(
                 // it in every cell would only repeat the same constraint.
                 row.minimum_height.filter(|_| cell_index == 0),
                 row_shared_line.as_ref(),
+                row_may_split,
                 ctx,
             )?;
             ctx.available_measure_pt = enclosing_measure_pt;
@@ -957,6 +968,7 @@ fn generate_table_cell(
     cell_track_height: Option<f64>,
     row_minimum_height: Option<f64>,
     row_shared_line: Option<&SheetRowLine>,
+    row_may_split: bool,
     ctx: &mut GenCtx,
 ) -> Result<(), ConvertError> {
     // Unmerged cells retain distinct native seats even in a tight track
@@ -1245,12 +1257,27 @@ fn generate_table_cell(
     let seat_shortfall_pt: f64 = sheet_cell_seat_shortfall_pt(&cell.content, ctx);
     if wraps_content_shift {
         let (dx, dy) = content_shift.expect("the content-shift wrapper requires a seat");
-        let _ = write!(
-            out,
-            "#move(dx: {}pt, dy: {}pt)[",
-            format_geometry(dx),
-            format_geometry(dy),
-        );
+        if row_may_split {
+            // Opposite paddings translate each laid-out fragment like `move`,
+            // but `pad` is breakable. A `move` lays its body out as one frame,
+            // which cut a row taller than the space left on the page off at
+            // the bottom margin (issue #2217).
+            let _ = write!(
+                out,
+                "#pad(left: {}pt, right: {}pt, top: {}pt, bottom: {}pt)[",
+                format_geometry(dx),
+                format_geometry(-dx),
+                format_geometry(dy),
+                format_geometry(-dy),
+            );
+        } else {
+            let _ = write!(
+                out,
+                "#move(dx: {}pt, dy: {}pt)[",
+                format_geometry(dx),
+                format_geometry(dy),
+            );
+        }
     }
 
     if let Some(spill_width) = cell.spill_width {

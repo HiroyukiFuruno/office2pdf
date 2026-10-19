@@ -102,6 +102,16 @@ header run states no face or size, and its Arial 12pt body lines state no
 exact line down at 15.50pt, and sets the body lines 16pt apart. Parser and
 compiled-layout regressions check all three.
 
+`first_header_row_overflow.docx` is the unmodified synthetic
+`cases/first-header-no-minimum-overflow/input.docx` from
+[docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/first-header-no-minimum-overflow),
+Apache-2.0. The 160pt first-page header is followed by `Before` and a one-cell
+table row with neither `w:cantSplit` nor a height rule, holding `Minimum`,
+`Second` and 60 `Continuation` paragraphs. Native Word starts the row on page 1
+below `Before` and continues it over three pages. A compiled-layout regression
+checks that the row starts on page 1 and paints every line once, above the
+bottom margin.
+
 `page_header_ordinary_marker.docx` is the unmodified synthetic
 `cases/page-header-ordinary-marker/input.docx` from
 [docxide-pdf at fe7b8bea](https://github.com/sverrejb/docxide-pdf/tree/fe7b8beafa7612cc89ad62a7d27b2c6141c4d6ed/tests/fixtures/cases/page-header-ordinary-marker),
