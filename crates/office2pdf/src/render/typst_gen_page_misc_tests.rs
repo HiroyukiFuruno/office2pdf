@@ -5731,10 +5731,9 @@ fn a_taller_first_page_header_also_grows_the_margin() {
 ///
 /// Regression for #735. The story carried no leading, so its lines took the
 /// 0.65em default on top of Typst's cap-height edge — 10.9305pt for 8pt Arial
-/// against Word's 9.1992pt. The leading is stated once for the story, which is
-/// a single Typst paragraph joined by `\\` line breaks; stating it per
-/// paragraph would make each one a block and Typst would put `par(spacing:)`
-/// between them instead.
+/// against Word's 9.1992pt. The leading is stated once for the story; a story
+/// of several paragraphs also states it as `par(spacing:)`, so a paragraph
+/// break advances by the same pitch (issue #2222).
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_header_line_advances_by_words_pitch() {
@@ -5772,6 +5771,208 @@ fn a_header_line_advances_by_words_pitch() {
         "8pt Arial leading tops the cap-height edge up to Word's 9.1992pt \
          advance, got {expected}pt"
     );
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Build a one-section document whose footer is pinned 36pt from the page
+/// edge and holds `paragraphs`.
+fn doc_with_footer(paragraphs: Vec<crate::ir::HeaderFooterParagraph>) -> Document {
+    use crate::ir::HeaderFooter;
+
+    let mut doc = doc_with_header(None, 72.0, Vec::new());
+    let Some(Page::Flow(page)) = doc.pages.first_mut() else {
+        panic!("the fixture is a flow page");
+    };
+    page.header = None;
+    page.margins.bottom = 57.6;
+    page.footer = Some(HeaderFooter {
+        shapes: Vec::new(),
+        distance_from_edge: Some(36.0),
+        sheet_print_scale: None,
+        paragraphs,
+    });
+    doc
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// A footer paragraph of 11pt Arial runs; each `"\t"` is a `<w:tab/>`.
+fn footer_paragraph(
+    style: ParagraphStyle,
+    elements: Vec<crate::ir::HFInline>,
+) -> crate::ir::HeaderFooterParagraph {
+    crate::ir::HeaderFooterParagraph {
+        style,
+        elements,
+        border: None,
+        border_space: None,
+        sheet_section_is_rich: false,
+        frame: None,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn arial_11_run(text: &str) -> crate::ir::HFInline {
+    crate::ir::HFInline::Run(Run {
+        text: text.to_string(),
+        style: arial(11.0),
+        href: None,
+        footnote: None,
+        inline_box: None,
+    })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// The baseline-to-baseline advance from the footer's `Upper` line to its
+/// `Lower` line.
+fn footer_pitch(
+    upper: crate::ir::HeaderFooterParagraph,
+    lower: crate::ir::HeaderFooterParagraph,
+) -> f64 {
+    let doc = doc_with_footer(vec![upper, lower]);
+    let upper_baseline: f64 = *baselines_of(&doc, "Upper")
+        .first()
+        .expect("the upper footer line is placed");
+    let lower_baseline: f64 = *baselines_of(&doc, "Lower")
+        .first()
+        .expect("the lower footer line is placed");
+    lower_baseline - upper_baseline
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Consecutive footer paragraphs advance by one line pitch whatever wraps
+/// each one, just as Word advances them.
+///
+/// A stated `w:jc`, a stop-placed `<w:tab/>`, an indent or a right `w:ptab`
+/// each wraps its paragraph in a block-level element, and a story joined by
+/// `\` line breaks then split around it: the break became an empty paragraph
+/// of its own with the default paragraph gap on both sides. Two `jc="both"`
+/// tabbed footer lines that Word draws 13.52pt apart came out 46.6pt apart,
+/// the upper one over the last body line (issue #2222).
+///
+/// The 21.6pt band is that document's, and two lines overflow it upward as
+/// they do in Word. A breakable block squeezed the gap to fit the band, so
+/// the indent and `w:ptab` pairs advanced 11.70pt.
+#[test]
+fn footer_paragraphs_advance_by_one_pitch_whatever_wraps_them() {
+    use crate::ir::{
+        Alignment, HFInline, PositionedTab, PositionedTabAlignment, PositionedTabRelativeTo,
+        TabAlignment, TabLeader, TabStop,
+    };
+
+    if crate::render::typst_gen::text::word_hf_line_leading_pt(
+        &[Run {
+            text: "Upper".to_string(),
+            style: arial(11.0),
+            href: None,
+            footnote: None,
+            inline_box: None,
+        }],
+        0.0,
+    )
+    .is_none()
+    {
+        return; // the face is unavailable on this runner
+    }
+    let plain = |text: &str| footer_paragraph(ParagraphStyle::default(), vec![arial_11_run(text)]);
+    let plain_pitch: f64 = footer_pitch(plain("Upper"), plain("Lower"));
+    assert!(
+        (11.0..1.5 * 11.0).contains(&plain_pitch),
+        "two plain 11pt footer lines advance by about one line, got {plain_pitch}pt"
+    );
+
+    let aligned = |alignment: Alignment, text: &str| {
+        footer_paragraph(
+            ParagraphStyle {
+                alignment: Some(alignment),
+                ..ParagraphStyle::default()
+            },
+            vec![arial_11_run(text)],
+        )
+    };
+    let stop = |position: f64, alignment: TabAlignment| TabStop {
+        position,
+        alignment,
+        leader: TabLeader::None,
+    };
+    // Centre and right stops inside the 453.58pt measure, where Word's
+    // footer style puts them: at half of it and at its end.
+    let tabbed_justified = |segments: &[&str]| {
+        let mut elements: Vec<HFInline> = Vec::new();
+        for segment in segments {
+            elements.push(arial_11_run("\t"));
+            elements.push(arial_11_run(segment));
+        }
+        footer_paragraph(
+            ParagraphStyle {
+                alignment: Some(Alignment::Justify),
+                tab_stops: Some(vec![
+                    stop(216.0, TabAlignment::Center),
+                    stop(432.0, TabAlignment::Right),
+                ]),
+                ..ParagraphStyle::default()
+            },
+            elements,
+        )
+    };
+    let indented = |text: &str| {
+        footer_paragraph(
+            ParagraphStyle {
+                indent_left: Some(18.0),
+                ..ParagraphStyle::default()
+            },
+            vec![arial_11_run(text)],
+        )
+    };
+    let right_ptab = |text: &str| {
+        footer_paragraph(
+            ParagraphStyle::default(),
+            vec![
+                arial_11_run(text),
+                HFInline::PositionedTab(PositionedTab {
+                    alignment: PositionedTabAlignment::Right,
+                    relative_to: PositionedTabRelativeTo::Margin,
+                    leader: TabLeader::None,
+                }),
+                arial_11_run("Page"),
+            ],
+        )
+    };
+    let cases = vec![
+        (
+            "jc=both with centre and right stops",
+            tabbed_justified(&["Upper 1 of 3", "Quality"]),
+            tabbed_justified(&["", "Lower"]),
+        ),
+        (
+            "jc=center",
+            aligned(Alignment::Center, "Upper"),
+            aligned(Alignment::Center, "Lower"),
+        ),
+        (
+            "jc=left over jc=right",
+            aligned(Alignment::Left, "Upper"),
+            aligned(Alignment::Right, "Lower"),
+        ),
+        (
+            "plain over jc=right",
+            plain("Upper"),
+            aligned(Alignment::Right, "Lower"),
+        ),
+        ("left indent", indented("Upper"), indented("Lower")),
+        (
+            "right margin ptab",
+            right_ptab("Upper"),
+            right_ptab("Lower"),
+        ),
+    ];
+    for (label, upper, lower) in cases {
+        let pitch: f64 = footer_pitch(upper, lower);
+        assert!(
+            (pitch - plain_pitch).abs() < 0.01,
+            "{label}: the footer lines advance {pitch}pt, not the plain story's \
+             {plain_pitch}pt"
+        );
+    }
 }
 
 /// A header story's banner carries no text, so it never reaches the paragraph
