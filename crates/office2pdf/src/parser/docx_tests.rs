@@ -493,7 +493,7 @@ fn test_parse_simple_numbered_list() {
         lists[0].level_styles.get(&0),
         Some(&ListLevelStyle {
             kind: ListKind::Ordered,
-            numbering_pattern: Some("1.".to_string()),
+            numbering_pattern: Some(NumberingPattern::parse("1.")),
             full_numbering: false,
             marker_text: None,
             marker_style: None,
@@ -983,7 +983,7 @@ fn test_parse_numbered_list_start_override() {
         list.level_styles.get(&0),
         Some(&ListLevelStyle {
             kind: ListKind::Ordered,
-            numbering_pattern: Some("1.".to_string()),
+            numbering_pattern: Some(NumberingPattern::parse("1.")),
             full_numbering: false,
             marker_text: None,
             marker_style: None,
@@ -1046,7 +1046,7 @@ fn test_parse_mixed_ordered_and_bulleted_levels() {
                 0,
                 ListLevelStyle {
                     kind: ListKind::Ordered,
-                    numbering_pattern: Some("1.".to_string()),
+                    numbering_pattern: Some(NumberingPattern::parse("1.")),
                     full_numbering: false,
                     marker_text: None,
                     marker_style: None,
@@ -1749,6 +1749,154 @@ fn test_zero_indent_numbering_renders_inline_number_with_tab() {
         "second clause number advances: {:?}",
         paragraphs[1].runs[0].text
     );
+}
+
+/// A numbering level with a hanging indent, as Word writes list levels.
+fn hanging_list_level(
+    level: usize,
+    number_format: &str,
+    level_text: &str,
+    left_twips: i32,
+    hanging_twips: i32,
+) -> docx_rs::Level {
+    docx_rs::Level::new(
+        level,
+        docx_rs::Start::new(1),
+        docx_rs::NumberFormat::new(number_format),
+        docx_rs::LevelText::new(level_text),
+        docx_rs::LevelJc::new("left"),
+    )
+    .indent(
+        Some(left_twips),
+        Some(docx_rs::SpecialIndentType::Hanging(hanging_twips)),
+        None,
+        None,
+    )
+}
+
+/// Compiles a DOCX and returns, for each body text, the label painted before
+/// it on its baseline and the left edge of the run that paints the body.
+#[cfg(not(target_arch = "wasm32"))]
+fn painted_list_labels(data: &[u8], bodies: &[&str]) -> Vec<(String, f64)> {
+    let (doc, _warnings) = DocxParser.parse(data, &ConvertOptions::default()).unwrap();
+    let source = crate::render::typst_gen::generate_typst(&doc).unwrap();
+    let runs = crate::render::pdf::compiled_text_runs(&source.source, 0).unwrap();
+    bodies
+        .iter()
+        .map(|body| {
+            let body_run = runs
+                .iter()
+                .find(|run| run.text.contains(body))
+                .unwrap_or_else(|| panic!("{body:?} is not painted: {runs:?}"));
+            let mut label_runs: Vec<_> = runs
+                .iter()
+                .filter(|run| {
+                    (run.baseline_pt - body_run.baseline_pt).abs() < 0.5
+                        && run.left_pt < body_run.left_pt
+                })
+                .collect();
+            label_runs.sort_by(|left, right| left.left_pt.total_cmp(&right.left_pt));
+            let mut label: String = label_runs.iter().map(|run| run.text.as_str()).collect();
+            label.push_str(&body_run.text[..body_run.text.find(body).unwrap()]);
+            (label.trim().to_string(), body_run.left_pt)
+        })
+        .collect()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_level_text_literal_text_prints_as_written() {
+    // Typst reads every `1`, `a`, `A`, `i`, `I`, `*`, ... in a numbering
+    // pattern as a counter, but Word prints lvlText's literal text as written:
+    // `1.%1` is `1.1`, `1.2`, never `1`, `2` (issue #2221).
+    let bodies = ["Alpha", "Beta", "Gamma"];
+    let mut body_lefts: BTreeMap<&str, Vec<f64>> = BTreeMap::new();
+    // A 9pt hanging indent is narrower than `1.1`, so the body's tab follows
+    // the label's measured width. A label with a space gets room for itself
+    // (issue #2322).
+    for (level_text, number_format, hanging_twips, expected) in [
+        ("1.%1", "decimal", 180, ["1.1", "1.2", "1.3"]),
+        // `9` is no counting symbol, so this control already prints right.
+        ("9.%1", "decimal", 180, ["9.1", "9.2", "9.3"]),
+        (
+            "Article %1",
+            "upperRoman",
+            1440,
+            ["Article I", "Article II", "Article III"],
+        ),
+        ("*%1)", "lowerLetter", 180, ["*a)", "*b)", "*c)"]),
+        // Without a placeholder, lvlText is static text on every item.
+        ("1)", "decimal", 180, ["1)", "1)", "1)"]),
+        ("*", "lowerLetter", 180, ["*", "*", "*"]),
+        ("", "decimal", 180, ["", "", ""]),
+        ("", "none", 180, ["", "", ""]),
+    ] {
+        let abstract_num = docx_rs::AbstractNumbering::new(0).add_level(hanging_list_level(
+            0,
+            number_format,
+            level_text,
+            1440,
+            hanging_twips,
+        ));
+        let data = build_docx_with_numbering(
+            vec![abstract_num],
+            vec![docx_rs::Numbering::new(1, 0)],
+            bodies
+                .iter()
+                .map(|body| {
+                    docx_rs::Paragraph::new()
+                        .add_run(docx_rs::Run::new().add_text(*body))
+                        .numbering(docx_rs::NumberingId::new(1), docx_rs::IndentLevel::new(0))
+                })
+                .collect(),
+        );
+        let painted = painted_list_labels(&data, &bodies);
+        let labels: Vec<&str> = painted.iter().map(|(label, _)| label.as_str()).collect();
+        assert_eq!(labels, expected, "lvlText {level_text:?}");
+        body_lefts.insert(level_text, painted.iter().map(|(_, left)| *left).collect());
+    }
+    // `1.1` and `9.1` are equally wide, so their bodies tab to the same stop.
+    for (literal, control) in body_lefts["1.%1"].iter().zip(&body_lefts["9.%1"]) {
+        assert!(
+            (literal - control).abs() < 0.01,
+            "body after `1.N` at {literal}pt, after `9.N` at {control}pt"
+        );
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn docx_level_text_literal_text_survives_parent_numbers() {
+    let abstract_num = docx_rs::AbstractNumbering::new(0)
+        .add_level(hanging_list_level(0, "decimal", "1.%1", 720, 360))
+        .add_level(hanging_list_level(1, "lowerLetter", "1.%1.%2", 1440, 360));
+    let items = [
+        (0, "Alpha"),
+        (1, "Child one"),
+        (1, "Child two"),
+        (0, "Beta"),
+    ];
+    let data = build_docx_with_numbering(
+        vec![abstract_num],
+        vec![docx_rs::Numbering::new(1, 0)],
+        items
+            .iter()
+            .map(|(level, body)| {
+                docx_rs::Paragraph::new()
+                    .add_run(docx_rs::Run::new().add_text(*body))
+                    .numbering(
+                        docx_rs::NumberingId::new(1),
+                        docx_rs::IndentLevel::new(*level),
+                    )
+            })
+            .collect(),
+    );
+    let bodies: Vec<&str> = items.iter().map(|(_, body)| *body).collect();
+    let labels: Vec<String> = painted_list_labels(&data, &bodies)
+        .into_iter()
+        .map(|(label, _)| label)
+        .collect();
+    assert_eq!(labels, ["1.1", "1.1.a", "1.1.b", "1.2"]);
 }
 
 /// Rewrites `word/settings.xml` inside a DOCX, replacing the
@@ -3261,7 +3409,7 @@ fn docx_skipped_list_subtrees_handle_returns_to_shallower_child_levels() {
             })
             .unwrap();
         let mut deepest = list.level_styles[&2].clone();
-        deepest.numbering_pattern = Some("[1]".to_string());
+        deepest.numbering_pattern = Some(NumberingPattern::parse("[1]"));
         deepest.marker_style = Some(TextStyle {
             font_size: Some(11.0),
             ..TextStyle::default()

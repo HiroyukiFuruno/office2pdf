@@ -1,5 +1,5 @@
 use super::*;
-use crate::ir::ListMarkerSuffix;
+use crate::ir::{ListMarkerSuffix, NumberingPattern};
 use crate::numbering::format_roman_counter as roman_marker;
 
 const PPTX_BLANK_LIST_ITEM_SENTINEL: &str = "\u{E000}\u{E001}";
@@ -16,7 +16,7 @@ fn is_pptx_blank_list_item(paragraph: &Paragraph) -> bool {
 /// Nested items are wrapped in `list.item()` / `enum.item()` with a sub-list.
 struct EffectiveListStyle<'a> {
     kind: ListKind,
-    numbering_pattern: Option<&'a str>,
+    numbering_pattern: Option<&'a NumberingPattern>,
     full_numbering: bool,
     marker_text: Option<&'a str>,
     marker_style: Option<&'a TextStyle>,
@@ -40,7 +40,7 @@ fn list_style_for_level<'a>(list: &'a List, level: u32) -> EffectiveListStyle<'a
     if let Some(style) = list.level_styles.get(&level) {
         EffectiveListStyle {
             kind: style.kind,
-            numbering_pattern: style.numbering_pattern.as_deref(),
+            numbering_pattern: style.numbering_pattern.as_ref(),
             full_numbering: style.full_numbering,
             marker_text: style.marker_text.as_deref(),
             marker_style: style.marker_style.as_ref(),
@@ -106,11 +106,14 @@ fn write_list_open(
             );
             out.push_str(", ");
         } else if let Some(numbering_pattern) = style.numbering_pattern {
-            let _ = write!(
-                out,
-                "numbering: \"{}\", ",
-                escape_typst_string(numbering_pattern)
-            );
+            out.push_str("numbering: ");
+            if let Some(pattern) = typst_numbering_pattern(numbering_pattern) {
+                let _ = write!(out, "\"{}\"", escape_typst_string(&pattern));
+            } else {
+                out.push_str("(..nums) => ");
+                write_numbering_label(out, Some(numbering_pattern), MarkerNumbers::Arguments);
+            }
+            out.push_str(", ");
         }
         if let Some(start_at) = start_at {
             let _ = write!(out, "start: {start_at}, ");
@@ -154,7 +157,6 @@ fn write_ordered_list_numbering_function(
     indent: Option<ListIndentGeometry>,
     baseline_snap: Option<PowerPointBaselineSnap>,
 ) {
-    let pattern: &str = style.numbering_pattern.unwrap_or("1.");
     out.push_str("numbering: (..nums) => [");
     if let Some(snap) = baseline_snap {
         snap.write_marker_open(out);
@@ -170,11 +172,8 @@ fn write_ordered_list_numbering_function(
         write_text_params(out, marker_style);
         out.push_str(")[");
     }
-    let _ = write!(
-        out,
-        "#numbering(\"{}\", ..nums)",
-        escape_typst_string(pattern)
-    );
+    out.push('#');
+    write_numbering_label(out, style.numbering_pattern, MarkerNumbers::Arguments);
     if marker_style.is_some_and(has_text_properties) {
         out.push(']');
     }
@@ -185,6 +184,81 @@ fn write_ordered_list_numbering_function(
         out.push(']');
     }
     out.push(']');
+}
+
+/// The numbers a label formats: a numbering function's `..nums`, or values
+/// known while the item is written.
+#[derive(Clone, Copy)]
+enum MarkerNumbers<'a> {
+    Arguments,
+    Values(&'a [u32]),
+}
+
+/// One Typst pattern string for `pattern`, if Typst reads exactly its
+/// counters back: its literal text may hold a counting symbol (issue #2221).
+fn typst_numbering_pattern(pattern: &NumberingPattern) -> Option<String> {
+    let mut joined: String = String::new();
+    for (prefix, symbol) in &pattern.pieces {
+        joined.push_str(prefix);
+        joined.push(*symbol);
+    }
+    joined.push_str(&pattern.suffix);
+    let counters: usize = joined
+        .parse::<typst::model::NumberingPattern>()
+        .ok()?
+        .pieces();
+    (counters == pattern.pieces.len()).then_some(joined)
+}
+
+/// Writes a code expression for the label. When one pattern string would turn
+/// literal text into counters, each counter is formatted alone between literal
+/// strings, taking the number at its position; a counter without one is
+/// dropped with its literal text, as Typst's patterns do.
+fn write_numbering_label(
+    out: &mut String,
+    pattern: Option<&NumberingPattern>,
+    numbers: MarkerNumbers<'_>,
+) {
+    let typst_pattern: Option<String> = match pattern {
+        Some(pattern) => typst_numbering_pattern(pattern),
+        None => Some("1.".to_string()),
+    };
+    if let Some(typst_pattern) = typst_pattern {
+        let _ = write!(out, "numbering(\"{}\"", escape_typst_string(&typst_pattern));
+        match numbers {
+            MarkerNumbers::Arguments => out.push_str(", ..nums"),
+            MarkerNumbers::Values(values) => {
+                for value in values {
+                    let _ = write!(out, ", {value}");
+                }
+            }
+        }
+        out.push(')');
+        return;
+    }
+    let Some(pattern) = pattern else {
+        return;
+    };
+    out.push_str("{ let n = ");
+    match numbers {
+        MarkerNumbers::Arguments => out.push_str("nums.pos()"),
+        MarkerNumbers::Values(values) => {
+            out.push('(');
+            for value in values {
+                let _ = write!(out, "{value},");
+            }
+            out.push(')');
+        }
+    }
+    out.push_str("; \"\"");
+    for (index, (prefix, symbol)) in pattern.pieces.iter().enumerate() {
+        let _ = write!(
+            out,
+            " + if n.len() > {index} {{ \"{}\" + numbering(\"{symbol}\", n.at({index})) }} else {{ \"\" }}",
+            escape_typst_string(prefix)
+        );
+    }
+    let _ = write!(out, " + \"{}\" }}", escape_typst_string(&pattern.suffix));
 }
 
 fn write_marker_box_open(out: &mut String, width_pt: f64) {
@@ -1413,7 +1487,7 @@ fn fixed_text_list_marker(
     runs: &[Run],
 ) -> String {
     let marker: String = match kind {
-        ListKind::Ordered => ordered_marker(style.numbering_pattern.unwrap_or("1."), number),
+        ListKind::Ordered => ordered_marker(style.numbering_pattern, number),
         ListKind::Unordered => {
             let (marker_text, _) =
                 renderable_unordered_marker(style.marker_text.unwrap_or("•"), style.marker_style);
@@ -1515,23 +1589,24 @@ fn first_visible_char_is_whitespace(runs: &[Run]) -> bool {
         .is_some_and(char::is_whitespace)
 }
 
-fn ordered_marker(pattern: &str, number: u32) -> String {
-    if pattern.contains('1') {
-        return pattern.replacen('1', &number.to_string(), 1);
-    }
-    if pattern.contains('a') {
-        return pattern.replacen('a', &alpha_marker(number, false), 1);
-    }
-    if pattern.contains('A') {
-        return pattern.replacen('A', &alpha_marker(number, true), 1);
-    }
-    if pattern.contains('i') {
-        return pattern.replacen('i', &roman_marker(number, false), 1);
-    }
-    if pattern.contains('I') {
-        return pattern.replacen('I', &roman_marker(number, true), 1);
-    }
-    format!("{number}.")
+/// The item's number formats the first counter. Like Typst's `numbering`
+/// given one value, later counters are dropped with their literal text; a
+/// pattern without counters is static text.
+fn ordered_marker(pattern: Option<&NumberingPattern>, number: u32) -> String {
+    let Some(pattern) = pattern else {
+        return format!("{number}.");
+    };
+    let Some((prefix, symbol)) = pattern.pieces.first() else {
+        return pattern.suffix.clone();
+    };
+    let counter: String = match symbol {
+        'a' => alpha_marker(number, false),
+        'A' => alpha_marker(number, true),
+        'i' => roman_marker(number, false),
+        'I' => roman_marker(number, true),
+        _ => number.to_string(),
+    };
+    format!("{prefix}{counter}{}", pattern.suffix)
 }
 
 fn alpha_marker(mut number: u32, uppercase: bool) -> String {
@@ -1724,20 +1799,13 @@ fn write_word_numbering_suffix_advance(
             write_text_params(out, marker_style);
             out.push_str(")[");
         }
-        let _ = write!(
-            out,
-            "#numbering(\"{}\"",
-            escape_typst_string(style.numbering_pattern.unwrap_or("1."))
-        );
         let values = if style.full_numbering {
             numbers
         } else {
             &numbers[numbers.len() - 1..]
         };
-        for number in values {
-            let _ = write!(out, ", {number}");
-        }
-        out.push(')');
+        out.push('#');
+        write_numbering_label(out, style.numbering_pattern, MarkerNumbers::Values(values));
         if marker_style.is_some() {
             out.push(']');
         }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::ir::NumberingPattern;
 use std::collections::BTreeMap;
 
 #[test]
@@ -180,7 +181,7 @@ fn test_generate_numbered_list() {
             0,
             ListLevelStyle {
                 kind: ListKind::Ordered,
-                numbering_pattern: Some("1.".to_string()),
+                numbering_pattern: Some(NumberingPattern::parse("1.")),
                 full_numbering: false,
                 marker_text: None,
                 marker_style: None,
@@ -239,7 +240,7 @@ fn test_generate_numbered_list_preserves_hanging_indent_columns() {
             0,
             ListLevelStyle {
                 kind: ListKind::Ordered,
-                numbering_pattern: Some("1.".to_string()),
+                numbering_pattern: Some(NumberingPattern::parse("1.")),
                 full_numbering: false,
                 marker_text: None,
                 marker_style: None,
@@ -443,7 +444,7 @@ fn test_generate_numbered_list_marker_inherits_common_text_font() {
             0,
             ListLevelStyle {
                 kind: ListKind::Ordered,
-                numbering_pattern: Some("1.".to_string()),
+                numbering_pattern: Some(NumberingPattern::parse("1.")),
                 full_numbering: false,
                 marker_text: None,
                 marker_style: None,
@@ -533,7 +534,7 @@ fn test_generate_numbered_list_emits_mid_list_restart() {
             0,
             ListLevelStyle {
                 kind: ListKind::Ordered,
-                numbering_pattern: Some("1.".to_string()),
+                numbering_pattern: Some(NumberingPattern::parse("1.")),
                 full_numbering: false,
                 marker_text: None,
                 marker_style: None,
@@ -603,7 +604,7 @@ fn test_generate_nested_list() {
                 0,
                 ListLevelStyle {
                     kind: ListKind::Ordered,
-                    numbering_pattern: Some("1.".to_string()),
+                    numbering_pattern: Some(NumberingPattern::parse("1.")),
                     full_numbering: false,
                     marker_text: None,
                     marker_style: None,
@@ -745,7 +746,7 @@ fn test_generate_nested_ordered_list_uses_full_numbering() {
                 0,
                 ListLevelStyle {
                     kind: ListKind::Ordered,
-                    numbering_pattern: Some("1.".to_string()),
+                    numbering_pattern: Some(NumberingPattern::parse("1.")),
                     full_numbering: false,
                     marker_text: None,
                     marker_style: None,
@@ -755,7 +756,7 @@ fn test_generate_nested_ordered_list_uses_full_numbering() {
                 1,
                 ListLevelStyle {
                     kind: ListKind::Ordered,
-                    numbering_pattern: Some("1.a.".to_string()),
+                    numbering_pattern: Some(NumberingPattern::parse("1.a.")),
                     full_numbering: true,
                     marker_text: None,
                     marker_style: None,
@@ -847,7 +848,7 @@ fn test_generate_ordered_list_with_custom_marker_style_uses_numbering_function()
             0,
             ListLevelStyle {
                 kind: ListKind::Ordered,
-                numbering_pattern: Some("1)".to_string()),
+                numbering_pattern: Some(NumberingPattern::parse("1)")),
                 full_numbering: false,
                 marker_text: None,
                 marker_style: Some(TextStyle {
@@ -1946,4 +1947,134 @@ pub(in crate::render) fn vertical_skips_pt(source: &str) -> Vec<f64> {
         .skip(1)
         .filter_map(|rest| rest.split("pt)").next()?.parse::<f64>().ok())
         .collect()
+}
+
+/// One ordered list level labelled by `pattern`, one item per body.
+fn ordered_list_with_pattern(pattern: NumberingPattern, bodies: &[&str]) -> crate::ir::List {
+    crate::ir::List {
+        kind: ListKind::Ordered,
+        items: bodies
+            .iter()
+            .enumerate()
+            .map(|(index, body)| ListItem {
+                content: vec![Paragraph {
+                    style: ParagraphStyle::default(),
+                    runs: vec![Run {
+                        text: body.to_string(),
+                        style: TextStyle::default(),
+                        href: None,
+                        footnote: None,
+                        inline_box: None,
+                    }],
+                }],
+                level: 0,
+                start_at: (index == 0).then_some(1),
+            })
+            .collect(),
+        level_styles: BTreeMap::from([(
+            0,
+            ListLevelStyle {
+                kind: ListKind::Ordered,
+                numbering_pattern: Some(pattern),
+                full_numbering: false,
+                marker_text: None,
+                marker_style: None,
+            },
+        )]),
+    }
+}
+
+/// The label painted before each body on its baseline.
+#[cfg(not(target_arch = "wasm32"))]
+fn painted_labels(source: &str, bodies: &[&str]) -> Vec<String> {
+    let runs = crate::render::pdf::compiled_text_runs(source, 0).unwrap();
+    bodies
+        .iter()
+        .map(|body| {
+            let body_run = runs
+                .iter()
+                .find(|run| run.text.contains(body))
+                .unwrap_or_else(|| panic!("{body:?} is not painted: {runs:?}"));
+            let mut label_runs: Vec<_> = runs
+                .iter()
+                .filter(|run| {
+                    (run.baseline_pt - body_run.baseline_pt).abs() < 0.5
+                        && run.left_pt < body_run.left_pt
+                })
+                .collect();
+            label_runs.sort_by(|left, right| left.left_pt.total_cmp(&right.left_pt));
+            let mut label: String = label_runs.iter().map(|run| run.text.as_str()).collect();
+            label.push_str(&body_run.text[..body_run.text.find(body).unwrap()]);
+            label.trim().to_string()
+        })
+        .collect()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn ordered_list_literal_counting_symbols_print_as_text() {
+    // Typst would read the `1` of `1.` and the `a` of `Chapter` as counters;
+    // every list path must print them as written (issue #2221).
+    let bodies = ["Alpha", "Beta"];
+    for (pattern, expected) in [
+        (
+            NumberingPattern {
+                pieces: vec![("1.".to_string(), '1')],
+                suffix: String::new(),
+            },
+            ["1.1", "1.2"],
+        ),
+        (
+            NumberingPattern {
+                pieces: vec![("Chapter ".to_string(), 'A')],
+                suffix: ":".to_string(),
+            },
+            ["Chapter A:", "Chapter B:"],
+        ),
+        (
+            NumberingPattern {
+                pieces: Vec::new(),
+                suffix: "1)".to_string(),
+            },
+            ["1)", "1)"],
+        ),
+    ] {
+        let list = ordered_list_with_pattern(pattern, &bodies);
+        let flow = generate_typst(&make_doc(vec![make_flow_page(vec![Block::List(
+            list.clone(),
+        )])]))
+        .unwrap();
+        assert_eq!(painted_labels(&flow.source, &bodies), expected, "flow list");
+
+        let text_box = FixedElement {
+            x: 20.0,
+            y: 20.0,
+            width: 300.0,
+            height: 100.0,
+            kind: FixedElementKind::TextBox(crate::ir::TextBoxData {
+                content: vec![Block::List(list)],
+                padding: Insets::default(),
+                vertical_align: crate::ir::TextBoxVerticalAlign::Top,
+                fill: None,
+                opacity: None,
+                stroke: None,
+                shape_kind: None,
+                no_wrap: false,
+                auto_fit: false,
+                text_rotation_deg: None,
+                shape_rotation_deg: None,
+            }),
+        };
+        let fixed = generate_typst(&make_doc(vec![make_fixed_page(
+            400.0,
+            200.0,
+            vec![text_box],
+        )]))
+        .unwrap();
+        assert_eq!(
+            painted_labels(&fixed.source, &bodies),
+            expected,
+            "text box list"
+        );
+    }
 }
